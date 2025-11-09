@@ -3040,6 +3040,24 @@ class SC2Logic:
             )
         )
 
+    def terran_into_the_void_requirement(self, state: CollectionState) -> bool:
+        if not self.terran_very_hard_mission_weapon_armor_level(state):
+            return False
+        if self.take_over_ai_allies and not (
+            self.zerg_very_hard_mission_weapon_armor_level(state) and self.protoss_very_hard_mission_weapon_armor_level(state)
+        ):
+            return False
+        return self.terran_competent_comp(state) and self.terran_competent_anti_air(state) and self.terran_power_rating(state) >= 6 
+    
+    def zerg_into_the_void_requirement(self, state: CollectionState) -> bool:
+        if not self.zerg_very_hard_mission_weapon_armor_level(state):
+            return False
+        if self.take_over_ai_allies and not (
+            self.terran_very_hard_mission_weapon_armor_level(state) and self.protoss_very_hard_mission_weapon_armor_level(state)
+        ):
+            return False
+        return self.zerg_competent_comp(state) and self.zerg_competent_anti_air(state) and self.zerg_power_rating(state) >= 6 
+
     def essence_of_eternity_requirement(self, state: CollectionState) -> bool:
         if not self.terran_very_hard_mission_weapon_armor_level(state):
             return False
@@ -3064,7 +3082,41 @@ class SC2Logic:
             )
             and self.terran_power_rating(state) >= 6
         )
-
+    
+    def zerg_essence_of_eternity_requirement(self, state: CollectionState) -> bool:
+        if not self.zerg_very_hard_mission_weapon_armor_level(state):
+            return False
+        if self.take_over_ai_allies and not (
+            self.terran_very_hard_mission_weapon_armor_level(state) and self.protoss_very_hard_mission_weapon_armor_level(state)
+        ):
+            return False
+        defense_score = self.zerg_defense_rating(state, False, True)
+        if self.take_over_ai_allies:
+            defense_score = max(defense_score,self.terran_defense_rating(state,False,True))
+            if self.protoss_static_defense(state):
+                defense_score += 2
+        return (
+            defense_score >= 12
+            and self.zerg_competent_anti_air(state) 
+            and self.zerg_power_rating(state) >= 6
+        )
+    
+    def protoss_essence_of_eternity_requirement(self, state: CollectionState) -> bool:
+        if not self.protoss_very_hard_mission_weapon_armor_level(state):
+            return False
+        if self.take_over_ai_allies and not (
+            self.terran_very_hard_mission_weapon_armor_level(state) and self.zerg_very_hard_mission_weapon_armor_level(state)
+        ):
+            return False
+        defense_score = self.protoss_defense_rating(state, False, True)
+        if self.take_over_ai_allies:
+            defense_score = max(defense_score,self.terran_defense_rating(state,False,True))
+        return (
+            defense_score >= 12
+            and self.protoss_competent_anti_air(state) 
+            and self.protoss_power_rating(state) >= 6
+        )
+    
     def amons_fall_requirement(self, state: CollectionState) -> bool:
         if not self.zerg_very_hard_mission_weapon_armor_level(state):
             return False
@@ -3113,6 +3165,41 @@ class SC2Logic:
                 )
                 or (self.advanced_tactics and self.spread_creep(state, False) and self.zerg_big_monsters(state))
             ) and self.zerg_competent_comp(state)
+        
+    def terran_amons_fall_requirement(self, state: CollectionState) -> bool:
+        if not self.terran_very_hard_mission_weapon_armor_level(state):
+            return False
+        if not self.terran_competent_anti_air(state):
+            return False
+        if self.terran_power_rating(state) < 6:
+            return False
+        if self.take_over_ai_allies and not (
+            self.zerg_very_hard_mission_weapon_armor_level(state) and self.protoss_very_hard_mission_weapon_armor_level(state)
+        ):
+            return False
+        if self.take_over_ai_allies:
+            return self.protoss_deathball(state) and self.zerg_competent_comp(state)
+        else:
+            return self.terran_beats_protoss_deathball(state)
+
+    def protoss_amons_fall_requirement(self, state: CollectionState) -> bool:
+        if not self.protoss_very_hard_mission_weapon_armor_level(state):
+            return False
+        if not self.protoss_competent_anti_air(state):
+            return False
+        if self.protoss_power_rating(state) < 6:
+            return False
+        if self.take_over_ai_allies and not (
+            self.terran_very_hard_mission_weapon_armor_level(state) and self.zerg_very_hard_mission_weapon_armor_level(state)
+        ):
+            return False
+        if self.take_over_ai_allies:
+            return (
+                self.terran_beats_protoss_deathball(state) and self.zerg_competent_comp(state) 
+                and (self.protoss_deathball(state) or self.protoss_fleet(state))
+            )
+        else:
+            return self.protoss_deathball(state) or self.protoss_fleet(state)
 
     def the_escape_stuff_granted(self) -> bool:
         """
