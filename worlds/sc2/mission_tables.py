@@ -203,14 +203,14 @@ class SC2Mission(Enum):
 
     # Nova Covert Ops
     THE_ESCAPE = 75, "The Escape", SC2Campaign.NCO, "_1", SC2Race.ANY, MissionPools.MEDIUM, "ap_the_escape", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.NoBuild|MissionFlag.VsTerran
-    SUDDEN_STRIKE = 76, "Sudden Strike", SC2Campaign.NCO, "_1", SC2Race.TERRAN, MissionPools.MEDIUM, "ap_sudden_strike", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.TimedDefense|MissionFlag.VsZerg
-    ENEMY_INTELLIGENCE = 77, "Enemy Intelligence", SC2Campaign.NCO, "_1", SC2Race.TERRAN, MissionPools.MEDIUM, "ap_enemy_intelligence", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.Defense|MissionFlag.VsZerg
-    TROUBLE_IN_PARADISE = 78, "Trouble In Paradise", SC2Campaign.NCO, "_2", SC2Race.TERRAN, MissionPools.HARD, "ap_trouble_in_paradise", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.Countdown|MissionFlag.VsPZ
-    NIGHT_TERRORS = 79, "Night Terrors", SC2Campaign.NCO, "_2", SC2Race.TERRAN, MissionPools.HARD, "ap_night_terrors", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.VsPZ
-    FLASHPOINT = 80, "Flashpoint", SC2Campaign.NCO, "_2", SC2Race.TERRAN, MissionPools.HARD, "ap_flashpoint", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.VsZerg
+    SUDDEN_STRIKE = 76, "Sudden Strike (Terran)", SC2Campaign.NCO, "_1", SC2Race.TERRAN, MissionPools.MEDIUM, "ap_sudden_strike", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.TimedDefense|MissionFlag.VsZerg|MissionFlag.HasRaceSwap
+    ENEMY_INTELLIGENCE = 77, "Enemy Intelligence (Terran)", SC2Campaign.NCO, "_1", SC2Race.TERRAN, MissionPools.MEDIUM, "ap_enemy_intelligence", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.Defense|MissionFlag.VsZerg|MissionFlag.HasRaceSwap
+    TROUBLE_IN_PARADISE = 78, "Trouble In Paradise (Terran)", SC2Campaign.NCO, "_2", SC2Race.TERRAN, MissionPools.HARD, "ap_trouble_in_paradise", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.Countdown|MissionFlag.VsPZ|MissionFlag.HasRaceSwap
+    NIGHT_TERRORS = 79, "Night Terrors (Terran)", SC2Campaign.NCO, "_2", SC2Race.TERRAN, MissionPools.HARD, "ap_night_terrors", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.VsPZ|MissionFlag.HasRaceSwap
+    FLASHPOINT = 80, "Flashpoint (Terran)", SC2Campaign.NCO, "_2", SC2Race.TERRAN, MissionPools.HARD, "ap_flashpoint", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.VsZerg|MissionFlag.HasRaceSwap
     IN_THE_ENEMY_S_SHADOW = 81, "In the Enemy's Shadow", SC2Campaign.NCO, "_3", SC2Race.TERRAN, MissionPools.MEDIUM, "ap_in_the_enemy_s_shadow", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.NoBuild|MissionFlag.VsTerran
-    DARK_SKIES = 82, "Dark Skies", SC2Campaign.NCO, "_3", SC2Race.TERRAN, MissionPools.HARD, "ap_dark_skies", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.TimedDefense|MissionFlag.VsProtoss
-    END_GAME = 83, "End Game", SC2Campaign.NCO, "_3", SC2Race.TERRAN, MissionPools.VERY_HARD, "ap_end_game", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.Defense|MissionFlag.VsTerran
+    DARK_SKIES = 82, "Dark Skies (Terran)", SC2Campaign.NCO, "_3", SC2Race.TERRAN, MissionPools.HARD, "ap_dark_skies", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.TimedDefense|MissionFlag.VsProtoss|MissionFlag.HasRaceSwap
+    END_GAME = 83, "End Game (Terran)", SC2Campaign.NCO, "_3", SC2Race.TERRAN, MissionPools.VERY_HARD, "ap_end_game", MissionFlag.Terran|MissionFlag.Nova|MissionFlag.Defense|MissionFlag.VsTerran|MissionFlag.HasRaceSwap
 
     # Race-Swapped Variants
     # 84/85 - Liberation Day
@@ -344,16 +344,22 @@ class SC2Mission(Enum):
     # 228/229 - The Essence of Eternity
     # 230/231 - Amon's Fall
     # 232/233 - The Escape
-    # 234/235 - Sudden Strike
-    # 236/237 - Enemy Intelligence
-    # 238/239 - Trouble In Paradise
-    # 240/241 - Night Terrors
-    # 242/243 - Flashpoint
+    SUDDEN_STRIKE_Z = 234, "Sudden Strike (Zerg)", SC2Campaign.NCO, "_1", SC2Race.ZERG, MissionPools.MEDIUM, "ap_sudden_strike", MissionFlag.Zerg|MissionFlag.Nova|MissionFlag.TimedDefense|MissionFlag.VsZerg|MissionFlag.RaceSwap
+    SUDDEN_STRIKE_P = 235, "Sudden Strike (Protoss)", SC2Campaign.NCO, "_1", SC2Race.PROTOSS, MissionPools.MEDIUM, "ap_sudden_strike", MissionFlag.Protoss|MissionFlag.Nova|MissionFlag.TimedDefense|MissionFlag.VsZerg|MissionFlag.RaceSwap
+    ENEMY_INTELLIGENCE_Z = 236, "Enemy Intelligence (Zerg)", SC2Campaign.NCO, "_1", SC2Race.ZERG, MissionPools.MEDIUM, "ap_enemy_intelligence", MissionFlag.Zerg|MissionFlag.Nova|MissionFlag.Defense|MissionFlag.VsZerg|MissionFlag.RaceSwap
+    ENEMY_INTELLIGENCE_P = 237, "Enemy Intelligence (Protoss)", SC2Campaign.NCO, "_1", SC2Race.PROTOSS, MissionPools.MEDIUM, "ap_enemy_intelligence", MissionFlag.Protoss|MissionFlag.Nova|MissionFlag.Defense|MissionFlag.VsZerg|MissionFlag.RaceSwap
+    TROUBLE_IN_PARADISE_Z = 238, "Trouble In Paradise (Zerg)", SC2Campaign.NCO, "_2", SC2Race.ZERG, MissionPools.HARD, "ap_trouble_in_paradise", MissionFlag.Zerg|MissionFlag.Nova|MissionFlag.Countdown|MissionFlag.VsPZ|MissionFlag.RaceSwap
+    TROUBLE_IN_PARADISE_P = 239, "Trouble In Paradise (Protoss)", SC2Campaign.NCO, "_2", SC2Race.PROTOSS, MissionPools.HARD, "ap_trouble_in_paradise", MissionFlag.Protoss|MissionFlag.Nova|MissionFlag.Countdown|MissionFlag.VsPZ|MissionFlag.RaceSwap
+    NIGHT_TERRORS_Z = 240, "Night Terrors (Zerg)", SC2Campaign.NCO, "_2", SC2Race.ZERG, MissionPools.HARD, "ap_night_terrors", MissionFlag.Zerg|MissionFlag.Nova|MissionFlag.VsPZ|MissionFlag.RaceSwap
+    NIGHT_TERRORS_P = 241, "Night Terrors (Protoss)", SC2Campaign.NCO, "_2", SC2Race.PROTOSS, MissionPools.HARD, "ap_night_terrors", MissionFlag.Protoss|MissionFlag.Nova|MissionFlag.VsPZ|MissionFlag.RaceSwap
+    FLASHPOINT_Z = 242, "Flashpoint (Zerg)", SC2Campaign.NCO, "_2", SC2Race.ZERG, MissionPools.HARD, "ap_flashpoint", MissionFlag.Zerg|MissionFlag.Nova|MissionFlag.VsZerg|MissionFlag.RaceSwap
+    FLASHPOINT_P = 243, "Flashpoint (Protoss)", SC2Campaign.NCO, "_2", SC2Race.PROTOSS, MissionPools.HARD, "ap_flashpoint", MissionFlag.Protoss|MissionFlag.Nova|MissionFlag.VsZerg|MissionFlag.RaceSwap
     # 244/245 - In the Enemy's Shadow
-    # 246/247 - Dark Skies
-    # 248/249 - End Game
-
-
+    DARK_SKIES_Z = 246, "Dark Skies (Zerg)", SC2Campaign.NCO, "_3", SC2Race.ZERG, MissionPools.HARD, "ap_dark_skies", MissionFlag.Zerg|MissionFlag.Nova|MissionFlag.TimedDefense|MissionFlag.VsProtoss|MissionFlag.RaceSwap
+    DARK_SKIES_P = 247, "Dark Skies (Protoss)", SC2Campaign.NCO, "_3", SC2Race.PROTOSS, MissionPools.HARD, "ap_dark_skies", MissionFlag.Protoss|MissionFlag.Nova|MissionFlag.TimedDefense|MissionFlag.VsProtoss|MissionFlag.RaceSwap
+    END_GAME_Z = 248, "End Game (Zerg)", SC2Campaign.NCO, "_3", SC2Race.ZERG, MissionPools.VERY_HARD, "ap_end_game", MissionFlag.Zerg|MissionFlag.Nova|MissionFlag.Defense|MissionFlag.VsTerran|MissionFlag.RaceSwap
+    END_GAME_P = 249, "End Game (Protoss)", SC2Campaign.NCO, "_3", SC2Race.PROTOSS, MissionPools.VERY_HARD, "ap_end_game", MissionFlag.Protoss|MissionFlag.Nova|MissionFlag.Defense|MissionFlag.VsTerran|MissionFlag.RaceSwap
+    
 class MissionConnection:
     campaign: SC2Campaign
     connect_to: int  # -1 connects to Menu
