@@ -864,6 +864,17 @@ class SC2Context(CommonContext):
             self.lowest_maximum_supply = args["slot_data"].get("lowest_maximum_supply", options.LowestMaximumSupply.default)
             self.research_cost_reduction_per_item = args["slot_data"].get("research_cost_reduction_per_item", options.ResearchCostReductionPerItem.default)
             self.nova_presence = args["slot_data"].get("nova_presence", options.NovaPresence.default)
+            if self.slot_data_version < 4:
+                if args["slot_data"].get("nova_covert_ops_only", True):
+                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN},
+                else:
+                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN, NovaPresenceOptions.GHOST_OF_A_CHANCE},
+            if self.slot_data_version < 5:
+                if args["slot_data"].get("use_nova_wol_fallback", True):
+                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN},
+                else:
+                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN, NovaPresenceOptions.GHOST_OF_A_CHANCE},
+            self.nova_presence = args["slot_data"].get("nova_presence", options.NovaPresence.default)
             self.trade_enabled = args["slot_data"].get("enable_void_trade", EnableVoidTrade.option_false)
             self.trade_age_limit = args["slot_data"].get("void_trade_age_limit", VoidTradeAgeLimit.default)
             self.trade_workers_allowed = args["slot_data"].get("void_trade_workers", VoidTradeWorkers.default)

@@ -1,5 +1,4 @@
-import enum
-class NovaPresenceOptions(enum.StrEnum):
+class NovaPresenceOptions():
     NCO_TERRAN = "Nova Covert Ops (Terran)"
     NCO_ZERG = "Nova Covert Ops (Zerg)"
     NCO_PROTOSS = "Nova Covert Ops (Protoss)"
