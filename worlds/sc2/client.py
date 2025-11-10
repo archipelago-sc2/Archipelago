@@ -35,7 +35,7 @@ from .options import (
     MissionOrder, KerriganPrimalStatus, kerrigan_unit_available, KerriganPresence, EnableMorphling, GameDifficulty,
     GameSpeed, GenericUpgradeItems, GenericUpgradeResearch, ColorChoice, GenericUpgradeMissions, MaxUpgradeLevel,
     LocationInclusion, ExtraLocations, MasteryLocations, SpeedrunLocations, PreventativeLocations, ChallengeLocations,
-    VanillaLocations,
+    VanillaLocations, NovaPresence,
     DisableForcedCamera, SkipCutscenes, GrantStoryTech, GrantStoryLevels, TakeOverAIAllies, RequiredTactics,
     SpearOfAdunPresence, SpearOfAdunPresentInNoBuild, SpearOfAdunPassiveAbilityPresence,
     SpearOfAdunPassivesPresentInNoBuild, EnableVoidTrade, VoidTradeAgeLimit, void_trade_age_limits_ms, VoidTradeWorkers,
@@ -653,8 +653,7 @@ class SC2Context(CommonContext):
         self.maximum_supply_reduction_per_item: int = options.MaximumSupplyReductionPerItem.default
         self.lowest_maximum_supply: int = options.LowestMaximumSupply.default
         self.research_cost_reduction_per_item: int = options.ResearchCostReductionPerItem.default
-        self.use_nova_wol_fallback: bool = False
-        self.use_nova_nco_fallback: bool = False
+        self.nova_presence: typing.List[str] = NovaPresence.default
         self.mercenary_highlanders: bool = False
         self.kerrigan_levels_per_mission_completed = 0
         self.trade_enabled: int = EnableVoidTrade.default
@@ -863,11 +862,13 @@ class SC2Context(CommonContext):
             self.maximum_supply_reduction_per_item = args["slot_data"].get("maximum_supply_reduction_per_item", options.MaximumSupplyReductionPerItem.default)
             self.lowest_maximum_supply = args["slot_data"].get("lowest_maximum_supply", options.LowestMaximumSupply.default)
             self.research_cost_reduction_per_item = args["slot_data"].get("research_cost_reduction_per_item", options.ResearchCostReductionPerItem.default)
-            self.use_nova_wol_fallback = args["slot_data"].get("use_nova_wol_fallback", True)
-            if self.slot_data_version < 4:
-                self.use_nova_nco_fallback = args["slot_data"].get("nova_covert_ops_only", False) and self.mission_order == MissionOrder.option_vanilla
-            else:
-                self.use_nova_nco_fallback = args["slot_data"].get("use_nova_nco_fallback", False)
+            #self.use_nova_wol_fallback = args["slot_data"].get("use_nova_wol_fallback", SC2Mission.GHOST_OF_A_CHANCE.mission_name in options.NovaPresence.default)
+            #if self.slot_data_version < 4:
+            #    self.use_nova_nco_fallback = (args["slot_data"].get("nova_covert_ops_only", SC2Campaign.NCO.campaign_name in options.NovaPresence.default) 
+            #    and self.mission_order == MissionOrder.option_vanilla)
+            #else:
+            #    self.use_nova_nco_fallback = args["slot_data"].get("use_nova_nco_fallback", SC2Campaign.NCO.campaign_name in options.NovaPresence.default)
+            self.nova_presence = args["slot_data"].get("nova_presence", options.NovaPresence.default)
             self.trade_enabled = args["slot_data"].get("enable_void_trade", EnableVoidTrade.option_false)
             self.trade_age_limit = args["slot_data"].get("void_trade_age_limit", VoidTradeAgeLimit.default)
             self.trade_workers_allowed = args["slot_data"].get("void_trade_workers", VoidTradeWorkers.default)
@@ -1566,6 +1567,15 @@ def calculate_kerrigan_options(ctx: SC2Context) -> int:
 
     return result
 
+def calculate_nova_presence(ctx: SC2Context, mission: SC2Mission) -> bool:
+    if mission.campaign == SC2Campaign.NCO:
+        if mission.race == SC2Race.TERRAN and 'Nova Covert Ops (Terran)' in ctx.nova_presence:
+            return True
+        elif MissionFlag.RaceSwap in mission.flags and 'Nova Covert Ops (Race-swapped)' in ctx.nova_presence:
+            return True
+    if mission == SC2Mission.GHOST_OF_A_CHANCE and 'Ghost of a Chance' in ctx.nova_presence:
+        return True
+    return False
 
 def caclulate_soa_options(ctx: SC2Context, mission: SC2Mission) -> int:
     """
@@ -1738,17 +1748,11 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             missions_beaten = self.missions_beaten_count()
             kerrigan_level = get_kerrigan_level(self.ctx, start_items, missions_beaten)
             kerrigan_options = calculate_kerrigan_options(self.ctx)
+            nova_presence = calculate_nova_presence(self.ctx, mission)
             soa_options = caclulate_soa_options(self.ctx, mission)
             generic_upgrade_options = calculate_generic_upgrade_options(self.ctx)
             trade_options = calculate_trade_options(self.ctx)
             mission_variant = get_mission_variant(self.mission_id)  # 0/1/2/3 for unchanged/Terran/Zerg/Protoss
-            nova_fallback: bool
-            if MissionFlag.Nova in mission.flags:
-                nova_fallback = self.ctx.use_nova_nco_fallback
-            elif MissionFlag.WoLNova in mission.flags:
-                nova_fallback = self.ctx.use_nova_wol_fallback
-            else:
-                nova_fallback = False
             uncollected_objectives: typing.List[int] = self.get_uncollected_objectives()
             if self.ctx.difficulty_override >= 0:
                 difficulty = calc_difficulty(self.ctx.difficulty_override)
@@ -1771,7 +1775,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 f" {self.ctx.take_over_ai_allies}"
                 f" {soa_options}"
                 f" {self.ctx.mission_order}"
-                f" {int(nova_fallback)}"
+                f" {int(nova_presence)}"
                 f" {self.ctx.grant_story_levels}"
                 f" {self.ctx.enable_morphling}"
                 f" {mission_variant}"

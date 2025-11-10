@@ -899,31 +899,25 @@ class NovaMaxGadgets(Range):
     range_start = 0
     range_end = len(nova_gadgets)
     default = range_end
-
-
-class NovaGhostOfAChanceVariant(Choice):
+    
+class NovaPresence(OptionSet):
     """
-    Determines which variant of Nova should be used in Ghost of a Chance mission.
+    Determines which missions will use the NCO Nova hero
+    Valid selections:
+    - 'Nova Covert Ops'
+    - 'Ghost of a Chance'
 
-    WoL: Uses Nova from Wings of Liberty campaign (vanilla)
-    NCO: Uses Nova from Nova Covert Ops campaign
-    Auto: Uses NCO if a mission from Nova Covert Ops is actually shuffled, if not uses WoL
+    If NCO is not included, Nova will be disabled for the NCO build missions.
+    If Ghost of a Chance is included, the mission will use the NCO version of Nova,
+    otherwise the vanilla WoL version of Nova is used.
     """
-    display_name = "Nova Ghost of Chance Variant"
-    option_wol = 0
-    option_nco = 1
-    option_auto = 2
-    default = option_wol
-
-    # Fix case
-    @classmethod
-    def get_option_name(cls, value: int) -> str:
-        if value == NovaGhostOfAChanceVariant.option_wol:
-            return "WoL"
-        elif value == NovaGhostOfAChanceVariant.option_nco:
-            return "NCO"
-        return super().get_option_name(value)
-
+    display_name = "Nova Presence"
+    valid_keys = {
+        "Nova Covert Ops (Terran)",
+        "Nova Covert Ops (Race-swapped)",
+        "Ghost of a Chance",
+    }
+    default = {"Nova Covert Ops (Terran)"}
 
 class TakeOverAIAllies(Toggle):
     """
@@ -1395,9 +1389,9 @@ class Starcraft2Options(PerGameCommonOptions):
     spear_of_adun_max_passive_abilities: SpearOfAdunMaxAutocastAbilities
     grant_story_tech: GrantStoryTech
     grant_story_levels: GrantStoryLevels
+    nova_presence: NovaPresence
     nova_max_weapons: NovaMaxWeapons
     nova_max_gadgets: NovaMaxGadgets
-    nova_ghost_of_a_chance_variant: NovaGhostOfAChanceVariant
     take_over_ai_allies: TakeOverAIAllies
     locked_items: LockedItems
     excluded_items: ExcludedItems
@@ -1485,9 +1479,9 @@ option_groups = [
         SpearOfAdunMaxAutocastAbilities,
     ]),
     OptionGroup("Nova", [
+        NovaPresence,
         NovaMaxWeapons,
         NovaMaxGadgets,
-        NovaGhostOfAChanceVariant,
     ]),
     OptionGroup("Race Specific Options", [
         EnableMorphling,
