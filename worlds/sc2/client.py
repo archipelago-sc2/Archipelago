@@ -45,6 +45,7 @@ from .options import (
 from .mission_order.slot_data import CampaignSlotData, LayoutSlotData, MissionSlotData, MissionOrderObjectSlotData
 from .mission_order.entry_rules import SubRuleRuleData, CountMissionsRuleData, MissionEntryRules
 from .mission_tables import MissionFlag
+from .tables import NovaPresenceOptions
 from .transfer_data import normalized_unit_types, worker_units
 from . import SC2World
 
@@ -862,12 +863,6 @@ class SC2Context(CommonContext):
             self.maximum_supply_reduction_per_item = args["slot_data"].get("maximum_supply_reduction_per_item", options.MaximumSupplyReductionPerItem.default)
             self.lowest_maximum_supply = args["slot_data"].get("lowest_maximum_supply", options.LowestMaximumSupply.default)
             self.research_cost_reduction_per_item = args["slot_data"].get("research_cost_reduction_per_item", options.ResearchCostReductionPerItem.default)
-            #self.use_nova_wol_fallback = args["slot_data"].get("use_nova_wol_fallback", SC2Mission.GHOST_OF_A_CHANCE.mission_name in options.NovaPresence.default)
-            #if self.slot_data_version < 4:
-            #    self.use_nova_nco_fallback = (args["slot_data"].get("nova_covert_ops_only", SC2Campaign.NCO.campaign_name in options.NovaPresence.default) 
-            #    and self.mission_order == MissionOrder.option_vanilla)
-            #else:
-            #    self.use_nova_nco_fallback = args["slot_data"].get("use_nova_nco_fallback", SC2Campaign.NCO.campaign_name in options.NovaPresence.default)
             self.nova_presence = args["slot_data"].get("nova_presence", options.NovaPresence.default)
             self.trade_enabled = args["slot_data"].get("enable_void_trade", EnableVoidTrade.option_false)
             self.trade_age_limit = args["slot_data"].get("void_trade_age_limit", VoidTradeAgeLimit.default)
@@ -1569,11 +1564,13 @@ def calculate_kerrigan_options(ctx: SC2Context) -> int:
 
 def calculate_nova_presence(ctx: SC2Context, mission: SC2Mission) -> bool:
     if mission.campaign == SC2Campaign.NCO:
-        if mission.race == SC2Race.TERRAN and 'Nova Covert Ops (Terran)' in ctx.nova_presence:
+        if mission.race == SC2Race.TERRAN and NovaPresenceOptions.NCO_TERRAN in ctx.nova_presence:
             return True
-        elif MissionFlag.RaceSwap in mission.flags and 'Nova Covert Ops (Race-swapped)' in ctx.nova_presence:
+        elif mission.race == SC2Race.ZERG and NovaPresenceOptions.NCO_ZERG in ctx.nova_presence:
             return True
-    if mission == SC2Mission.GHOST_OF_A_CHANCE and 'Ghost of a Chance' in ctx.nova_presence:
+        elif mission.race == SC2Race.PROTOSS and NovaPresenceOptions.NCO_PROTOSS in ctx.nova_presence:
+            return True
+    if mission == SC2Mission.GHOST_OF_A_CHANCE and NovaPresenceOptions.GHOST_OF_A_CHANCE in ctx.nova_presence:
         return True
     return False
 

@@ -41,6 +41,7 @@ from .item.item_tables import (
     protoss_passive_ratings,
 )
 from .mission_tables import SC2Race, SC2Campaign
+from .tables import NovaPresenceOptions
 from .item import item_groups, item_names
 
 if TYPE_CHECKING:
@@ -1655,7 +1656,7 @@ class SC2Logic:
     def ghost_of_a_chance_requirement(self, state: CollectionState) -> bool:
         return (
             self.grant_story_tech == GrantStoryTech.option_grant
-            or 'Ghost of a Chance' in self.nova_presence
+            or NovaPresenceOptions.GHOST_OF_A_CHANCE in self.nova_presence
             or not self.nova_used
             or (
                 self.nova_ranged_weapon(state)

@@ -19,6 +19,7 @@ from .mission_tables import (
 )
 from .mission_groups import mission_groups, MissionGroupNames
 from .mission_order.options import CustomMissionOrder
+from .tables import NovaPresenceOptions
 
 if TYPE_CHECKING:
     from worlds.AutoWorld import World
@@ -873,6 +874,25 @@ class GrantStoryLevels(Choice):
     option_minimum = 2
     default = option_minimum
 
+class NovaPresence(OptionSet):
+    """
+    Determines which missions will use the NCO Nova hero
+    
+    Nova Covert Ops (Terran):        Nova is present in vanilla NCO missions.
+    Nova Covert Ops (Zerg):          Nova is present in Zerg NCO missions.
+    Nova Covert Ops (Protoss):       Nova is present in Protoss NCO missions.
+    Ghost of a Chance:               Vanilla WoL Nova is replaced with NCO Nova.
+
+    Not including any of the options will disable Nova for those missions.
+    """
+    display_name = "Nova Presence"
+    valid_keys = {
+        NovaPresenceOptions.NCO_TERRAN,
+        NovaPresenceOptions.NCO_ZERG,
+        NovaPresenceOptions.NCO_PROTOSS,
+        NovaPresenceOptions.GHOST_OF_A_CHANCE,
+    }
+    default = {NovaPresenceOptions.NCO_TERRAN}
 
 class NovaMaxWeapons(Range):
     """
@@ -900,24 +920,7 @@ class NovaMaxGadgets(Range):
     range_end = len(nova_gadgets)
     default = range_end
     
-class NovaPresence(OptionSet):
-    """
-    Determines which missions will use the NCO Nova hero
-    Valid selections:
-    - 'Nova Covert Ops'
-    - 'Ghost of a Chance'
 
-    If NCO is not included, Nova will be disabled for the NCO build missions.
-    If Ghost of a Chance is included, the mission will use the NCO version of Nova,
-    otherwise the vanilla WoL version of Nova is used.
-    """
-    display_name = "Nova Presence"
-    valid_keys = {
-        "Nova Covert Ops (Terran)",
-        "Nova Covert Ops (Race-swapped)",
-        "Ghost of a Chance",
-    }
-    default = {"Nova Covert Ops (Terran)"}
 
 class TakeOverAIAllies(Toggle):
     """

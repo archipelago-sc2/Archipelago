@@ -6,6 +6,7 @@ from .mission_tables import (
     SC2Mission, SC2Campaign, MissionFlag, get_campaign_goal_priority,
     campaign_final_mission_locations, campaign_alt_final_mission_locations
 )
+from .tables import NovaPresenceOptions
 from .options import (
     ShuffleNoBuild, RequiredTactics, ShuffleCampaigns,
     kerrigan_unit_available, TakeOverAIAllies, MissionOrder, get_excluded_missions, get_enabled_campaigns,
@@ -138,7 +139,7 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools):
         pools.move_mission(SC2Mission.SUPREME, Difficulty.MEDIUM, Difficulty.STARTER)
         pools.move_mission(SC2Mission.THE_INFINITE_CYCLE, Difficulty.HARD, Difficulty.STARTER)
         pools.move_mission(SC2Mission.CONVICTION, Difficulty.MEDIUM, Difficulty.STARTER)
-    if  grant_story_tech != GrantStoryTech.option_grant and 'Ghost of a Chance' in world.options.nova_presence:
+    if  grant_story_tech != GrantStoryTech.option_grant and NovaPresenceOptions.GHOST_OF_A_CHANCE in world.options.nova_presence:
         # Using NCO tech for this mission that must be acquired
         pools.move_mission(SC2Mission.GHOST_OF_A_CHANCE, Difficulty.STARTER, Difficulty.MEDIUM)
     if world.options.take_over_ai_allies.value == TakeOverAIAllies.option_true:

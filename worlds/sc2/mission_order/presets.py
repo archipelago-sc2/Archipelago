@@ -5,6 +5,7 @@ from .. import options
 from Options import Accessibility, ProgressionBalancing
 from .. import item_names
 from ..mission_tables import SC2Race, SC2Campaign
+from ..tables import NovaPresenceOptions
 
 from ..options import ( 
     # avoid import *
@@ -38,7 +39,6 @@ template_settings = {
     OPTION_NAME[KeyMode]:                               KeyMode.option_disabled,
     OPTION_NAME[MaximumCampaignSize]:                   25,
     OPTION_NAME[StarterUnit]:                           StarterUnit.option_balanced,
-    OPTION_NAME[NovaPresence]:                          NovaPresence.option_wol,
     OPTION_NAME[TakeOverAIAllies]:                      TakeOverAIAllies.option_false,
     OPTION_NAME[DifficultyCurve]:                       DifficultyCurve.option_standard,
     OPTION_NAME[MasteryLocations]:                      MasteryLocations.option_disabled,
@@ -225,7 +225,10 @@ bread_and_butter_settings = {
     OPTION_NAME[ChallengeLocations]:                    ChallengeLocations.option_enabled,
     OPTION_NAME[MasteryLocations]:                      MasteryLocations.option_disabled,
     OPTION_NAME[WarCouncilNerfs]:                       WarCouncilNerfs.option_true,
-   # OPTION_NAME[NovaPresence]:             NovaPresence.option_nco,
+    OPTION_NAME[NovaPresence]: {
+        NovaPresenceOptions.NCO_TERRAN,
+        NovaPresenceOptions.GHOST_OF_A_CHANCE,
+    },
     OPTION_NAME[GenericUpgradeItems]:                   GenericUpgradeItems.option_individual_items,
     OPTION_NAME[MinNumberOfUpgrades]:                   1,
     OPTION_NAME[MaxNumberOfUpgrades]:                   4,
@@ -347,7 +350,7 @@ evil_logic_settings = {
     OPTION_NAME[ChallengeLocations]:                    ChallengeLocations.option_enabled,
     OPTION_NAME[MasteryLocations]:                      MasteryLocations.option_enabled,
     OPTION_NAME[WarCouncilNerfs]:                       WarCouncilNerfs.option_true,
-    #OPTION_NAME[NovaPresence]:             NovaPresence.option_nco,
+    OPTION_NAME[NovaPresence]:                          {},
     OPTION_NAME[GenericUpgradeItems]:                   GenericUpgradeItems.option_individual_items,
     OPTION_NAME[MinNumberOfUpgrades]:                   1,
     OPTION_NAME[MaxNumberOfUpgrades]:                   2,
@@ -399,7 +402,7 @@ full_campaign_settings = {
     OPTION_NAME[TwoStartPositions]:                     TwoStartPositions.option_true,
     OPTION_NAME[StarterUnit]:                           StarterUnit.option_off,
     OPTION_NAME[EnableMorphling]:                       EnableMorphling.option_true,
-    #OPTION_NAME[NovaPresence]:                          ,
+    OPTION_NAME[NovaPresence]:                          NovaPresence.valid_keys,          
     OPTION_NAME[GrantStoryTech]:                        GrantStoryTech.option_allow_substitutes,
     OPTION_NAME[TakeOverAIAllies]:                      TakeOverAIAllies.option_false,
     OPTION_NAME[DifficultyCurve]:                       DifficultyCurve.option_standard,
