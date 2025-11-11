@@ -3680,7 +3680,7 @@ class SC2Logic:
                 state.has_any((item_names.GOLIATH, item_names.VIKING), self.player)
                 or (
                     NovaPresenceOptions.NCO_TERRAN in self.nova_presence 
-                    and state.has_any(item_names.NOVA_C20A_CANISTER_RIFLE, item_names.NOVA_BLAZEFIRE_GUNBLADE, self.player)
+                    and state.has_any((item_names.NOVA_C20A_CANISTER_RIFLE, item_names.NOVA_BLAZEFIRE_GUNBLADE), self.player)
                 )
                 or state.has_all((item_names.THOR, item_names.THOR_PROGRESSIVE_HIGH_IMPACT_PAYLOAD), self.player)
                 or state.has_all((item_names.BATTLECRUISER, item_names.BATTLECRUISER_ATX_LASER_BATTERY), self.player)
