@@ -1404,7 +1404,8 @@ item_table = {
         ItemData(309 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Morph, 3, SC2Race.ZERG,
                  classification=ItemClassification.progression, parent=parent_names.MORPH_SOURCE_AIR),
     item_names.SWARM_HOST_CARRION_STRAIN:
-        ItemData(310 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Strain, 10, SC2Race.ZERG, parent=item_names.SWARM_HOST),
+        ItemData(310 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Strain, 10, SC2Race.ZERG, 
+                 classification=ItemClassification.progression, parent=item_names.SWARM_HOST),
     item_names.SWARM_HOST_CREEPER_STRAIN:
         ItemData(311 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Strain, 11, SC2Race.ZERG, parent=item_names.SWARM_HOST),
     item_names.ULTRALISK_NOXIOUS_STRAIN:
