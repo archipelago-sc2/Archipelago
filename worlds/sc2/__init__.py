@@ -123,23 +123,24 @@ class SC2World(World):
         self.custom_mission_order = create_mission_order(
             self, get_locations(self), self.location_cache
         )
-        self.logic.nova_used = False
-        for mission in self.custom_mission_order.get_used_missions():
-            if (MissionFlag.Nova in mission.flags 
-                and ( 
-                    MissionFlag.Terran in mission.flags
-                    and NovaPresenceOptions.NCO_TERRAN in self.options.nova_presence
-                    or MissionFlag.Zerg in mission.flags
-                    and NovaPresenceOptions.NCO_ZERG in self.options.nova_presence
-                    or MissionFlag.Protoss in mission.flags
-                    and NovaPresenceOptions.NCO_PROTOSS in self.options.nova_presence
-                )
-            ):
-                self.logic.nova_used = True
-        if (MissionFlag.WoLNova in self.custom_mission_order.get_used_flags()
-            and NovaPresenceOptions.GHOST_OF_A_CHANCE in self.options.nova_presence
+        if (NovaPresenceOptions.GHOST_OF_A_CHANCE_AUTO in self.options.nova_presence
+            and NovaPresenceOptions.GHOST_OF_A_CHANCE not in self.options.nova_presence
+            # if both options are set, Nova is forced on
         ):
-            self.logic.nova_used = True
+            for mission in self.custom_mission_order.get_used_missions():
+                # check if Nova is used anywhere
+                if (MissionFlag.Nova in mission.flags 
+                    and ( 
+                        MissionFlag.Terran in mission.flags
+                        and NovaPresenceOptions.NCO_TERRAN in self.options.nova_presence
+                        or MissionFlag.Zerg in mission.flags
+                        and NovaPresenceOptions.NCO_ZERG in self.options.nova_presence
+                        or MissionFlag.Protoss in mission.flags
+                        and NovaPresenceOptions.NCO_PROTOSS in self.options.nova_presence
+                    )
+                ):
+                  # ...and just modify the option
+                  self.options.nova_presence.value.add(NovaPresenceOptions.GHOST_OF_A_CHANCE)
 
 
     def create_items(self) -> None:
@@ -542,10 +543,18 @@ def flag_mission_based_item_excludes(world: SC2World, item_list: List[FilterItem
     nova_missions = [
         mission for mission in missions
         if MissionFlag.Nova in mission.flags
-           or (
-                   'Ghost of a Chance' in world.options.nova_presence
-                   and MissionFlag.WoLNova in mission.flags
-           )
+            and ( 
+                MissionFlag.Terran in mission.flags
+                and NovaPresenceOptions.NCO_TERRAN in world.options.nova_presence
+                or MissionFlag.Zerg in mission.flags
+                and NovaPresenceOptions.NCO_ZERG in world.options.nova_presence
+                or MissionFlag.Protoss in mission.flags
+                and NovaPresenceOptions.NCO_PROTOSS in world.options.nova_presence
+            )
+        or (
+            NovaPresenceOptions.GHOST_OF_A_CHANCE in world.options.nova_presence
+            and MissionFlag.WoLNova in mission.flags
+        )
     ]
 
     kerrigan_is_present = (

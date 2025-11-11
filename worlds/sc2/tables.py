@@ -3,3 +3,4 @@ class NovaPresenceOptions():
     NCO_ZERG = "Nova Covert Ops (Zerg)"
     NCO_PROTOSS = "Nova Covert Ops (Protoss)"
     GHOST_OF_A_CHANCE = "Ghost of a Chance"
+    GHOST_OF_A_CHANCE_AUTO = "Ghost of a Chance (Auto)"

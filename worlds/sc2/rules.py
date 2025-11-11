@@ -91,9 +91,6 @@ class SC2Logic:
         # Must be set externally for accurate logic checking of upgrade level when generic_upgrade_missions is checked
         self.total_mission_count = 1
 
-        # Must be set externally
-        self.nova_used = True
-
         # Conditionally set to False by the world after culling items
         self.has_barracks_unit: bool = True
         self.has_factory_unit: bool = True
@@ -1657,7 +1654,6 @@ class SC2Logic:
         return (
             self.grant_story_tech == GrantStoryTech.option_grant
             or NovaPresenceOptions.GHOST_OF_A_CHANCE not in self.nova_presence
-            or not self.nova_used
             or (
                 self.nova_ranged_weapon(state)
                 and state.has_any({item_names.NOVA_DOMINATION, item_names.NOVA_C20A_CANISTER_RIFLE}, self.player)

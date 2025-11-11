@@ -891,6 +891,7 @@ class NovaPresence(OptionSet):
         NovaPresenceOptions.NCO_ZERG,
         NovaPresenceOptions.NCO_PROTOSS,
         NovaPresenceOptions.GHOST_OF_A_CHANCE,
+        NovaPresenceOptions.GHOST_OF_A_CHANCE_AUTO,
     }
     default = {NovaPresenceOptions.NCO_TERRAN}
 
