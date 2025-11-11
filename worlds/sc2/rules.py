@@ -3146,7 +3146,12 @@ class SC2Logic:
             state.has(item_names.ABERRATION,self.player)
             or state.has(item_names.ULTRALISK,self.player)
             or self.morph_tyrannozor(state)
-            or (self.advanced_tactics and state.has_any({item_names.VIPER, item_names.INFESTOR, item_names.BROOD_QUEEN},self.player))
+            or (self.advanced_tactics 
+                and (
+                    state.has_any({item_names.INFESTOR, item_names.BROOD_QUEEN},self.player)
+                    or self.morph_viper(state)
+                )
+            )
             or (
                 NovaPresenceOptions.NCO_ZERG in self.nova_presence
                 and state.has(item_names.NOVA_JUMP_SUIT_MODULE, self.player)

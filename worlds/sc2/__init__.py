@@ -141,6 +141,7 @@ class SC2World(World):
                 ):
                   # ...and just modify the option
                   self.options.nova_presence.value.add(NovaPresenceOptions.GHOST_OF_A_CHANCE)
+                  break
 
 
     def create_items(self) -> None:
