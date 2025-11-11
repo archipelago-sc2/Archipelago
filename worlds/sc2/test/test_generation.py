@@ -9,9 +9,9 @@ from .. import mission_groups, mission_tables, options, locations, SC2Mission, S
     RequiredTactics
 from ..item import item_groups, item_tables, item_names
 from .. import get_all_missions, get_random_first_mission
-from ..options import EnabledCampaigns, NovaGhostOfAChanceVariant, MissionOrder, ExcludeOverpoweredItems, \
+from ..options import EnabledCampaigns, MissionOrder, ExcludeOverpoweredItems, \
     VanillaItemsOnly, MaximumCampaignSize
-
+from ..tables import NovaPresenceOptions
 
 class TestItemFiltering(Sc2SetupTestBase):
     def test_explicit_locks_excludes_interact_and_set_flags(self):
@@ -1037,7 +1037,7 @@ class TestItemFiltering(Sc2SetupTestBase):
         world_options = {
             **self.TERRAN_CAMPAIGNS,
             'mission_order': MissionOrder.option_custom,
-            'nova_ghost_of_a_chance_variant': NovaGhostOfAChanceVariant.option_auto,
+            'nova_presence': {}, # dropped auto option
             'custom_mission_order': {
                 'test': {
                     'type': 'column',
@@ -1059,7 +1059,7 @@ class TestItemFiltering(Sc2SetupTestBase):
         world_options = {
             **self.TERRAN_CAMPAIGNS,
             'mission_order': MissionOrder.option_custom,
-            'nova_ghost_of_a_chance_variant': NovaGhostOfAChanceVariant.option_nco,
+            'nova_presence': {NovaPresenceOptions.GHOST_OF_A_CHANCE},
             'custom_mission_order': {
                 'test': {
                     'type': 'column',
@@ -1081,7 +1081,7 @@ class TestItemFiltering(Sc2SetupTestBase):
         world_options = {
             **self.TERRAN_CAMPAIGNS,
             'mission_order': MissionOrder.option_custom,
-            'nova_ghost_of_a_chance_variant': NovaGhostOfAChanceVariant.option_auto,
+            'nova_presence': {NovaPresenceOptions.GHOST_OF_A_CHANCE, NovaPresenceOptions.NCO_TERRAN},
             'custom_mission_order': {
                 'test': {
                     'type': 'column',
