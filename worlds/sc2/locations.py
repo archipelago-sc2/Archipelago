@@ -14162,7 +14162,6 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.zerg_sudden_strike_requirement(state)
-                and logic.zerg_competent_comp(state)
                 and logic.zerg_base_buster(state)
                 and logic.zerg_power_rating(state) >= 8
             ),
@@ -14220,9 +14219,8 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.protoss_sudden_strike_requirement(state)
-                and logic.zerg_competent_comp(state)
-                and logic.zerg_base_buster(state)
-                and logic.zerg_power_rating(state) >= 8
+                and logic.protoss_death_ball(state)
+                and logic.protoss_power_rating(state) >= 8
             ),
             flags=LocationFlag.BASEBUST,
         ),
