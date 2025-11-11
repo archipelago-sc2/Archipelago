@@ -14219,7 +14219,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.protoss_sudden_strike_requirement(state)
-                and logic.protoss_death_ball(state)
+                and logic.protoss_deathball(state)
                 and logic.protoss_power_rating(state) >= 8
             ),
             flags=LocationFlag.BASEBUST,
