@@ -1656,7 +1656,7 @@ class SC2Logic:
     def ghost_of_a_chance_requirement(self, state: CollectionState) -> bool:
         return (
             self.grant_story_tech == GrantStoryTech.option_grant
-            or NovaPresenceOptions.GHOST_OF_A_CHANCE in self.nova_presence
+            or NovaPresenceOptions.GHOST_OF_A_CHANCE not in self.nova_presence
             or not self.nova_used
             or (
                 self.nova_ranged_weapon(state)

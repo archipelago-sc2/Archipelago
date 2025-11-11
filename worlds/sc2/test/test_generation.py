@@ -174,7 +174,8 @@ class TestItemFiltering(Sc2SetupTestBase):
         self.assertTrue(self.multiworld.itempool)
         world_items = [(item.name, item_tables.item_table[item.name]) for item in self.multiworld.itempool]
         for item_name, item_data in world_items:
-            self.assertNotIn(item_data.type, item_tables.TerranItemType, f"Item '{item_name}' included when all terran missions are excluded")
+            if (item_name not in item_tables.nova_equipment): # Skip Nova items, they can generate for other races
+                self.assertNotIn(item_data.type, item_tables.TerranItemType, f"Item '{item_name}' included when all terran missions are excluded")
 
     def test_excluding_all_terran_build_missions_excludes_all_terran_units(self) -> None:
         world_options = {

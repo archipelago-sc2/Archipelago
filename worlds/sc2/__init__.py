@@ -32,6 +32,7 @@ from .rules import get_basic_units, SC2Logic
 from . import settings
 from .pool_filter import filter_items
 from .mission_tables import SC2Campaign, SC2Mission, SC2Race, MissionFlag
+from .tables import NovaPresenceOptions
 from .regions import create_mission_order
 from .mission_order import SC2MissionOrder
 from worlds.LauncherComponents import components, Component, launch as launch_component
@@ -122,13 +123,24 @@ class SC2World(World):
         self.custom_mission_order = create_mission_order(
             self, get_locations(self), self.location_cache
         )
-        self.logic.nova_used = (
-                MissionFlag.Nova in self.custom_mission_order.get_used_flags()
-                or (
-                        MissionFlag.WoLNova in self.custom_mission_order.get_used_flags()
-                        and 'Ghost of a Chance' in self.options.nova_presence
+        self.logic.nova_used = False
+        for mission in self.custom_mission_order.get_used_missions():
+            if (MissionFlag.Nova in mission.flags 
+                and ( 
+                    MissionFlag.Terran in mission.flags
+                    and NovaPresenceOptions.NCO_TERRAN in self.options.nova_presence
+                    or MissionFlag.Zerg in mission.flags
+                    and NovaPresenceOptions.NCO_ZERG in self.options.nova_presence
+                    or MissionFlag.Protoss in mission.flags
+                    and NovaPresenceOptions.NCO_PROTOSS in self.options.nova_presence
                 )
-        )
+            ):
+                self.logic.nova_used = True
+        if (MissionFlag.WoLNova in self.custom_mission_order.get_used_flags()
+            and NovaPresenceOptions.GHOST_OF_A_CHANCE in self.options.nova_presence
+        ):
+            self.logic.nova_used = True
+
 
     def create_items(self) -> None:
         # Starcraft 2-specific item setup:
