@@ -11,6 +11,7 @@ from .options import (
     get_enabled_campaigns,
 )
 from .mission_tables import SC2Mission, SC2Campaign
+from .tables import NovaPresenceOptions
 
 from BaseClasses import Location
 from worlds.AutoWorld import World
@@ -14606,17 +14607,19 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.VANILLA,
             lambda state: (
                 logic.zerg_night_terrors_requirement(state)
-                and logic.nova_ranged_weapon(state)
-                and state.has_any(
-                    {
-                        item_names.NOVA_HELLFIRE_SHOTGUN,
-                        item_names.NOVA_PULSE_GRENADES,
-                        item_names.NOVA_STIM_INFUSION,
-                        item_names.NOVA_HOLO_DECOY,
-                    },
-                    player,
+                and (
+                    logic.nova_ranged_weapon(state)
+                    and state.has_any(
+                        {
+                            item_names.NOVA_HELLFIRE_SHOTGUN,
+                            item_names.NOVA_PULSE_GRENADES,
+                            item_names.NOVA_STIM_INFUSION,
+                            item_names.NOVA_HOLO_DECOY,
+                        },
+                        player,
+                    )
+                    or NovaPresenceOptions.NCO_ZERG not in logic.nova_presence
                 )
-                # or Nova-less
             ),
         ),
         make_location_data(
@@ -14632,7 +14635,8 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 15710,
             LocationType.VANILLA,
             lambda state: (
-                logic.zerg_night_terrors_requirement(state) and logic.nova_any_weapon(state) # or Nova-less
+                logic.zerg_night_terrors_requirement(state) 
+                and (logic.nova_any_weapon(state) or NovaPresenceOptions.NCO_ZERG not in logic.nova_presence)
             ),
         ),
         make_location_data(
@@ -14698,17 +14702,19 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.VANILLA,
             lambda state: (
                 logic.protoss_night_terrors_requirement(state)
-                and logic.nova_ranged_weapon(state)
-                and state.has_any(
-                    {
-                        item_names.NOVA_HELLFIRE_SHOTGUN,
-                        item_names.NOVA_PULSE_GRENADES,
-                        item_names.NOVA_STIM_INFUSION,
-                        item_names.NOVA_HOLO_DECOY,
-                    },
-                    player,
+                and (
+                    logic.nova_ranged_weapon(state)
+                    and state.has_any(
+                        {
+                            item_names.NOVA_HELLFIRE_SHOTGUN,
+                            item_names.NOVA_PULSE_GRENADES,
+                            item_names.NOVA_STIM_INFUSION,
+                            item_names.NOVA_HOLO_DECOY,
+                        },
+                        player,
+                    )
+                    or NovaPresenceOptions.NCO_PROTOSS not in logic.nova_presence
                 )
-                # or Nova-less
             ),
         ),
         make_location_data(
@@ -14724,7 +14730,8 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 15810,
             LocationType.VANILLA,
             lambda state: (
-                logic.protoss_night_terrors_requirement(state) and logic.nova_any_weapon(state) # or Nova-less
+                logic.protoss_night_terrors_requirement(state) 
+                and (logic.nova_any_weapon(state) or NovaPresenceOptions.NCO_PROTOSS not in logic.nova_presence)
             ),
         ),
         make_location_data(
@@ -15026,7 +15033,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 16500,
             LocationType.VICTORY,
             lambda state: logic.zerg_end_game_requirement(state)
-            and logic.nova_any_weapon(state), # or Nova-less
+            and (logic.nova_any_weapon(state) or NovaPresenceOptions.NCO_ZERG not in logic.nova_presence)
         ),
         make_location_data(
             SC2Mission.END_GAME_Z.mission_name,
@@ -15084,7 +15091,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 16600,
             LocationType.VICTORY,
             lambda state: logic.protoss_end_game_requirement(state)
-            and logic.nova_any_weapon(state), # or Nova-less
+            and (logic.nova_any_weapon(state) or NovaPresenceOptions.NCO_PROTOSS not in logic.nova_presence)
         ),
         make_location_data(
             SC2Mission.END_GAME_P.mission_name,
