@@ -12,8 +12,9 @@ from ..options import (
     GrantStoryLevels, BasebustLocations, ChallengeLocations, DifficultyCurve, EnableMorphling, ExcludeOverpoweredItems,
     ExcludeVeryHardMissions, ExtraLocations, GenericUpgradeItems, GenericUpgradeResearch, GenericUpgradeResearchSpeedup,
     KerriganPrimalStatus, KeyMode, MissionOrderScouting, EnableMissionRaceBalancing,
-    NovaGhostOfAChanceVariant, PreventativeLocations, SpeedrunLocations, TakeOverAIAllies, VanillaItemsOnly
+    PreventativeLocations, SpeedrunLocations, TakeOverAIAllies, VanillaItemsOnly
 )
+from ..tables import NovaPresenceOptions
 
 
 class TestSupportedUseCases(Sc2SetupTestBase):
@@ -545,7 +546,7 @@ class TestSupportedUseCases(Sc2SetupTestBase):
             'mission_order': MissionOrder.option_mini_campaign,
             'mission_order_scouting': MissionOrderScouting.option_none,
             'mission_race_balancing': EnableMissionRaceBalancing.option_semi_balanced,
-            'nova_ghost_of_a_chance_variant': NovaGhostOfAChanceVariant.option_wol,
+            'nova_presence': {NovaPresenceOptions.NCO_TERRAN},
             'preventative_locations': PreventativeLocations.option_enabled,
             'required_tactics': RequiredTactics.option_standard,
             'shuffle_campaigns': ShuffleCampaigns.option_true,
