@@ -1038,7 +1038,7 @@ class TestItemFiltering(Sc2SetupTestBase):
         world_options = {
             **self.TERRAN_CAMPAIGNS,
             'mission_order': MissionOrder.option_custom,
-            'nova_presence': {}, # dropped auto option
+            'nova_presence': {NovaPresenceOptions.GHOST_OF_A_CHANCE_AUTO},
             'custom_mission_order': {
                 'test': {
                     'type': 'column',
@@ -1082,7 +1082,7 @@ class TestItemFiltering(Sc2SetupTestBase):
         world_options = {
             **self.TERRAN_CAMPAIGNS,
             'mission_order': MissionOrder.option_custom,
-            'nova_presence': {NovaPresenceOptions.GHOST_OF_A_CHANCE, NovaPresenceOptions.NCO_TERRAN},
+            'nova_presence': {NovaPresenceOptions.GHOST_OF_A_CHANCE_AUTO, NovaPresenceOptions.NCO_TERRAN},
             'custom_mission_order': {
                 'test': {
                     'type': 'column',
