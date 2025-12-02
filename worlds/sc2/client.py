@@ -1816,8 +1816,9 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 game_speed = self.ctx.game_speed_override
             else:
                 game_speed = self.ctx.game_speed
-            await self.chat_send(
-                "?SetOptions"
+
+            OptionsBank = SC2Bank("ArchipelagoOptions")
+            OptionsBank.addEntry("GameOptions","Options",
                 f" {difficulty}"
                 f" {generic_upgrade_options}"
                 f" {self.ctx.all_in_choice}"
@@ -1838,31 +1839,41 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 f" {self.ctx.mercenary_highlanders}" # TODO: Possibly rework it into unit options in the next cycle
                 f" {self.ctx.war_council_nerfs}"
             )
-            await self.update_resources(start_items)
-            #await self.update_terran_tech(start_items)
-            terran_items = start_items[SC2Race.TERRAN]
-            b = SC2Bank("ArchipelagoItems")
-            b.addEntry("Items","TerranItems",f" ".join(map(str, terran_items)))
-            b.makeFile()
-            await self.update_zerg_tech(start_items, kerrigan_level)
-            await self.update_protoss_tech(start_items)
-            await self.update_misc_tech(start_items)
-            await self.update_colors()
+            OptionsBank.makeFile()
+            self.update_tech(start_items,kerrigan_level)
+
+            
+            CoreOptionsBank = SC2Bank("ArchipelagoCoreOptions")
+            CoreOptionsBank.addEntry("CoreOptions","StartingResources",self.get_resources(start_items))
+            CoreOptionsBank.addEntry("CoreOptions","FactionColors",self.get_colors())
             if uncollected_objectives:
-                await self.chat_send("?UncollectedLocations {}".format(
+                CoreOptionsBank.addEntry("CoreOptions","UncollectedLocations","{}".format(
                     functools.reduce(lambda a, b: a + " " + b, [str(x) for x in uncollected_objectives])
                 ))
-            await self.chat_send("?LoadFinished")
-            self.last_received_update = len(self.ctx.items_received)
-
+            CoreOptionsBank.addEntry("CoreOptions","LoadFinished","1")
+            CoreOptionsBank.makeFile()
+            '''
+            self.last_received_update = len(self.ctx.items_received)"""
         else:
-            if self.ctx.pending_color_update:
-                await self.update_colors()
+            #if self.ctx.pending_color_update:
+            #    await self.update_colors()
+
+            #messages = []
+            #for i in range(20):
+            #    if not self.ctx.announcements.empty(): 
+            #        messages[i] = self.ctx.announcements.get_nowait()
+            #        self.ctx.announcements.task_done()
+            #    else:
+            #        break
+            #if messages:
+            #    self.send_chat_message(messages)
 
             if not self.ctx.announcements.empty():
                 message = self.ctx.announcements.get(timeout=1)
-                await self.chat_send("?SendMessage " + message)
+                self.send_chat_message({message})
                 self.ctx.announcements.task_done()
+            '''
+
             '''
             # Archipelago reads the health
             controller1_state = 0
@@ -1926,40 +1937,32 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                         self.last_supply_used = self.supply_used
             game_state = controller1_state + (controller2_state << 15)
             '''
-            next_line = False
-            l = '<Value string="'
-            r = '"/>'
-            with open(get_bank_folder() + "/ArchipelagoLocations.SC2Bank") as locationBank:
-                for line in locationBank:
-                    if next_line:
-                        game_state = int(line[line.find(l) + len(l):line.rfind(r)])
-                        self.can_read_game = True
-                        break
-                    if '<Key name="GameState">' in line:
-                        next_line = True
 
-                    
-            
+            '''
+            game_state = self.get_locations()
+
+            if game_state & 1:
+                self.can_read_game = True
+
             if iteration == 160 and not game_state & 1:
-                await self.chat_send("?SendMessage Warning: Archipelago unable to connect or has lost connection to " +
-                                     "Starcraft 2 (This is likely a map issue)")
+                self.send_chat_message({"Warning: Archipelago unable to connect or has lost connection to " +
+                                        "Starcraft 2 (This is likely a map issue)"})
+                
             if game_state & 1:
                 if not self.game_running:
-                    await self.chat_send("?SendMessage Archipelago Connected")
-                    print("Archipelago Connected")
+                    self.send_chat_message({"Archipelago Connected"})
+                    #print("Archipelago Connected")
                     self.game_running = True
-
+            '''
+            '''
             if self.last_received_update < len(self.ctx.items_received):
                 current_items = calculate_items(self.ctx)
                 missions_beaten = self.missions_beaten_count()
                 kerrigan_level = get_kerrigan_level(self.ctx, current_items, missions_beaten)
-                await self.update_resources(current_items)
-                await self.update_terran_tech(current_items)
-                await self.update_zerg_tech(current_items, kerrigan_level)
-                await self.update_protoss_tech(current_items)
-                await self.update_misc_tech(current_items)
+                self.update_core_options(current_items)
+                self.update_tech(current_items, kerrigan_level)
                 self.last_received_update = len(self.ctx.items_received)
-
+            '''
             if game_state & 1:
                 if not self.game_running:
                     print("Archipelago Connected")
@@ -2006,8 +2009,34 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                         # Wait an arbitrary amount of frames before trying again
                         self.trade_reply_cooldown = 60
                 else:
-                    await self.chat_send("?SendMessage LostConnection - Lost connection to game.")
+                    self.send_chat_message({"LostConnection - Lost connection to game."})
 
+    def clean_chat_message(self, message: str) -> str:
+        return message.replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
+
+    def send_chat_message(self, messages: typing.List[str]):
+        bank = SC2Bank("ArchipelagoMessages")
+        i = 0
+        for msg in messages:
+            #TODO: Check for limits/staggering
+            i+=1
+            bank.addEntry("Messages",f"Message{str(i)}", self.clean_chat_message(msg))
+        bank.makeFile()
+
+    def get_locations(self) -> str:
+            result = "0"
+            next_line = False
+            l = '<Value string="'
+            r = '"/>'
+            with open(get_bank_folder() + "/ArchipelagoLocations.SC2Bank") as locationBank:
+                for line in locationBank:
+                    if next_line:
+                        result = int(line[line.find(l) + len(l):line.rfind(r)])
+                        break
+                    if '<Key name="GameState">' in line:
+                        next_line = True
+            return result
+    
     def get_uncollected_objectives(self) -> typing.List[int]:
         result = [
             location % VICTORY_MODULO
@@ -2019,15 +2048,16 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
     def missions_beaten_count(self) -> int:
         return len([location for location in self.ctx.checked_locations if location % VICTORY_MODULO == 0])
 
-    async def update_colors(self):
-        await self.chat_send("?SetColor rr " + str(self.ctx.player_color_raynor))
-        await self.chat_send("?SetColor ks " + str(self.ctx.player_color_zerg))
-        await self.chat_send("?SetColor pz " + str(self.ctx.player_color_zerg_primal))
-        await self.chat_send("?SetColor da " + str(self.ctx.player_color_protoss))
-        await self.chat_send("?SetColor nova " + str(self.ctx.player_color_nova))
+    def get_colors(self) -> str:
         self.ctx.pending_color_update = False
+        return f"""{str(self.ctx.player_color_raynor)} 
+                   {str(self.ctx.player_color_zerg)} 
+                   {str(self.ctx.player_color_zerg_primal)} 
+                   {str(self.ctx.player_color_protoss)} 
+                   {str(self.ctx.player_color_nova)}  
+        """
 
-    async def update_resources(self, current_items: typing.Dict[SC2Race, typing.List[int]]):
+    def get_resources(self, current_items: typing.Dict[SC2Race, typing.List[int]]) -> str:
         DEFAULT_MAX_SUPPLY = 200
         max_supply_amount = max(
             DEFAULT_MAX_SUPPLY
@@ -2041,34 +2071,48 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             ),
             self.ctx.lowest_maximum_supply,
         )
-        await self.chat_send("?GiveResources {} {} {} {}".format(
+        return ("{} {} {} {}".format(
             current_items[SC2Race.ANY][get_item_flag_word(item_names.STARTING_MINERALS)],
             current_items[SC2Race.ANY][get_item_flag_word(item_names.STARTING_VESPENE)],
             current_items[SC2Race.ANY][get_item_flag_word(item_names.STARTING_SUPPLY)],
             max_supply_amount - DEFAULT_MAX_SUPPLY,
         ))
 
-    async def update_terran_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]]):
+    def get_terran_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]]) -> str:
         terran_items = current_items[SC2Race.TERRAN]
-        await self.chat_send("?GiveTerranTech " + " ".join(map(str, terran_items)))
+        return (" ".join(map(str, terran_items)))
 
-    async def update_zerg_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]], kerrigan_level: int):
+    def get_zerg_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]], kerrigan_level: int) -> str:
         zerg_items = current_items[SC2Race.ZERG]
         zerg_items = [value for index, value in enumerate(zerg_items) if index not in [ZergItemType.Level.flag_word, ZergItemType.Primal_Form.flag_word]]
         kerrigan_primal_by_items = kerrigan_primal(self.ctx, kerrigan_level)
         kerrigan_primal_bot_value = 1 if kerrigan_primal_by_items else 0
-        await self.chat_send(f"?GiveZergTech {kerrigan_level} {kerrigan_primal_bot_value} " + ' '.join(map(str, zerg_items)))
+        return(f"{kerrigan_level} {kerrigan_primal_bot_value} " + ' '.join(map(str, zerg_items)))
 
-    async def update_protoss_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]]):
+    def get_protoss_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]]) -> str:
         protoss_items = current_items[SC2Race.PROTOSS]
-        await self.chat_send("?GiveProtossTech " + " ".join(map(str, protoss_items)))
+        return (" ".join(map(str, protoss_items)))
 
-    async def update_misc_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]]):
-        await self.chat_send("?GiveMiscTech {} {} {}".format(
+    def get_misc_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]]) -> str:
+        return self.chat_send("{} {} {}".format(
             current_items[SC2Race.ANY][get_item_flag_word(item_names.BUILDING_CONSTRUCTION_SPEED)],
             current_items[SC2Race.ANY][get_item_flag_word(item_names.UPGRADE_RESEARCH_SPEED)],
             current_items[SC2Race.ANY][get_item_flag_word(item_names.UPGRADE_RESEARCH_COST)],
         ))
+
+    def update_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]], kerrigan_level: int):
+        ItemBank = SC2Bank("ArchipelagoItems")
+        ItemBank.addEntry("Items","TerranItems",self.get_terran_tech(current_items))
+        ItemBank.addEntry("Items","ZergItems",self.get_zerg_tech(current_items, kerrigan_level))
+        ItemBank.addEntry("Items","ProtossItems",self.get_protoss_tech(current_items))
+        ItemBank.addEntry("Items","MiscItems",self.get_misc_tech(current_items))
+        ItemBank.makeFile()
+    
+    def update_core_options(self, current_items: typing.Dict[SC2Race, typing.List[int]]):
+        CoreOptionsBank = SC2Bank("ArchipelagoCoreOptions")
+        CoreOptionsBank.addEntry("CoreOptions","StartingResources",self.get_resources(current_items))
+        CoreOptionsBank.addEntry("CoreOptions","FactionColors",self.get_colors())
+        CoreOptionsBank.makeFile()
 
 def calc_unfinished_nodes(
         ctx: SC2Context
