@@ -115,6 +115,10 @@ STARCRAFT2_WOL = "Starcraft 2 Wings of Liberty"
 def get_metadata_file() -> str:
     return os.environ["SC2PATH"] + os.sep + "ArchipelagoSC2Metadata.txt"
 
+# file path to bank folder.
+def get_bank_folder() -> str:
+    return os.path.expanduser("~/Documents/StarCraft II/Banks")
+
 
 def _remap_color_option(slot_data_version: int, color: int) -> int:
     """Remap colour options for backwards compatibility with older slot data"""
@@ -595,7 +599,34 @@ class SC2JSONtoTextParser(JSONtoTextParser):
     def color_code(self, code: str) -> str:
         return '<c val="' + self.color_codes[code] + '">'
 
+class SC2Bank():
+    fileName = "NewBank"
+    sections = {}
+    def __init__(self, name: str) -> None:
+        self.fileName = name
+        self.sections: typing.Dict[str, typing.Dict[str, str]] = {}
 
+    def addSection(self, sectionName: str) -> None:
+        self.sections[sectionName] = {}
+
+    def addEntry(self, sectionName: str, key: str, value: str) -> None:
+        if not sectionName in self.sections:
+            self.addSection(sectionName)
+        self.sections[sectionName][key]=value
+
+    def makeFile(self) -> None:
+        content =          f'<?xml version="1.0" encoding="utf-8"?>\n<Bank version="1">\n'
+        for name, section in self.sections.items():
+            content +=     f'    <Section name="{name}">\n'
+            for key, value in section.items():
+                content += f'        <Key name="{key}">\n'
+                content += f'            <Value name="{value}"/>\n'
+                content += f'        </Key>\n'
+            content +=     f'    </Section>\n'
+        content +=         f'</Bank>'
+        with open(get_bank_folder() + f"/Backup/{self.fileName}_backup_0.SC2Bank", "w") as f:
+            f.write(content)
+            
 class SC2Context(CommonContext):
     command_processor = StarcraftClientProcessor
     game = STARCRAFT2
@@ -1808,7 +1839,11 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 f" {self.ctx.war_council_nerfs}"
             )
             await self.update_resources(start_items)
-            await self.update_terran_tech(start_items)
+            #await self.update_terran_tech(start_items)
+            terran_items = start_items[SC2Race.TERRAN]
+            b = SC2Bank("ArchipelagoItems")
+            b.addEntry("Items","TerranItems",f" ".join(map(str, terran_items)))
+            b.makeFile()
             await self.update_zerg_tech(start_items, kerrigan_level)
             await self.update_protoss_tech(start_items)
             await self.update_misc_tech(start_items)
@@ -1828,7 +1863,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 message = self.ctx.announcements.get(timeout=1)
                 await self.chat_send("?SendMessage " + message)
                 self.ctx.announcements.task_done()
-
+            '''
             # Archipelago reads the health
             controller1_state = 0
             controller2_state = 0
@@ -1890,10 +1925,29 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                         # so a supply buffer here is the best we can do
                         self.last_supply_used = self.supply_used
             game_state = controller1_state + (controller2_state << 15)
+            '''
+            next_line = False
+            l = '<Value string="'
+            r = '"/>'
+            with open(get_bank_folder() + "/ArchipelagoLocations.SC2Bank") as locationBank:
+                for line in locationBank:
+                    if next_line:
+                        game_state = int(line[line.find(l) + len(l):line.rfind(r)])
+                        self.can_read_game = True
+                        break
+                    if '<Key name="GameState">' in line:
+                        next_line = True
 
+                    
+            
             if iteration == 160 and not game_state & 1:
                 await self.chat_send("?SendMessage Warning: Archipelago unable to connect or has lost connection to " +
                                      "Starcraft 2 (This is likely a map issue)")
+            if game_state & 1:
+                if not self.game_running:
+                    await self.chat_send("?SendMessage Archipelago Connected")
+                    print("Archipelago Connected")
+                    self.game_running = True
 
             if self.last_received_update < len(self.ctx.items_received):
                 current_items = calculate_items(self.ctx)
