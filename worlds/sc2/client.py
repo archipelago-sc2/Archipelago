@@ -1852,8 +1852,8 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 ))
             CoreOptionsBank.addEntry("CoreOptions","LoadFinished","1")
             CoreOptionsBank.makeFile()
-            '''
-            self.last_received_update = len(self.ctx.items_received)"""
+
+            self.last_received_update = len(self.ctx.items_received)
         else:
             #if self.ctx.pending_color_update:
             #    await self.update_colors()
@@ -1872,20 +1872,10 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 message = self.ctx.announcements.get(timeout=1)
                 self.send_chat_message({message})
                 self.ctx.announcements.task_done()
-            '''
 
             '''
-            # Archipelago reads the health
-            controller1_state = 0
-            controller2_state = 0
             for unit in self.all_own_units():
-                if unit.health_max == CONTROLLER_HEALTH:
-                    controller1_state = int(CONTROLLER_HEALTH - unit.health)
-                    self.can_read_game = True
-                elif unit.health_max == CONTROLLER2_HEALTH:
-                    controller2_state = int(CONTROLLER2_HEALTH - unit.health)
-                    self.can_read_game = True
-                elif unit.name == TRADE_UNIT:
+                if unit.name == TRADE_UNIT:
                     # Handle Void Trade requests
                     # Check for orders (for buildings this is usually research or training)
                     if not unit.is_idle and not self.ctx.trade_underway:
@@ -1935,10 +1925,8 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                         # SC2 has no good means of detecting when a unit is queued while supply capped,
                         # so a supply buffer here is the best we can do
                         self.last_supply_used = self.supply_used
-            game_state = controller1_state + (controller2_state << 15)
             '''
 
-            '''
             game_state = self.get_locations()
 
             if game_state & 1:
@@ -1953,8 +1941,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                     self.send_chat_message({"Archipelago Connected"})
                     #print("Archipelago Connected")
                     self.game_running = True
-            '''
-            '''
+            
             if self.last_received_update < len(self.ctx.items_received):
                 current_items = calculate_items(self.ctx)
                 missions_beaten = self.missions_beaten_count()
@@ -1962,7 +1949,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 self.update_core_options(current_items)
                 self.update_tech(current_items, kerrigan_level)
                 self.last_received_update = len(self.ctx.items_received)
-            '''
+            
             if game_state & 1:
                 if not self.game_running:
                     print("Archipelago Connected")
@@ -2094,7 +2081,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
         return (" ".join(map(str, protoss_items)))
 
     def get_misc_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]]) -> str:
-        return self.chat_send("{} {} {}".format(
+        return ("{} {} {}".format(
             current_items[SC2Race.ANY][get_item_flag_word(item_names.BUILDING_CONSTRUCTION_SPEED)],
             current_items[SC2Race.ANY][get_item_flag_word(item_names.UPGRADE_RESEARCH_SPEED)],
             current_items[SC2Race.ANY][get_item_flag_word(item_names.UPGRADE_RESEARCH_COST)],
