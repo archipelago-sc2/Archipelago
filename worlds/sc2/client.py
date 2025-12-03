@@ -1936,6 +1936,10 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 self.send_chat_message({"Warning: Archipelago unable to connect or has lost connection to " +
                                         "Starcraft 2 (This is likely a map issue)"})
                 
+            if os.path.isfile(f"{get_bank_folder()}/ArchipelagoUpdate.SC2Bank"):
+                self.last_received_update = 0
+                os.remove(f"{get_bank_folder()}/ArchipelagoUpdate.SC2Bank")
+                
             if self.last_received_update < len(self.ctx.items_received):
                 current_items = calculate_items(self.ctx)
                 missions_beaten = self.missions_beaten_count()
