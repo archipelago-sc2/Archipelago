@@ -1817,8 +1817,8 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             else:
                 game_speed = self.ctx.game_speed
 
-            OptionsBank = SC2Bank("ArchipelagoOptions")
-            OptionsBank.addEntry("GameOptions","Options",
+            options_bank = SC2Bank("ArchipelagoOptions")
+            options_bank.addEntry("GameOptions", "Options",
                 f" {difficulty}"
                 f" {generic_upgrade_options}"
                 f" {self.ctx.all_in_choice}"
@@ -1839,19 +1839,19 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 f" {self.ctx.mercenary_highlanders}" # TODO: Possibly rework it into unit options in the next cycle
                 f" {self.ctx.war_council_nerfs}"
             )
-            OptionsBank.makeFile()
-            self.update_tech(start_items,kerrigan_level)
+            options_bank.makeFile()
+            self.update_tech(start_items, kerrigan_level)
 
             
-            CoreOptionsBank = SC2Bank("ArchipelagoCoreOptions")
-            CoreOptionsBank.addEntry("CoreOptions","StartingResources",self.get_resources(start_items))
-            CoreOptionsBank.addEntry("CoreOptions","FactionColors",self.get_colors())
+            core_options_bank = SC2Bank("ArchipelagoCoreOptions")
+            core_options_bank.addEntry("CoreOptions", "StartingResources", self.get_resources(start_items))
+            core_options_bank.addEntry("CoreOptions", "FactionColors", self.get_colors())
             if uncollected_objectives:
-                CoreOptionsBank.addEntry("CoreOptions","UncollectedLocations","{}".format(
+                core_options_bank.addEntry("CoreOptions", "UncollectedLocations","{}".format(
                     functools.reduce(lambda a, b: a + " " + b, [str(x) for x in uncollected_objectives])
                 ))
-            CoreOptionsBank.addEntry("CoreOptions","LoadFinished","1")
-            CoreOptionsBank.makeFile()
+            core_options_bank.addEntry("CoreOptions", "LoadFinished", "1")
+            core_options_bank.makeFile()
 
             self.last_received_update = len(self.ctx.items_received)
         else:
@@ -1936,12 +1936,6 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 self.send_chat_message({"Warning: Archipelago unable to connect or has lost connection to " +
                                         "Starcraft 2 (This is likely a map issue)"})
                 
-            if game_state & 1:
-                if not self.game_running:
-                    self.send_chat_message({"Archipelago Connected"})
-                    #print("Archipelago Connected")
-                    self.game_running = True
-            
             if self.last_received_update < len(self.ctx.items_received):
                 current_items = calculate_items(self.ctx)
                 missions_beaten = self.missions_beaten_count()
@@ -1952,9 +1946,10 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             
             if game_state & 1:
                 if not self.game_running:
-                    print("Archipelago Connected")
+                    self.send_chat_message({"Archipelago Connected"})
+                    #print("Archipelago Connected")
                     self.game_running = True
-
+            
                 if self.can_read_game:
                     if game_state & (1 << 1) and not self.mission_completed:
                         victory_locations = [get_location_id(self.mission_id, 0)]
@@ -2088,18 +2083,18 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
         ))
 
     def update_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]], kerrigan_level: int):
-        ItemBank = SC2Bank("ArchipelagoItems")
-        ItemBank.addEntry("Items","TerranItems",self.get_terran_tech(current_items))
-        ItemBank.addEntry("Items","ZergItems",self.get_zerg_tech(current_items, kerrigan_level))
-        ItemBank.addEntry("Items","ProtossItems",self.get_protoss_tech(current_items))
-        ItemBank.addEntry("Items","MiscItems",self.get_misc_tech(current_items))
-        ItemBank.makeFile()
+        item_bank = SC2Bank("ArchipelagoItems")
+        item_bank.addEntry("Items", "TerranItems", self.get_terran_tech(current_items))
+        item_bank.addEntry("Items", "ZergItems", self.get_zerg_tech(current_items, kerrigan_level))
+        item_bank.addEntry("Items", "ProtossItems", self.get_protoss_tech(current_items))
+        item_bank.addEntry("Items", "MiscItems", self.get_misc_tech(current_items))
+        item_bank.makeFile()
     
     def update_core_options(self, current_items: typing.Dict[SC2Race, typing.List[int]]):
-        CoreOptionsBank = SC2Bank("ArchipelagoCoreOptions")
-        CoreOptionsBank.addEntry("CoreOptions","StartingResources",self.get_resources(current_items))
-        CoreOptionsBank.addEntry("CoreOptions","FactionColors",self.get_colors())
-        CoreOptionsBank.makeFile()
+        core_options_bank = SC2Bank("ArchipelagoCoreOptions")
+        core_options_bank.addEntry("CoreOptions", "StartingResources", self.get_resources(current_items))
+        core_options_bank.addEntry("CoreOptions", "FactionColors", self.get_colors())
+        core_options_bank.makeFile()
 
 def calc_unfinished_nodes(
         ctx: SC2Context
