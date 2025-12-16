@@ -1,18 +1,17 @@
 import functools
 from dataclasses import fields, Field, dataclass
-from typing import *
+from typing import TYPE_CHECKING, Iterable, Any, Type, Iterator, Mapping
 from datetime import timedelta
 
 from Options import (
     Choice, Toggle, DefaultOnToggle, OptionSet, Range,
-    PerGameCommonOptions, Option, VerifyKeys, StartInventory,
-    is_iterable_except_str, OptionGroup, Visibility, ItemDict,
-    Accessibility, ProgressionBalancing
+    PerGameCommonOptions, VerifyKeys, StartInventory,
+    OptionGroup, ItemDict,
+    OptionCounter,
 )
 from Utils import get_fuzzy_results
 from BaseClasses import PlandoOptions
-from .item import item_names, item_tables
-from .item.item_groups import kerrigan_active_abilities, kerrigan_passives, nova_weapons, nova_gadgets
+from .item import item_names, item_tables, item_groups
 from .mission_tables import (
     SC2Campaign, SC2Mission, lookup_name_to_mission, MissionPools, get_missions_with_any_flags_in_list,
     campaign_mission_table, SC2Race, MissionFlag
@@ -29,19 +28,15 @@ class Sc2MissionSet(OptionSet):
     """Option set made for handling missions and expanding mission groups"""
     valid_keys: Iterable[str] = [x.mission_name for x in SC2Mission]
 
-    @classmethod
-    def from_any(cls, data: Any):
-        if is_iterable_except_str(data):
-            return cls(data)
-        return cls.from_text(str(data))
-
     def verify(self, world: Type['World'], player_name: str, plando_options: PlandoOptions) -> None:
         """Overridden version of function from Options.VerifyKeys for a better error message"""
         new_value: set[str] = set()
         case_insensitive_group_mapping = {
             group_name.casefold(): group_value for group_name, group_value in mission_groups.items()
         }
-        case_insensitive_group_mapping.update({mission.mission_name.casefold(): [mission.mission_name] for mission in SC2Mission})
+        case_insensitive_group_mapping.update(
+            {mission.mission_name.casefold(): [mission.mission_name] for mission in SC2Mission}
+        )
         for group_name in self.value:
             item_names = case_insensitive_group_mapping.get(group_name.casefold(), {group_name})
             new_value.update(item_names)
@@ -69,7 +64,7 @@ class SelectedRaces(OptionSet):
     Pick which factions' missions and items can be shuffled into the world.
     """
     display_name = "Select Playable Races"
-    valid_keys = {race.get_title() for race in SC2Race if race != SC2Race.ANY}
+    valid_keys = frozenset(race.get_title() for race in SC2Race if race != SC2Race.ANY)
     default = valid_keys
 
 
@@ -127,12 +122,13 @@ class AllInMap(Choice):
     display_name = "All In Map"
     option_ground = 0
     option_air = 1
-    default = 'random'
+    default = 'random'  # type: ignore
 
 
 class MissionOrder(Choice):
     """
-    Determines the order the missions are played in.  The first three mission orders ignore the Maximum Campaign Size option.
+    Determines the order the missions are played in.
+    The first three mission orders ignore the Maximum Campaign Size option.
     Vanilla (83 total if all campaigns enabled): Keeps the standard mission order and branching from the vanilla Campaigns.
     Vanilla Shuffled (83 total if all campaigns enabled): Keeps same branching paths from the vanilla Campaigns but randomizes the order of missions within.
     Mini Campaign (47 total if all campaigns enabled): Shorter version of the campaign with randomized missions and optional branches.
@@ -173,7 +169,6 @@ class TwoStartPositions(Toggle):
     removes the first mission and allows both of the next two missions to be played from the start.
     """
     display_name = "Two start missions"
-    default = Toggle.option_false
 
 
 class KeyMode(Choice):
@@ -266,8 +261,8 @@ class EnabledCampaigns(OptionSet):
     - 'Nova Covert Ops'
     """
     display_name = "Enabled Campaigns"
-    valid_keys = {campaign.campaign_name for campaign in SC2Campaign if campaign != SC2Campaign.GLOBAL}
-    default = set((SC2Campaign.WOL.campaign_name,))
+    valid_keys = frozenset(campaign.campaign_name for campaign in SC2Campaign if campaign != SC2Campaign.GLOBAL)
+    default = frozenset((SC2Campaign.WOL.campaign_name,))
 
 
 class EnableRaceSwapVariants(Choice):
@@ -359,10 +354,11 @@ class RequiredTactics(Choice):
 
 class EnableVoidTrade(Toggle):
     """
-    Enables the Void Trade Wormhole to be built from the Advanced Construction tab of SCVs, Drones and Probes.  
-    This structure allows sending units to the Archipelago server, as well as buying random units from the server.  
-    
-    Note: Always disabled if there is no other Starcraft II world with Void Trade enabled in the multiworld.  You cannot receive units that you send.
+    Enables the Void Trade Wormhole to be built from the Advanced Construction tab of SCVs, Drones and Probes.
+    This structure allows sending units to the Archipelago server, as well as buying random units from the server.
+
+    Note: Always disabled if there is no other Starcraft II world with Void Trade enabled in the multiworld.
+    You cannot receive units that you send.
     """
     display_name = "Enable Void Trade"
 
@@ -418,7 +414,7 @@ class GenericUpgradeMissions(Range):
     """
     display_name = "Generic Upgrade Missions"
     range_start = 0
-    range_end = 100 # Higher values lead to fails often
+    range_end = 100  # Higher values lead to fails often
     default = 0
 
 
@@ -584,7 +580,8 @@ class KerriganLevelsPerMissionCompleted(Range):
 
 class KerriganLevelsPerMissionCompletedCap(Range):
     """
-    Limits how many total levels Kerrigan can gain from beating missions.  This does not affect levels gained from items.  
+    Limits how many total levels Kerrigan can gain from beating missions.
+    This does not affect levels gained from items.
     Set to -1 to disable this limit.
 
     NOTE: The following missions have these level requirements:
@@ -600,7 +597,8 @@ class KerriganLevelsPerMissionCompletedCap(Range):
 
 class KerriganLevelItemSum(Range):
     """
-    Determines the sum of the level items in the world.  This does not affect levels gained from beating missions.
+    Determines the sum of the level items in the world.
+    This does not affect levels gained from beating missions.
 
     NOTE: The following missions have these level requirements:
     Supreme: 35
@@ -620,17 +618,18 @@ class KerriganLevelItemDistribution(Choice):
     This entails 32 individual levels and 6 packs of varying sizes.
     This distribution always adds up to 70, ignoring the Level Item Sum setting.
     Smooth:  Uses a custom, condensed distribution of 10 items between sizes 4 and 10,
-    intended to fit more levels into settings with little room for filler while keeping some variance in level gains.
+      intended to fit more levels into settings with little room for filler
+      while keeping some variance in level gains.
     This distribution always adds up to 70, ignoring the Level Item Sum setting.
-    Size 70:  Uses items worth 70 levels each.
-    Size 35:  Uses items worth 35 levels each.
-    Size 14:  Uses items worth 14 levels each.
-    Size 10:  Uses items worth 10 levels each.
+    Size 70: Uses items worth 70 levels each.
+    Size 35: Uses items worth 35 levels each.
+    Size 14: Uses items worth 14 levels each.
+    Size 10: Uses items worth 10 levels each.
     Size 7:  Uses items worth 7 levels each.
     Size 5:  Uses items worth 5 levels each.
     Size 2:  Uses items worth 2 level eachs.
-    Size 1:  Uses individual levels.  As there are not enough locations in the game for this distribution,
-    this will result in a greatly reduced total level, and is likely to remove many other items."""
+    Size 1:  Uses individual levels. As there are not enough locations in the game for this distribution,
+      this will result in a greatly reduced total level, and is likely to remove many other items."""
     display_name = "Kerrigan Level Item Distribution"
     option_vanilla = 0
     option_smooth = 1
@@ -700,7 +699,7 @@ class KerriganMaxActiveAbilities(Range):
     """
     display_name = "Kerrigan Maximum Active Abilities"
     range_start = 0
-    range_end = len(kerrigan_active_abilities)
+    range_end = len(item_groups.kerrigan_active_abilities)
     default = range_end
 
 
@@ -711,7 +710,7 @@ class KerriganMaxPassiveAbilities(Range):
     """
     display_name = "Kerrigan Maximum Passive Abilities"
     range_start = 0
-    range_end = len(kerrigan_passives)
+    range_end = len(item_groups.kerrigan_passives)
     default = range_end
 
 
@@ -817,7 +816,10 @@ class SpearOfAdunMaxActiveAbilities(Range):
     """
     display_name = "Spear of Adun Maximum Active Abilities"
     range_start = 0
-    range_end = sum([item.quantity for item_name, item in item_tables.get_full_item_list().items() if item_name in item_tables.spear_of_adun_calldowns])
+    range_end = sum([
+        item_tables.item_table[item_name].quantity
+        for item_name in item_tables.spear_of_adun_calldowns
+    ])
     default = range_end
 
 
@@ -829,7 +831,10 @@ class SpearOfAdunMaxAutocastAbilities(Range):
     """
     display_name = "Spear of Adun Maximum Passive Abilities"
     range_start = 0
-    range_end = sum(item.quantity for item_name, item in item_tables.get_full_item_list().items() if item_name in item_tables.spear_of_adun_castable_passives)
+    range_end = sum(
+        item_tables.item_table[item_name].quantity
+        for item_name in item_groups.spear_of_adun_passives
+    )
     default = range_end
 
 
@@ -883,7 +888,7 @@ class NovaMaxWeapons(Range):
     """
     display_name = "Nova Maximum Weapons"
     range_start = 0
-    range_end = len(nova_weapons)
+    range_end = len(item_groups.nova_weapons)
     default = range_end
 
 
@@ -897,7 +902,7 @@ class NovaMaxGadgets(Range):
     """
     display_name = "Nova Maximum Gadgets"
     range_start = 0
-    range_end = len(nova_gadgets)
+    range_end = len(item_groups.nova_gadgets)
     default = range_end
 
 
@@ -932,33 +937,48 @@ class TakeOverAIAllies(Toggle):
     display_name = "Take Over AI Allies"
 
 
-class Sc2ItemDict(Option[Dict[str, int]], VerifyKeys, Mapping[str, int]):
-    """A branch of ItemDict that supports item counts of 0"""
+class Sc2ItemDict(OptionCounter, VerifyKeys, Mapping[str, int]):
+    """A branch of ItemDict that supports negative item counts"""
     default = {}
     supports_weighting = False
     verify_item_name = True
     # convert_name_groups = True
     display_name = 'Unnamed dictionary'
-    minimum_value: int = 0
+    # Note(phaneros): Limiting minimum to -1 means that if two triggers add -1 to the same item,
+    # the validation fails. So give trigger people space to stack a bunch of triggers.
+    min: int = -1000
+    max: int = 1000
+    valid_keys = set(item_tables.item_table) | set(item_groups.item_name_groups)
 
-    def __init__(self, value: Dict[str, int]):
-        self.value = {key: val for key, val in value.items()}
+    def __init__(self, value: dict[str, int]):
+        self.value: dict[str, int] = {key: val for key, val in value.items()}
 
     @classmethod
-    def from_any(cls, data: Union[List[str], Dict[str, int]]) -> 'Sc2ItemDict':
+    def from_any(cls, data: list[str] | dict[str, int]) -> 'Sc2ItemDict':
         if isinstance(data, list):
-            # This is a little default that gets us backwards compatibility with lists.
-            # It doesn't play nice with trigger merging dicts and lists together, though, so best not to advertise it overmuch.
-            data = {item: 0 for item in data}
+            raise ValueError(
+                f"{cls.display_name}: Cannot convert from list. "
+                f"Use dict syntax (no dashes, 'value: number' synax)."
+            )
         if isinstance(data, dict):
             for key, value in data.items():
                 if not isinstance(value, int):
-                    raise ValueError(f"Invalid type in '{cls.display_name}': element '{key}' maps to '{value}', expected an integer")
-                if value < cls.minimum_value:
-                    raise ValueError(f"Invalid value for '{cls.display_name}': element '{key}' maps to {value}, which is less than the minimum ({cls.minimum_value})")
+                    raise ValueError(
+                        f"Invalid type in '{cls.display_name}': "
+                        f"element '{key}' maps to '{value}', expected an integer"
+                    )
+                if value < cls.min:
+                    raise ValueError(
+                        f"Invalid value for '{cls.display_name}': "
+                        f"element '{key}' maps to {value}, which is less than the minimum ({cls.min})"
+                    )
+                if value > cls.max:
+                    raise ValueError(f"Invalid value for '{cls.display_name}': "
+                    f"element '{key}' maps to {value}, which is greater than the maximum ({cls.max})"
+                )
             return cls(data)
         else:
-            raise NotImplementedError(f"Cannot Convert from non-dictionary, got {type(data)}")
+            raise NotImplementedError(f"{cls.display_name}: Cannot convert from non-dictionary, got {type(data)}")
 
     def verify(self, world: Type['World'], player_name: str, plando_options: PlandoOptions) -> None:
         """Overridden version of function from Options.VerifyKeys for a better error message"""
@@ -974,17 +994,19 @@ class Sc2ItemDict(Option[Dict[str, int]], VerifyKeys, Mapping[str, int]):
         self.value = new_value
         for item_name in self.value:
             if item_name not in world.item_names:
-                from .item import item_groups
                 picks = get_fuzzy_results(
                     item_name,
                     list(world.item_names) + list(item_groups.ItemGroupNames.get_all_group_names()),
                     limit=1,
                 )
-                raise Exception(f"Item {item_name} from option {self} "
-                                f"is not a valid item name from {world.game}. "
-                                f"Did you mean '{picks[0][0]}' ({picks[0][1]}% sure)")
+                raise Exception(
+                    f"Item {item_name} from option {self} "
+                    f"is not a valid item name from {world.game}. "
+                    f"Did you mean '{picks[0][0]}' ({picks[0][1]}% sure)"
+                )
 
-    def get_option_name(self, value):
+    @classmethod
+    def get_option_name(cls, value: dict[str, int]) -> str:
         return ", ".join(f"{key}: {v}" for key, v in value.items())
 
     def __getitem__(self, item: str) -> int:
@@ -998,25 +1020,25 @@ class Sc2ItemDict(Option[Dict[str, int]], VerifyKeys, Mapping[str, int]):
 
 
 class Sc2StartInventory(Sc2ItemDict):
-    """Start with these items."""
+    """Start with these items. Use an amount of -1 to start with all copies of an item."""
     display_name = StartInventory.display_name
 
 
 class LockedItems(Sc2ItemDict):
     """Guarantees that these items will be unlockable, in the amount specified.
-    Specify an amount of 0 to lock all copies of an item."""
+    Specify an amount of -1 to lock all copies of an item."""
     display_name = "Locked Items"
 
 
 class ExcludedItems(Sc2ItemDict):
     """Guarantees that these items will not be unlockable, in the amount specified.
-    Specify an amount of 0 to exclude all copies of an item."""
+    Specify an amount of -1 to exclude all copies of an item."""
     display_name = "Excluded Items"
 
 
 class UnexcludedItems(Sc2ItemDict):
     """Undoes an item exclusion; useful for whitelisting or fine-tuning a category.
-    Specify an amount of 0 to unexclude all copies of an item."""
+    Specify an amount of -1 to unexclude all copies of an item."""
     display_name = "Unexcluded Items"
 
 
@@ -1057,7 +1079,7 @@ class ExcludeVeryHardMissions(Choice):
     option_false = 2
 
     @classmethod
-    def get_option_name(cls, value):
+    def get_option_name(cls, value: int) -> str:
         return ["Default", "Yes", "No"][int(value)]
 
 
@@ -1294,9 +1316,10 @@ class MaximumSupplyReductionPerItem(Range):
 class LowestMaximumSupply(Range):
     """Controls how far max supply reduction traps can reduce maximum supply."""
     display_name = "Lowest Maximum Supply"
-    range_start = 100
+    range_start = 50
     range_end = 200
     default = 180
+
 
 class ResearchCostReductionPerItem(Range):
     """
@@ -1330,7 +1353,7 @@ class FillerItemsDistribution(ItemDict):
     valid_keys = default.keys()
     display_name = "Filler Items Distribution"
 
-    def __init__(self, value: Dict[str, int]):
+    def __init__(self, value: dict[str, int]):
         # Allow zeros that the parent class doesn't allow
         if any(item_count < 0 for item_count in value.values()):
             raise Exception("Cannot have negative item weight.")
@@ -1427,6 +1450,7 @@ class Starcraft2Options(PerGameCommonOptions):
     mission_order_scouting: MissionOrderScouting
 
     custom_mission_order: CustomMissionOrder
+
 
 option_groups = [
     OptionGroup("Difficulty Settings", [
@@ -1541,7 +1565,8 @@ option_groups = [
     ])
 ]
 
-def get_option_value(world: Union['SC2World', None], name: str) -> int:
+
+def get_option_value(world: 'SC2World | None', name: str) -> Any:
     """
     You should basically never use this unless `world` can be `None`.
     Use `world.options.<option_name>.value` instead for better typing, autocomplete, and error messages.
@@ -1560,12 +1585,16 @@ def get_option_value(world: Union['SC2World', None], name: str) -> int:
     return player_option.value
 
 
-def get_enabled_races(world: Optional['SC2World']) -> Set[SC2Race]:
-    race_names = world.options.selected_races.value if world and len(world.options.selected_races.value) > 0 else SelectedRaces.valid_keys
+def get_enabled_races(world: 'SC2World | None') -> set[SC2Race]:
+    race_names = (
+        world.options.selected_races.value
+        if world and len(world.options.selected_races.value) > 0
+        else SelectedRaces.valid_keys
+    )
     return {race for race in SC2Race if race.get_title() in race_names}
 
 
-def get_enabled_campaigns(world: Optional['SC2World']) -> Set[SC2Campaign]:
+def get_enabled_campaigns(world: 'SC2World | None') -> set[SC2Campaign]:
     if world is None:
         return {campaign for campaign in SC2Campaign if campaign.campaign_name in EnabledCampaigns.default}
     campaign_names = world.options.enabled_campaigns
@@ -1581,7 +1610,7 @@ def get_enabled_campaigns(world: Optional['SC2World']) -> Set[SC2Campaign]:
     return campaigns
 
 
-def get_disabled_campaigns(world: 'SC2World') -> Set[SC2Campaign]:
+def get_disabled_campaigns(world: 'SC2World') -> set[SC2Campaign]:
     all_campaigns = set(SC2Campaign)
     enabled_campaigns = get_enabled_campaigns(world)
     disabled_campaigns = all_campaigns.difference(enabled_campaigns)
@@ -1606,29 +1635,29 @@ def get_disabled_flags(world: 'SC2World') -> MissionFlag:
     return MissionFlag(excluded)
 
 
-def get_excluded_missions(world: 'SC2World') -> Set[SC2Mission]:
+def get_excluded_missions(world: 'SC2World') -> set[SC2Mission]:
     mission_order_type = world.options.mission_order.value
     excluded_mission_names = world.options.excluded_missions.value
     disabled_campaigns = get_disabled_campaigns(world)
     disabled_flags = get_disabled_flags(world)
 
-    excluded_missions: Set[SC2Mission] = set([lookup_name_to_mission[name] for name in excluded_mission_names])
+    excluded_missions: set[SC2Mission] = set([lookup_name_to_mission[name] for name in excluded_mission_names])
 
     # Excluding Very Hard missions depending on options
     if (mission_order_type != MissionOrder.option_vanilla and
-            (
-                    world.options.exclude_very_hard_missions == ExcludeVeryHardMissions.option_true
-                    or (
-                            world.options.exclude_very_hard_missions == ExcludeVeryHardMissions.option_default
-                            and (
-                                    (
-                                            mission_order_type in dynamic_mission_orders
-                                            and world.options.maximum_campaign_size < 20
-                                    )
-                                    or mission_order_type == MissionOrder.option_mini_campaign
-                            )
+        (
+            world.options.exclude_very_hard_missions == ExcludeVeryHardMissions.option_true
+            or (
+                world.options.exclude_very_hard_missions == ExcludeVeryHardMissions.option_default
+                and (
+                    (
+                        mission_order_type in dynamic_mission_orders
+                        and world.options.maximum_campaign_size < 20
                     )
+                    or mission_order_type == MissionOrder.option_mini_campaign
+                )
             )
+        )
     ):
         excluded_missions = excluded_missions.union(
             [mission for mission in SC2Mission if
@@ -1640,21 +1669,8 @@ def get_excluded_missions(world: 'SC2World') -> Set[SC2Mission]:
     # Omitting missions not in enabled campaigns
     for campaign in disabled_campaigns:
         excluded_missions = excluded_missions.union(campaign_mission_table[campaign])
-    # Omitting unwanted mission variants
-    if world.options.enable_race_swap.value in [EnableRaceSwapVariants.option_pick_one, EnableRaceSwapVariants.option_pick_one_non_vanilla]:
-        swaps = [
-            mission for mission in SC2Mission
-            if mission not in excluded_missions
-            and mission.flags & (MissionFlag.HasRaceSwap|MissionFlag.RaceSwap)
-        ]
-        while len(swaps) > 0:
-            curr = swaps[0]
-            variants = [mission for mission in swaps if mission.map_file == curr.map_file]
-            variants.sort(key=lambda mission: mission.id)
-            swaps = [mission for mission in swaps if mission not in variants]
-            if len(variants) > 1:
-                variants.pop(world.random.randint(0, len(variants)-1))
-                excluded_missions = excluded_missions.union(variants)
+
+    # Exclusions for race_swap: pick_one are handled during mission order generation
 
     return excluded_missions
 
@@ -1682,7 +1698,6 @@ def is_mission_in_soa_presence(
     )
 
 
-
 static_mission_orders = [
     MissionOrder.option_vanilla,
     MissionOrder.option_vanilla_shuffled,
@@ -1704,7 +1719,7 @@ kerrigan_unit_available = [
 ]
 
 # Names of upgrades to be included for different options
-upgrade_included_names: Dict[int, Set[str]] = {
+upgrade_included_names: dict[int, set[str]] = {
     GenericUpgradeItems.option_individual_items: {
         item_names.PROGRESSIVE_TERRAN_INFANTRY_WEAPON,
         item_names.PROGRESSIVE_TERRAN_INFANTRY_ARMOR,
@@ -1748,14 +1763,14 @@ upgrade_included_names: Dict[int, Set[str]] = {
 }
 
 # Mapping trade age limit options to their millisecond equivalents
-void_trade_age_limits_ms: Dict[int, int] = {
-    VoidTradeAgeLimit.option_5_minutes: 1000 * int(timedelta(minutes = 5).total_seconds()),
-    VoidTradeAgeLimit.option_30_minutes: 1000 * int(timedelta(minutes = 30).total_seconds()),
-    VoidTradeAgeLimit.option_1_hour: 1000 * int(timedelta(hours = 1).total_seconds()),
-    VoidTradeAgeLimit.option_2_hours: 1000 * int(timedelta(hours = 2).total_seconds()),
-    VoidTradeAgeLimit.option_4_hours: 1000 * int(timedelta(hours = 4).total_seconds()),
-    VoidTradeAgeLimit.option_1_day: 1000 * int(timedelta(days = 1).total_seconds()),
-    VoidTradeAgeLimit.option_1_week: 1000 * int(timedelta(weeks = 1).total_seconds()),
+void_trade_age_limits_ms: dict[int, int] = {
+    VoidTradeAgeLimit.option_5_minutes: 1000 * int(timedelta(minutes=5).total_seconds()),
+    VoidTradeAgeLimit.option_30_minutes: 1000 * int(timedelta(minutes=30).total_seconds()),
+    VoidTradeAgeLimit.option_1_hour: 1000 * int(timedelta(hours=1).total_seconds()),
+    VoidTradeAgeLimit.option_2_hours: 1000 * int(timedelta(hours=2).total_seconds()),
+    VoidTradeAgeLimit.option_4_hours: 1000 * int(timedelta(hours=4).total_seconds()),
+    VoidTradeAgeLimit.option_1_day: 1000 * int(timedelta(days=1).total_seconds()),
+    VoidTradeAgeLimit.option_1_week: 1000 * int(timedelta(weeks=1).total_seconds()),
 }
 
 # Store the names of all options

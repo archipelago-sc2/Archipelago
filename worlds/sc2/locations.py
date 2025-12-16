@@ -3950,8 +3950,11 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             "Victory",
             SC2LOTV_LOC_ID_OFFSET + 500,
             LocationType.VICTORY,
-            lambda state: logic.protoss_common_unit(state)
-            and (adv_tactics or logic.protoss_moderate_anti_air(state)),
+            lambda state: (
+                logic.protoss_common_unit(state)
+                and logic.protoss_moderate_anti_air(state)
+            ),
+            hard_rule=logic.protoss_any_anti_air_unit_or_soa,
         ),
         make_location_data(
             SC2Mission.THE_GROWING_SHADOW.mission_name,
@@ -3986,8 +3989,11 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             "Templar Base",
             SC2LOTV_LOC_ID_OFFSET + 505,
             LocationType.EXTRA,
-            lambda state: logic.protoss_common_unit(state)
-            and (adv_tactics or logic.protoss_moderate_anti_air(state)),
+            lambda state: (
+                logic.protoss_common_unit(state)
+                and logic.protoss_moderate_anti_air(state)
+            ),
+            hard_rule=logic.protoss_any_anti_air_unit_or_soa,
         ),
         make_location_data(
             SC2Mission.THE_SPEAR_OF_ADUN.mission_name,
@@ -5880,7 +5886,114 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             flags=LocationFlag.BASEBUST,
         ),
         # Mission Variants
-        # 10X/20X - Liberation Day
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_Z.mission_name,
+            "Victory",
+            SC2_RACESWAP_LOC_ID_OFFSET + 100,
+            LocationType.VICTORY,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_Z.mission_name,
+            "First Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 101,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_Z.mission_name,
+            "Second Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 102,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_Z.mission_name,
+            "Third Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 103,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_Z.mission_name,
+            "Fourth Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 104,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_Z.mission_name,
+            "Fifth Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 105,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_Z.mission_name,
+            "Sixth Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 106,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_Z.mission_name,
+            "Special Delivery",
+            SC2_RACESWAP_LOC_ID_OFFSET + 107,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_Z.mission_name,
+            "Transport",
+            SC2_RACESWAP_LOC_ID_OFFSET + 108,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_P.mission_name,
+            "Victory",
+            SC2_RACESWAP_LOC_ID_OFFSET + 200,
+            LocationType.VICTORY,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_P.mission_name,
+            "First Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 201,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_P.mission_name,
+            "Second Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 202,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_P.mission_name,
+            "Third Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 203,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_P.mission_name,
+            "Fourth Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 204,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_P.mission_name,
+            "Fifth Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 205,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_P.mission_name,
+            "Sixth Statue",
+            SC2_RACESWAP_LOC_ID_OFFSET + 206,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_P.mission_name,
+            "Special Delivery",
+            SC2_RACESWAP_LOC_ID_OFFSET + 207,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.LIBERATION_DAY_P.mission_name,
+            "Transport",
+            SC2_RACESWAP_LOC_ID_OFFSET + 208,
+            LocationType.EXTRA,
+        ),
         make_location_data(
             SC2Mission.THE_OUTLAWS_Z.mission_name,
             "Victory",
@@ -8210,6 +8323,66 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             flags=LocationFlag.PREVENTATIVE,
         ),
         make_location_data(
+            SC2Mission.BREAKOUT_Z.mission_name,
+            "Victory",
+            SC2_RACESWAP_LOC_ID_OFFSET + 2900,
+            LocationType.VICTORY,
+        ),
+        make_location_data(
+            SC2Mission.BREAKOUT_Z.mission_name,
+            "Diamondback Prison",
+            SC2_RACESWAP_LOC_ID_OFFSET + 2901,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.BREAKOUT_Z.mission_name,
+            "Siege Tank Prison",
+            SC2_RACESWAP_LOC_ID_OFFSET + 2902,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.BREAKOUT_Z.mission_name,
+            "First Checkpoint",
+            SC2_RACESWAP_LOC_ID_OFFSET + 2903,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.BREAKOUT_Z.mission_name,
+            "Second Checkpoint",
+            SC2_RACESWAP_LOC_ID_OFFSET + 2904,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.BREAKOUT_P.mission_name,
+            "Victory",
+            SC2_RACESWAP_LOC_ID_OFFSET + 3000,
+            LocationType.VICTORY,
+        ),
+        make_location_data(
+            SC2Mission.BREAKOUT_P.mission_name,
+            "Diamondback Prison",
+            SC2_RACESWAP_LOC_ID_OFFSET + 3001,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.BREAKOUT_P.mission_name,
+            "Siege Tank Prison",
+            SC2_RACESWAP_LOC_ID_OFFSET + 3002,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.BREAKOUT_P.mission_name,
+            "First Checkpoint",
+            SC2_RACESWAP_LOC_ID_OFFSET + 3003,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.BREAKOUT_P.mission_name,
+            "Second Checkpoint",
+            SC2_RACESWAP_LOC_ID_OFFSET + 3004,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
             SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
             "Victory",
             SC2_RACESWAP_LOC_ID_OFFSET + 3300,
@@ -10272,6 +10445,118 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             flags=LocationFlag.BASEBUST,
         ),
         make_location_data(
+            SC2Mission.ENEMY_WITHIN_T.mission_name,
+            "Victory",
+            SC2_RACESWAP_LOC_ID_OFFSET + 6900,
+            LocationType.VICTORY,
+            logic.terran_enemy_within_requirement,
+            hard_rule=logic.terran_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_T.mission_name,
+            "Giant Ursadon",
+            SC2_RACESWAP_LOC_ID_OFFSET + 6901,
+            LocationType.VANILLA,
+            logic.terran_enemy_within_requirement,
+            hard_rule=logic.terran_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_T.mission_name,
+            "First Stetmann Levelup",
+            SC2_RACESWAP_LOC_ID_OFFSET + 6902,
+            LocationType.VANILLA,
+            logic.terran_enemy_within_requirement,
+            hard_rule=logic.terran_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_T.mission_name,
+            "Second Stetmann Levelup",
+            SC2_RACESWAP_LOC_ID_OFFSET + 6903,
+            LocationType.VANILLA,
+            logic.terran_enemy_within_requirement,
+            hard_rule=logic.terran_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_T.mission_name,
+            "Third Stetmann Levelup",
+            SC2_RACESWAP_LOC_ID_OFFSET + 6904,
+            LocationType.VANILLA,
+            logic.terran_enemy_within_requirement,
+            hard_rule=logic.terran_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_T.mission_name,
+            "Warp Drive",
+            SC2_RACESWAP_LOC_ID_OFFSET + 6905,
+            LocationType.EXTRA,
+            logic.terran_enemy_within_requirement,
+            hard_rule=logic.terran_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_T.mission_name,
+            "Stasis Quadrant",
+            SC2_RACESWAP_LOC_ID_OFFSET + 6906,
+            LocationType.EXTRA,
+            logic.terran_enemy_within_requirement,
+            hard_rule=logic.terran_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_P.mission_name,
+            "Victory",
+            SC2_RACESWAP_LOC_ID_OFFSET + 7000,
+            LocationType.VICTORY,
+            logic.protoss_enemy_within_requirement,
+            hard_rule=logic.protoss_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_P.mission_name,
+            "Giant Ursadon",
+            SC2_RACESWAP_LOC_ID_OFFSET + 7001,
+            LocationType.VANILLA,
+            logic.protoss_enemy_within_requirement,
+            hard_rule=logic.protoss_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_P.mission_name,
+            "First Probius Upgrade",
+            SC2_RACESWAP_LOC_ID_OFFSET + 7002,
+            LocationType.VANILLA,
+            logic.protoss_enemy_within_requirement,
+            hard_rule=logic.protoss_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_P.mission_name,
+            "Second Probius Upgrade",
+            SC2_RACESWAP_LOC_ID_OFFSET + 7003,
+            LocationType.VANILLA,
+            logic.protoss_enemy_within_requirement,
+            hard_rule=logic.protoss_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_P.mission_name,
+            "Third Probius Upgrade",
+            SC2_RACESWAP_LOC_ID_OFFSET + 7004,
+            LocationType.VANILLA,
+            logic.protoss_enemy_within_requirement,
+            hard_rule=logic.protoss_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_P.mission_name,
+            "Warp Drive",
+            SC2_RACESWAP_LOC_ID_OFFSET + 7005,
+            LocationType.EXTRA,
+            logic.protoss_enemy_within_requirement,
+            hard_rule=logic.protoss_enemy_within_requirement,
+        ),
+        make_location_data(
+            SC2Mission.ENEMY_WITHIN_P.mission_name,
+            "Stasis Quadrant",
+            SC2_RACESWAP_LOC_ID_OFFSET + 7006,
+            LocationType.EXTRA,
+            logic.protoss_enemy_within_requirement,
+            hard_rule=logic.protoss_enemy_within_requirement,
+        ),
+        make_location_data(
             SC2Mission.DOMINATION_T.mission_name,
             "Victory",
             SC2_RACESWAP_LOC_ID_OFFSET + 7100,
@@ -12165,14 +12450,111 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             ),
         ),
         make_location_data(
+            SC2Mission.FOR_AIUR_T.mission_name,
+            "Victory",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10500,
+            LocationType.VICTORY,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_T.mission_name,
+            "Southwest Hive",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10501,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_T.mission_name,
+            "Northwest Hive",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10502,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_T.mission_name,
+            "Northeast Hive",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10503,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_T.mission_name,
+            "East Hive",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10504,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_T.mission_name,
+            "West Conduit",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10505,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_T.mission_name,
+            "Middle Conduit",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10506,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_T.mission_name,
+            "Northeast Conduit",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10507,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_Z.mission_name,
+            "Victory",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10600,
+            LocationType.VICTORY,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_Z.mission_name,
+            "Southwest Hive",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10601,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_Z.mission_name,
+            "Northwest Hive",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10602,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_Z.mission_name,
+            "Northeast Hive",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10603,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_Z.mission_name,
+            "East Hive",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10604,
+            LocationType.VANILLA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_Z.mission_name,
+            "West Conduit",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10605,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_Z.mission_name,
+            "Middle Conduit",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10606,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.FOR_AIUR_Z.mission_name,
+            "Northeast Conduit",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10607,
+            LocationType.EXTRA,
+        ),
+        make_location_data(
             SC2Mission.THE_GROWING_SHADOW_T.mission_name,
             "Victory",
             SC2_RACESWAP_LOC_ID_OFFSET + 10700,
             LocationType.VICTORY,
             lambda state: (
                 logic.terran_common_unit(state)
-                and (adv_tactics or logic.terran_moderate_anti_air(state))
+                and logic.terran_moderate_anti_air(state)
             ),
+            hard_rule=logic.terran_any_anti_air,
         ),
         make_location_data(
             SC2Mission.THE_GROWING_SHADOW_T.mission_name,
@@ -12219,8 +12601,9 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.EXTRA,
             lambda state: (
                 logic.terran_common_unit(state)
-                and (adv_tactics or logic.terran_moderate_anti_air(state))
+                and logic.terran_moderate_anti_air(state)
             ),
+            hard_rule=logic.terran_any_anti_air,
         ),
         make_location_data(
             SC2Mission.THE_GROWING_SHADOW_Z.mission_name,

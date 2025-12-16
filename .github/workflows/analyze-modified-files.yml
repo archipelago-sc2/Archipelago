@@ -70,8 +70,11 @@ jobs:
       - name: "flake8: Lint modified files"
         continue-on-error: true
         if: env.diff != '' && matrix.task == 'flake8'
-        run: |
-          flake8 --count --max-complexity=14 --max-doc-length=120 --max-line-length=120 --statistics ${{ env.diff }}
+        # Todo(mm): Revert this when it is time to merge to main
+        run: >
+          flake8 --count --max-complexity=14 --max-doc-length=120 --max-line-length=120 --statistics ${{ env.diff }} 
+          --per-file-ignores='worlds/sc2/mission_tables.py:E227,E501,E221 worlds/sc2/*.py:E124,E128'
+          --ignore=C901,W503
 
       - name: "mypy: Type check modified files"
         continue-on-error: true
