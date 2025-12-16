@@ -3223,7 +3223,7 @@ class SC2Logic:
             return False
         defense_score = self.zerg_defense_rating(state, False, True)
         if self.take_over_ai_allies:
-            defense_score = max(defense_score,self.terran_defense_rating(state,False,True))
+            defense_score = max(defense_score, self.terran_defense_rating(state, False, True))
             if self.protoss_static_defense(state):
                 defense_score += 2
         return (
@@ -3241,7 +3241,7 @@ class SC2Logic:
             return False
         defense_score = self.protoss_defense_rating(state, False, True)
         if self.take_over_ai_allies:
-            defense_score = max(defense_score,self.terran_defense_rating(state,False,True))
+            defense_score = max(defense_score, self.terran_defense_rating(state, False, True))
         return (
             defense_score >= 12
             and self.protoss_competent_anti_air(state) 
@@ -3309,7 +3309,10 @@ class SC2Logic:
         ):
             return False
         if self.take_over_ai_allies:
-            return self.protoss_deathball(state) and self.zerg_competent_comp(state)
+            return (
+                self.terran_beats_protoss_deathball(state) and self.zerg_competent_comp(state) 
+                and (self.protoss_deathball(state) or self.protoss_fleet(state))
+            )
         else:
             return self.terran_beats_protoss_deathball(state)
 
