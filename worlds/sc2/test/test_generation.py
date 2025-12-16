@@ -201,9 +201,10 @@ class TestItemFiltering(Sc2SetupTestBase):
             'mission_order': options.MissionOrder.option_grid,
             'maximum_campaign_size': options.MaximumCampaignSize.range_end,
             'excluded_missions': [
-                mission.mission_name for mission in mission_tables.SC2Mission
-                if mission_tables.MissionFlag.Terran in mission.flags
-                    and mission_tables.MissionFlag.NoBuild not in mission.flags,
+                *[mission.mission_name
+                    for mission in mission_tables.SC2Mission
+                    if mission_tables.MissionFlag.Terran in mission.flags
+                    and mission_tables.MissionFlag.NoBuild not in mission.flags],
                 mission_tables.SC2Mission.ENEMY_WITHIN_T.mission_name,
             ],
         }
