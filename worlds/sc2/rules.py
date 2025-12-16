@@ -3239,7 +3239,7 @@ class SC2Logic:
             self.terran_very_hard_mission_weapon_armor_level(state) and self.zerg_very_hard_mission_weapon_armor_level(state)
         ):
             return False
-        defense_score = self.protoss_defense_rating(state, False, True)
+        defense_score = self.protoss_defense_rating(state, False)
         if self.take_over_ai_allies:
             defense_score = max(defense_score, self.terran_defense_rating(state, False, True))
         return (
