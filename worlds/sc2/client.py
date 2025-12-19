@@ -1078,6 +1078,8 @@ class SC2Context(CommonContext):
                 if not self.sc2_run_task.done():
                     sc2_logger.warning("Starcraft 2 Client is still running!")
                 self.sc2_run_task.cancel()  # doesn't actually close the game, just stops the python task
+            # clean up locations bank from previous map
+            pathlib.Path(f"{get_bank_folder()}/ArchipelagoLocations.SC2Bank").unlink(missing_ok=True)
             if self.slot is None:
                 sc2_logger.warning("Launching Mission without Archipelago authentication, "
                                    "checks will not be registered to server.")
