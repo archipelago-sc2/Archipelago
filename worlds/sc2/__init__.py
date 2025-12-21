@@ -557,11 +557,17 @@ def flag_mission_based_item_excludes(world: SC2World, item_list: List[FilterItem
             and MissionFlag.WoLNova in mission.flags
         )
     ]
+    nova_build_missions = [mission for mission in nova_missions if MissionFlag.NoBuild not in mission.flags]
 
     kerrigan_is_present = (
-            len(kerrigan_missions) > 0
-            and world.options.kerrigan_presence in kerrigan_unit_available
-            and SC2Campaign.HOTS in get_enabled_campaigns(world) # TODO: Kerrigan available all Zerg/Everywhere
+        len(kerrigan_missions) > 0
+        and world.options.kerrigan_presence in kerrigan_unit_available
+        and SC2Campaign.HOTS in get_enabled_campaigns(world) # TODO: Kerrigan available all Zerg/Everywhere
+    )
+
+    nova_is_present = (
+        # for now, no-builds will force grant story tech, if there is no build mission with nova
+        len(nova_build_missions) > 0
     )
 
     # TvX build missions -- check flags
@@ -620,6 +626,11 @@ def flag_mission_based_item_excludes(world: SC2World, item_list: List[FilterItem
         )
     )
 
+    remove_nova_items = (
+        # If handling of Nova no-builds is changed, this might need to get more complex
+        not nova_is_present
+    )
+
     for item in item_list:
         # Filter Nova equipment if you never get Nova
         if not nova_missions and (item.name in item_groups.nova_equipment):
@@ -632,8 +643,12 @@ def flag_mission_based_item_excludes(world: SC2World, item_list: List[FilterItem
         ):
             item.flags |= ItemFilterFlags.FilterExcluded
 
-        # Remove Kerrigan abilities if there's no kerrigan
+        # Remove Kerrigan abilities if there's no Kerrigan
         if item.data.type == item_tables.ZergItemType.Ability and remove_kerrigan_abils:
+            item.flags |= ItemFilterFlags.FilterExcluded
+
+        # Remove Nova items if there's no Nova
+        if item.data.type == item_tables.nova_equipment and remove_nova_items:
             item.flags |= ItemFilterFlags.FilterExcluded
 
         # Remove Spear of Adun if it's off

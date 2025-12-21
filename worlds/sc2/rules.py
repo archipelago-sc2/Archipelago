@@ -3117,18 +3117,40 @@ class SC2Logic:
                 or (self.advanced_tactics and self.spread_creep(state, False) and self.zerg_big_monsters(state))
             ) and self.zerg_competent_comp(state)
 
+    def nova_present(self) -> bool:
+            # Intended to check if nova no-builds should grant story tech
+            # so we ignore Ghost of a Chance here
+        return ( 
+            SC2Campaign.NCO in self.enabled_campaigns
+            and (
+                (NovaPresenceOptions.NCO_TERRAN in self.nova_presence and SC2Race.TERRAN in self.get_enabled_races)
+                or (NovaPresenceOptions.NCO_ZERG in self.nova_presence and SC2Race.ZERG in self.get_enabled_races)
+                or (NovaPresenceOptions.NCO_PROTOSS in self.nova_presence and SC2Race.PROTOSS in self.get_enabled_races)
+        ))
+
     def the_escape_stuff_granted(self) -> bool:
         """
         The NCO first mission requires having too much stuff first before actually able to do anything
         :return:
         """
-        return self.grant_story_tech == GrantStoryTech.option_grant or (self.mission_order == MissionOrder.option_vanilla and self.enabled_campaigns == {SC2Campaign.NCO})
+        return ( 
+            self.grant_story_tech == GrantStoryTech.option_grant 
+            or (self.mission_order == MissionOrder.option_vanilla and self.enabled_campaigns == {SC2Campaign.NCO})
+            or (not self.nova_present())
+        )
 
     def the_escape_first_stage_requirement(self, state: CollectionState) -> bool:
         return self.the_escape_stuff_granted() or (self.nova_ranged_weapon(state) and (self.nova_full_stealth(state) or self.nova_heal(state)))
 
     def the_escape_requirement(self, state: CollectionState) -> bool:
         return self.the_escape_first_stage_requirement(state) and (self.the_escape_stuff_granted() or self.nova_splash(state))
+
+    def the_escape_hard_rule(self, state: CollectionState) -> bool:
+        return (
+            self.grant_story_tech == GrantStoryTech.option_grant 
+            or not self.nova_present()
+            or self.nova_any_nobuild_damage()
+        )
 
     def terran_able_to_snipe_defiler(self, state: CollectionState) -> bool:
         return (
@@ -3592,48 +3614,110 @@ class SC2Logic:
             and self.protoss_mobile_detector(state)
             and self.protoss_defense_rating(state, True) >= 6
             and self.protoss_army_weapon_armor_upgrade_min_level(state) >= 2
-            and (self.nova_splash(state) or NovaPresenceOptions.NCO_PROTOSS not in self.nova_presence)
+            and (
+                self.nova_splash(state) or NovaPresenceOptions.NCO_PROTOSS not in self.nova_presence
+            )
         )
 
     def enemy_shadow_tripwires_tool(self, state: CollectionState) -> bool:
-        return state.has_any({item_names.NOVA_FLASHBANG_GRENADES, item_names.NOVA_BLINK, item_names.NOVA_DOMINATION}, self.player)
+        return (
+            self.grant_story_tech == GrantStoryTech.option_grant 
+            or not self.nova_present()
+            or state.has_any({item_names.NOVA_FLASHBANG_GRENADES, item_names.NOVA_BLINK, item_names.NOVA_DOMINATION}, self.player)
+        )
 
     def enemy_shadow_door_unlocks_tool(self, state: CollectionState) -> bool:
-        return state.has_any({item_names.NOVA_DOMINATION, item_names.NOVA_BLINK, item_names.NOVA_JUMP_SUIT_MODULE}, self.player)
+        return (
+            self.grant_story_tech == GrantStoryTech.option_grant 
+            or not self.nova_present()
+            or state.has_any({item_names.NOVA_DOMINATION, item_names.NOVA_BLINK, item_names.NOVA_JUMP_SUIT_MODULE}, self.player)
+        )
+    
+    def enemy_shadow_blazefire_unlock(self, state: CollectionState) -> bool:
+        return (
+            self.enemy_shadow_second_stage(state)
+            and (
+                self.grant_story_tech == GrantStoryTech.option_grant 
+                or not self.nova_present()
+                or state.has(item_names.NOVA_BLINK, self.player)
+                or (
+                    self.adv_tactics
+                    and state.has_all(
+                        {
+                            item_names.NOVA_DOMINATION,
+                            item_names.NOVA_HOLO_DECOY,
+                            item_names.NOVA_JUMP_SUIT_MODULE,
+                        },
+                        self.player,
+                    )
+                )
+            )
+        )
 
     def enemy_shadow_nova_damage_and_blazefire_unlock(self, state: CollectionState) -> bool:
-        return self.nova_any_nobuild_damage(state) and (
-            state.has(item_names.NOVA_BLINK, self.player) or state.has_all((item_names.NOVA_HOLO_DECOY, item_names.NOVA_DOMINATION), self.player)
+        return (
+            self.grant_story_tech == GrantStoryTech.option_grant 
+            or not self.nova_present()
+            or self.nova_any_nobuild_damage(state) 
+            and (
+                state.has(item_names.NOVA_BLINK, self.player) or state.has_all((item_names.NOVA_HOLO_DECOY, item_names.NOVA_DOMINATION), self.player)
+            )
         )
 
     def enemy_shadow_domination(self, state: CollectionState) -> bool:
-        return self.grant_story_tech == GrantStoryTech.option_grant or (
-            self.nova_ranged_weapon(state)
-            and (
-                self.nova_full_stealth(state)
-                or state.has(item_names.NOVA_JUMP_SUIT_MODULE, self.player)
-                or (self.nova_heal(state) and self.nova_splash(state))
+        return (
+            self.grant_story_tech == GrantStoryTech.option_grant 
+            or not self.nova_present()
+            or (
+                self.nova_ranged_weapon(state)
+                and (
+                    self.nova_full_stealth(state)
+                    or state.has(item_names.NOVA_JUMP_SUIT_MODULE, self.player)
+                    or (self.nova_heal(state) and self.nova_splash(state))
+                )
             )
         )
 
     def enemy_shadow_first_stage(self, state: CollectionState) -> bool:
-        return self.enemy_shadow_domination(state) and (
-            self.grant_story_tech == GrantStoryTech.option_grant
-            or ((self.nova_full_stealth(state) and self.enemy_shadow_tripwires_tool(state)) or (self.nova_heal(state) and self.nova_splash(state)))
+        return (
+            self.enemy_shadow_domination(state) 
+            and (
+                self.grant_story_tech == GrantStoryTech.option_grant
+                or not self.nova_present()
+                or ((self.nova_full_stealth(state) and self.enemy_shadow_tripwires_tool(state)) or (self.nova_heal(state) and self.nova_splash(state)))
+            )
         )
 
     def enemy_shadow_second_stage(self, state: CollectionState) -> bool:
-        return self.enemy_shadow_first_stage(state) and (
-            self.grant_story_tech == GrantStoryTech.option_grant
-            or (self.nova_splash(state) or self.nova_heal(state) or self.nova_escape_assist(state))
-            and (self.advanced_tactics or state.has(item_names.NOVA_GHOST_VISOR, self.player))
+        return (
+            self.enemy_shadow_first_stage(state) 
+            and (
+                self.grant_story_tech == GrantStoryTech.option_grant
+                or not self.nova_present()
+                or (self.nova_splash(state) or self.nova_heal(state) or self.nova_escape_assist(state))
+                and (self.advanced_tactics or state.has(item_names.NOVA_GHOST_VISOR, self.player))
+            )
         )
 
     def enemy_shadow_door_controls(self, state: CollectionState) -> bool:
-        return self.enemy_shadow_second_stage(state) and (self.grant_story_tech == GrantStoryTech.option_grant or self.enemy_shadow_door_unlocks_tool(state))
+        return (
+            self.enemy_shadow_second_stage(state) 
+            and (
+                self.grant_story_tech == GrantStoryTech.option_grant 
+                or not self.nova_present()
+                or self.enemy_shadow_door_unlocks_tool(state)
+            )
+        )
 
     def enemy_shadow_victory(self, state: CollectionState) -> bool:
-        return self.enemy_shadow_door_controls(state) and (self.grant_story_tech == GrantStoryTech.option_grant or (self.nova_heal(state) and self.nova_beat_stone(state)))
+        return (
+            self.enemy_shadow_door_controls(state) 
+            and (
+                self.grant_story_tech == GrantStoryTech.option_grant 
+                or not self.nova_present()
+                or (self.nova_heal(state) and self.nova_beat_stone(state))
+            )
+        )
 
     def dark_skies_requirement(self, state: CollectionState) -> bool:
         return self.terran_common_unit(state) and self.terran_beats_protoss_deathball(state) and self.terran_defense_rating(state, False, True) >= 8
@@ -3649,7 +3733,8 @@ class SC2Logic:
             self.terran_competent_comp(state)
             and self.terran_mobile_detector(state)
             and (
-                NovaPresenceOptions.NCO_TERRAN not in self.nova_presence or [self.nova_any_weapon(state) and self.nova_splash(state)]
+                NovaPresenceOptions.NCO_TERRAN not in self.nova_presence 
+                or (self.nova_any_weapon(state) and self.nova_splash(state))
             )
             and (
                 # Xanthos

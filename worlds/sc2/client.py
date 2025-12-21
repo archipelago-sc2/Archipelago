@@ -1585,7 +1585,7 @@ def calculate_nova_presence(ctx: SC2Context, mission: SC2Mission) -> bool:
         return True
     return False
 
-def caclulate_soa_options(ctx: SC2Context, mission: SC2Mission) -> int:
+def calculate_soa_options(ctx: SC2Context, mission: SC2Mission) -> int:
     """
     Pack SOA options into a single integer with bitflags.
     0b000011 = SOA presence
@@ -1757,7 +1757,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             kerrigan_level = get_kerrigan_level(self.ctx, start_items, missions_beaten)
             kerrigan_options = calculate_kerrigan_options(self.ctx)
             nova_presence = calculate_nova_presence(self.ctx, mission)
-            soa_options = caclulate_soa_options(self.ctx, mission)
+            soa_options = calculate_soa_options(self.ctx, mission)
             generic_upgrade_options = calculate_generic_upgrade_options(self.ctx)
             trade_options = calculate_trade_options(self.ctx)
             mission_variant = get_mission_variant(self.mission_id)  # 0/1/2/3 for unchanged/Terran/Zerg/Protoss

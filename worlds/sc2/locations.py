@@ -5155,7 +5155,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 100,
             LocationType.VICTORY,
             logic.the_escape_requirement,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.the_escape_hard_rule,
         ),
         make_location_data(
             SC2Mission.THE_ESCAPE.mission_name,
@@ -5163,6 +5163,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 101,
             LocationType.VANILLA,
             logic.the_escape_first_stage_requirement,
+            hard_rule=logic.the_escape_hard_rule,
         ),
         make_location_data(
             SC2Mission.THE_ESCAPE.mission_name,
@@ -5170,7 +5171,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 102,
             LocationType.VANILLA,
             logic.the_escape_first_stage_requirement,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.the_escape_hard_rule,
         ),
         make_location_data(
             SC2Mission.THE_ESCAPE.mission_name,
@@ -5178,7 +5179,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 103,
             LocationType.VANILLA,
             logic.the_escape_requirement,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.the_escape_hard_rule,
         ),
         make_location_data(
             SC2Mission.THE_ESCAPE.mission_name,
@@ -5186,7 +5187,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 104,
             LocationType.VANILLA,
             logic.the_escape_requirement,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.the_escape_hard_rule,
         ),
         make_location_data(
             SC2Mission.THE_ESCAPE.mission_name,
@@ -5194,7 +5195,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 105,
             LocationType.VANILLA,
             logic.the_escape_requirement,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.the_escape_hard_rule,
         ),
         make_location_data(
             SC2Mission.SUDDEN_STRIKE.mission_name,
@@ -5503,7 +5504,8 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.VANILLA,
             lambda state: (
                 logic.night_terrors_requirement(state) 
-                and (logic.nova_any_weapon(state) or NovaPresenceOptions.NCO_TERRAN not in logic.nova_presence)
+                and (logic.nova_any_weapon(state) 
+                     or NovaPresenceOptions.NCO_TERRAN not in logic.nova_presence)
             ),
         ),
         make_location_data(
@@ -5712,24 +5714,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             "Facility: Blazefire Gunblade",
             SC2NCO_LOC_ID_OFFSET + 706,
             LocationType.VANILLA,
-            lambda state: (
-                logic.enemy_shadow_second_stage(state)
-                and (
-                    logic.grant_story_tech == GrantStoryTech.option_grant
-                    or state.has(item_names.NOVA_BLINK, player)
-                    or (
-                        adv_tactics
-                        and state.has_all(
-                            {
-                                item_names.NOVA_DOMINATION,
-                                item_names.NOVA_HOLO_DECOY,
-                                item_names.NOVA_JUMP_SUIT_MODULE,
-                            },
-                            player,
-                        )
-                    )
-                )
-            ),
+            logic.enemy_shadow_blazefire_unlock,
             hard_rule=logic.enemy_shadow_nova_damage_and_blazefire_unlock,
         ),
         make_location_data(
@@ -5830,7 +5815,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.VICTORY,
             lambda state: logic.end_game_requirement(state)
             and (logic.nova_any_weapon(state)
-            or NovaPresenceOptions.NCO_TERRAN not in logic.nova_presence)
+                or NovaPresenceOptions.NCO_TERRAN not in logic.nova_presence)
         ),
         make_location_data(
             SC2Mission.END_GAME.mission_name,
@@ -14637,7 +14622,8 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.VANILLA,
             lambda state: (
                 logic.zerg_night_terrors_requirement(state) 
-                and (logic.nova_any_weapon(state) or NovaPresenceOptions.NCO_ZERG not in logic.nova_presence)
+                and (logic.nova_any_weapon(state) 
+                     or NovaPresenceOptions.NCO_ZERG not in logic.nova_presence)
             ),
         ),
         make_location_data(
@@ -14732,7 +14718,8 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.VANILLA,
             lambda state: (
                 logic.protoss_night_terrors_requirement(state) 
-                and (logic.nova_any_weapon(state) or NovaPresenceOptions.NCO_PROTOSS not in logic.nova_presence)
+                and (logic.nova_any_weapon(state) 
+                     or NovaPresenceOptions.NCO_PROTOSS not in logic.nova_presence)
             ),
         ),
         make_location_data(
@@ -15034,7 +15021,8 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 16500,
             LocationType.VICTORY,
             lambda state: logic.zerg_end_game_requirement(state)
-            and (logic.nova_any_weapon(state) or NovaPresenceOptions.NCO_ZERG not in logic.nova_presence)
+            and (logic.nova_any_weapon(state) 
+                 or NovaPresenceOptions.NCO_ZERG not in logic.nova_presence)
         ),
         make_location_data(
             SC2Mission.END_GAME_Z.mission_name,
@@ -15092,7 +15080,8 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 16600,
             LocationType.VICTORY,
             lambda state: logic.protoss_end_game_requirement(state)
-            and (logic.nova_any_weapon(state) or NovaPresenceOptions.NCO_PROTOSS not in logic.nova_presence)
+            and (logic.nova_any_weapon(state) 
+                 or NovaPresenceOptions.NCO_PROTOSS not in logic.nova_presence)
         ),
         make_location_data(
             SC2Mission.END_GAME_P.mission_name,
