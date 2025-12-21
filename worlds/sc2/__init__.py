@@ -769,13 +769,21 @@ def flag_start_unit(world: SC2World, item_list: List[FilterItem], starter_unit: 
         unit.flags |= ItemFilterFlags.StartInventory
 
         # NCO-only specific rules
-        if first_mission == SC2Mission.SUDDEN_STRIKE:
+        if ( first_mission == SC2Mission.SUDDEN_STRIKE and NovaPresenceOptions.NCO_TERRAN in world.options.nova_presence
+            or first_mission == SC2Mission.SUDDEN_STRIKE_Z and NovaPresenceOptions.NCO_ZERG in world.options.nova_presence
+            or first_mission == SC2Mission.SUDDEN_STRIKE_P and NovaPresenceOptions.NCO_PROTOSS in world.options.nova_presence
+        ):
             if unit.name in nco_support_items:
                 support_item = possible_starter_items[nco_support_items[unit.name]]
                 support_item.flags |= ItemFilterFlags.StartInventory
             if item_names.NOVA_JUMP_SUIT_MODULE in possible_starter_items:
                 possible_starter_items[item_names.NOVA_JUMP_SUIT_MODULE].flags |= ItemFilterFlags.StartInventory
-        if MissionFlag.Nova in first_mission.flags:
+        if ( MissionFlag.Nova in first_mission.flags 
+            and (
+                MissionFlag.Terran in first_mission.flags and NovaPresenceOptions.NCO_TERRAN in world.options.nova_presence
+                    or MissionFlag.Zerg in first_mission.flags and NovaPresenceOptions.NCO_ZERG in world.options.nova_presence
+                    or MissionFlag.Protoss in first_mission.flags and NovaPresenceOptions.NCO_PROTOSS in world.options.nova_presence
+        )):
             possible_starter_weapons = (
                 item_names.NOVA_HELLFIRE_SHOTGUN,
                 item_names.NOVA_PLASMA_RIFLE,

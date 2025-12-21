@@ -5486,6 +5486,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
                     },
                     player,
                 )
+                or NovaPresenceOptions.NCO_TERRAN not in logic.nova_presence
             ),
         ),
         make_location_data(
@@ -5501,7 +5502,8 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 510,
             LocationType.VANILLA,
             lambda state: (
-                logic.night_terrors_requirement(state) and logic.nova_any_weapon(state)
+                logic.night_terrors_requirement(state) 
+                and (logic.nova_any_weapon(state) or NovaPresenceOptions.NCO_TERRAN not in logic.nova_presence)
             ),
         ),
         make_location_data(
@@ -5827,7 +5829,8 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 900,
             LocationType.VICTORY,
             lambda state: logic.end_game_requirement(state)
-            and logic.nova_any_weapon(state),
+            and (logic.nova_any_weapon(state)
+            or NovaPresenceOptions.NCO_TERRAN not in logic.nova_presence)
         ),
         make_location_data(
             SC2Mission.END_GAME.mission_name,
