@@ -489,10 +489,45 @@ def flag_excludes_by_faction_presence(world: SC2World, item_list: List[FilterIte
         in (GenericUpgradeResearch.option_always_auto, GenericUpgradeResearch.option_auto_in_no_build)
     )
 
+    allowed_remaining_terran_units: set[str] = set()
+    allowed_remaining_zerg_units: set[str] = set()
+    allowed_remaining_protoss_units: set[str] = set()
+
+    if world.options.grant_story_tech.value != GrantStoryTech.option_grant:
+        if SC2Mission.ENEMY_WITHIN in missions:
+            allowed_remaining_zerg_units.update(item_groups.ENEMY_WITHIN_ZERG_BASELINE_UNITS)
+        if SC2Mission.ENEMY_WITHIN_T in missions:
+            # Randomly select 4 units
+            if world.options.required_tactics.value == RequiredTactics.option_standard:
+                allowed_remaining_terran_units.update(
+                    world.random.sample(item_groups.ENEMY_WITHIN_TERRAN_STANDARD_UNITS, 4)
+                )
+            else:
+                allowed_remaining_terran_units.update(
+                    world.random.sample(item_groups.ENEMY_WITHIN_TERRAN_UNITS, 4)
+                )
+        if SC2Mission.ENEMY_WITHIN_P in missions:
+            # Randomly select 4 units
+            if world.options.required_tactics.value == RequiredTactics.option_standard:
+                allowed_remaining_protoss_units.update(
+                    world.random.sample(item_groups.ENEMY_WITHIN_PROTOSS_STANDARD_UNITS, 4)
+                )
+            else:
+                allowed_remaining_protoss_units.update(
+                    world.random.sample(item_groups.ENEMY_WITHIN_PROTOSS_UNITS, 4)
+                )
+        if (SC2Mission.TEMPLAR_S_RETURN in missions
+            and world.options.required_tactics.value == RequiredTactics.option_standard
+        ):
+            # Randomly select 2 units for standard tactics
+            allowed_remaining_protoss_units.update(
+                world.random.sample(item_groups.TEMPLARS_RETURN_PROTOSS_UNITS, 2)
+            )
+
     for item in item_list:
         # Catch-all for all of a faction's items
         # Unit upgrades required for no-builds will get the FilterExcluded lifted when flagging AllowedOrphan
-        if not terran_build_missions and item.data.race == SC2Race.TERRAN:
+        if not terran_missions and item.data.race == SC2Race.TERRAN:
             if item.name not in item_groups.nova_equipment:
                 item.flags |= ItemFilterFlags.FilterExcluded
                 continue
@@ -508,32 +543,34 @@ def flag_excludes_by_faction_presence(world: SC2World, item_list: List[FilterIte
             continue
 
         # Faction units
+        if (not terran_build_missions
+            and item.data.race == SC2Race.TERRAN
+            and item.data.type != item_tables.TerranItemType.Upgrade
+            and item.name not in item_groups.nova_equipment
+            and item.name not in allowed_remaining_terran_units
+        ):
+            item.flags |= ItemFilterFlags.FilterExcluded
         if (not zerg_build_missions
-            and item.data.type in (item_tables.ZergItemType.Unit, item_tables.ZergItemType.Mercenary, item_tables.ZergItemType.Evolution_Pit)
-        ):
-            if (SC2Mission.ENEMY_WITHIN not in missions
-                or world.options.grant_story_tech.value == GrantStoryTech.option_grant
-                or item.name not in (item_names.ZERGLING, item_names.ROACH, item_names.HYDRALISK, item_names.INFESTOR)
-            ):
-                item.flags |= ItemFilterFlags.FilterExcluded
-        if (not protoss_build_missions
             and item.data.type in (
-                        item_tables.ProtossItemType.Unit,
-                        item_tables.ProtossItemType.Unit_2,
-                        item_tables.ProtossItemType.Building,
+                item_tables.ZergItemType.Unit,
+                item_tables.ZergItemType.Mercenary,
+                item_tables.ZergItemType.Evolution_Pit,
             )
+            and item.name not in allowed_remaining_zerg_units
         ):
-            # Note(mm): This doesn't exclude things like automated assimilators or warp gate improvements
-            # because that item type is mixed in with e.g. Reconstruction Beam and Overwatch
-            if (SC2Mission.TEMPLAR_S_RETURN not in missions
-                or world.options.grant_story_tech.value == GrantStoryTech.option_grant
-                or item.name not in (
-                            item_names.IMMORTAL, item_names.ANNIHILATOR,
-                            item_names.COLOSSUS, item_names.VANGUARD, item_names.REAVER, item_names.DARK_TEMPLAR,
-                            item_names.SENTRY, item_names.HIGH_TEMPLAR,
-                )
-            ):
-                item.flags |= ItemFilterFlags.FilterExcluded
+            item.flags |= ItemFilterFlags.FilterExcluded
+        if (not protoss_build_missions
+            # Note(mm): This doesn't handle categories containing e.g. automated assimilators
+            # or warp gate improvements because that item type is mixed in with
+            # e.g. Reconstruction Beam and Overwatch
+            and item.data.type in (
+                item_tables.ProtossItemType.Unit,
+                item_tables.ProtossItemType.Unit_2,
+                item_tables.ProtossItemType.Building,
+            )
+            and item.name not in allowed_remaining_protoss_units
+        ):
+            item.flags |= ItemFilterFlags.FilterExcluded
 
         # Faction +attack/armour upgrades
         if (item.data.type == item_tables.TerranItemType.Upgrade

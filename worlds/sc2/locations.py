@@ -2638,21 +2638,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             "Victory",
             SC2HOTS_LOC_ID_OFFSET + 600,
             LocationType.VICTORY,
-            lambda state: (
-                logic.zerg_pass_vents(state)
-                and (
-                    logic.grant_story_tech == GrantStoryTech.option_grant
-                    or state.has_any(
-                        {
-                            item_names.ZERGLING_RAPTOR_STRAIN,
-                            item_names.ROACH,
-                            item_names.HYDRALISK,
-                            item_names.INFESTOR,
-                        },
-                        player,
-                    )
-                )
-            ),
+            logic.zerg_enemy_within_victory_requirement,
             hard_rule=logic.zerg_pass_vents,
         ),
         make_location_data(

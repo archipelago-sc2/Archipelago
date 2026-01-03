@@ -67,7 +67,7 @@ second_pass_placeable_items: Tuple[str, ...] = (
     item_names.SPORE_CRAWLER,
     item_names.SPINE_CRAWLER,
     # Overseer
-    item_names.OVERLORD_OVERSEER_ASPECT,
+    item_names.OVERSEER,
     # Spear of Adun Abilities
     item_names.SOA_CHRONO_SURGE,
     item_names.SOA_PROGRESSIVE_PROXY_PYLON,

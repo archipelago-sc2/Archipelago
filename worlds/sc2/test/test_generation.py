@@ -201,11 +201,12 @@ class TestItemFiltering(Sc2SetupTestBase):
             'mission_order': options.MissionOrder.option_grid,
             'maximum_campaign_size': options.MaximumCampaignSize.range_end,
             'excluded_missions': [
-                *[mission.mission_name
-                    for mission in mission_tables.SC2Mission
+                SC2Mission.ENEMY_WITHIN_T.mission_name,
+                *[
+                    mission.mission_name for mission in mission_tables.SC2Mission
                     if mission_tables.MissionFlag.Terran in mission.flags
-                    and mission_tables.MissionFlag.NoBuild not in mission.flags],
-                mission_tables.SC2Mission.ENEMY_WITHIN_T.mission_name,
+                        and mission_tables.MissionFlag.NoBuild not in mission.flags
+                ]
             ],
         }
         self.generate_world(world_options)
@@ -518,9 +519,9 @@ class TestItemFiltering(Sc2SetupTestBase):
         itempool = [item.name for item in self.multiworld.itempool]
         self.assertTrue(itempool)
         aspects_in_pool = list(set(itempool).intersection(set(item_groups.zerg_morphs)))
-        if item_names.OVERLORD_OVERSEER_ASPECT in aspects_in_pool:
+        if item_names.OVERSEER in aspects_in_pool:
             # Overseer morphs from Overlord, that's available always
-            aspects_in_pool.remove(item_names.OVERLORD_OVERSEER_ASPECT)
+            aspects_in_pool.remove(item_names.OVERSEER)
         self.assertFalse(aspects_in_pool)
         units_in_pool = list(set(itempool).intersection(set(item_groups.zerg_units))
                              .difference(set(item_groups.zerg_morphs)))
