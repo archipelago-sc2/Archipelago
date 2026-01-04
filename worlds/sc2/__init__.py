@@ -129,16 +129,7 @@ class SC2World(World):
         ):
             for mission in self.custom_mission_order.get_used_missions():
                 # check if Nova is used anywhere
-                if (MissionFlag.Nova in mission.flags 
-                    and ( 
-                        MissionFlag.Terran in mission.flags
-                        and NovaPresenceOptions.NCO_TERRAN in self.options.nova_presence
-                        or MissionFlag.Zerg in mission.flags
-                        and NovaPresenceOptions.NCO_ZERG in self.options.nova_presence
-                        or MissionFlag.Protoss in mission.flags
-                        and NovaPresenceOptions.NCO_PROTOSS in self.options.nova_presence
-                    )
-                ):
+                if MissionFlag.Nova in mission.flags and self.logic.nova_unit_available:
                   # ...and just modify the option
                   self.options.nova_presence.value.add(NovaPresenceOptions.GHOST_OF_A_CHANCE)
                   break
