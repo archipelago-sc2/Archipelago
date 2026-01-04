@@ -136,8 +136,8 @@ parent_present[parent_names.TERRAN_MERCENARIES] = AnyOf(item_groups.terran_merce
 # Zerg
 parent_present[parent_names.ANY_NYDUS_WORM] = AnyOf((item_names.NYDUS_WORM, item_names.ECHIDNA_WORM), item_names.NYDUS_WORM)
 parent_present[parent_names.BANELING_SOURCE] = AnyOf(
-    (item_names.ZERGLING_BANELING_ASPECT, item_names.KERRIGAN_SPAWN_BANELINGS),
-    item_names.ZERGLING_BANELING_ASPECT,
+    (item_names.BANELING, item_names.KERRIGAN_SPAWN_BANELINGS),
+    item_names.BANELING,
 )
 parent_present[parent_names.INFESTED_UNITS] = AnyOf(item_groups.infterr_units, display_string='Infested')
 parent_present[parent_names.INFESTED_FACTORY_OR_STARPORT] = AnyOf(

@@ -21,7 +21,6 @@ import random
 import concurrent.futures
 import time
 import uuid
-import argparse
 from pathlib import Path
 
 # CommonClient import first to trigger ModuleUpdater
@@ -41,6 +40,7 @@ from .options import (
     SpearOfAdunPassivesPresentInNoBuild, EnableVoidTrade, VoidTradeAgeLimit, void_trade_age_limits_ms, VoidTradeWorkers,
     DifficultyDamageModifier, MissionOrderScouting, GenericUpgradeResearchSpeedup, MercenaryHighlanders, WarCouncilNerfs,
     is_mission_in_soa_presence,
+    upgrade_included_names,
 )
 from .mission_order.slot_data import CampaignSlotData, LayoutSlotData, MissionSlotData, MissionOrderObjectSlotData
 from .mission_order.entry_rules import SubRuleRuleData, CountMissionsRuleData, MissionEntryRules
@@ -73,9 +73,11 @@ from .mission_tables import (
 )
 
 import colorama
-from .options import Option, upgrade_included_names
 from NetUtils import ClientStatus, NetworkItem, JSONtoTextParser, JSONMessagePart, add_json_item, add_json_location, add_json_text, JSONTypes
 from MultiServer import mark_raw
+
+if typing.TYPE_CHECKING:
+    from Options import Option
 
 pool = concurrent.futures.ThreadPoolExecutor(1)
 loop = asyncio.get_event_loop_policy().new_event_loop()
@@ -83,9 +85,9 @@ nest_asyncio.apply(loop)
 MAX_BONUS: int = 28
 
 # GitHub repo where the Map/mod data is hosted for /download_data command
-DATA_REPO_OWNER = "Ziktofel"
+DATA_REPO_OWNER = "archipelago-sc2"
 DATA_REPO_NAME = "Archipelago-SC2-data"
-DATA_API_VERSION = "API4"
+DATA_API_VERSION = "API5"
 
 # Bot controller
 CONTROLLER_HEALTH: int = 38281
