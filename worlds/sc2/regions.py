@@ -93,7 +93,14 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
         world.options.kerrigan_presence.value not in kerrigan_unit_available
         or SC2Campaign.HOTS not in enabled_campaigns
     )
-
+    novaless = (
+        SC2Campaign.NCO not in enabled_campaigns
+        or ( 
+            NovaPresenceOptions.NCO_TERRAN not in world.options.nova_presence or SC2Race.TERRAN not in world.options.get_enabled_races
+            and NovaPresenceOptions.NCO_ZERG not in world.options.nova_presence or SC2Race.ZERG not in world.options.get_enabled_races
+            and NovaPresenceOptions.NCO_PROTOSS not in world.options.nova_presence or SC2Race.PROTOSS not in world.options.get_enabled_races
+        )
+    )
     # General changes for standard tactics
     if world.options.required_tactics.value == RequiredTactics.option_standard:
         pools.move_mission(SC2Mission.SMASH_AND_GRAB, Difficulty.STARTER, Difficulty.EASY)
@@ -117,11 +124,11 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
         pools.move_mission(SC2Mission.A_SINISTER_TURN, Difficulty.MEDIUM, Difficulty.EASY)
 
     # Don't start on Ghost of a Chance if it will require Nova items
-    if (grant_story_tech != GrantStoryTech.option_grant
+    if (grant_story_tech != GrantStoryTech.option_grant or novaless
         and (
             NovaPresenceOptions.GHOST_OF_A_CHANCE in world.options.nova_presence()
             or (
-                SC2Campaign.NCO in enabled_campaigns
+                not novaless
                 and NovaPresenceOptions.GHOST_OF_A_CHANCE_AUTO in world.options.nova_presence()
             )
         )
@@ -136,18 +143,7 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
         )
     ):
         pools.move_mission(SC2Mission.DARK_WHISPERS, Difficulty.EASY, Difficulty.STARTER)
-    # HotS
-    kerriganless = world.options.kerrigan_presence.value not in kerrigan_unit_available \
-        or SC2Campaign.HOTS not in enabled_campaigns
-    # NCO
-    novaless = (
-        SC2Campaign.NCO not in enabled_campaigns
-        or ( 
-            NovaPresenceOptions.NCO_TERRAN not in world.options.nova_presence or SC2Race.TERRAN not in world.options.get_enabled_races
-            and NovaPresenceOptions.NCO_ZERG not in world.options.nova_presence or SC2Race.ZERG not in world.options.get_enabled_races
-            and NovaPresenceOptions.NCO_PROTOSS not in world.options.nova_presence or SC2Race.PROTOSS not in world.options.get_enabled_races
-        )
-    )
+
     if grant_story_tech == GrantStoryTech.option_grant:
         # Additional starter mission if player is granted story tech
         pools.move_mission(SC2Mission.ENEMY_WITHIN, Difficulty.EASY, Difficulty.STARTER)
