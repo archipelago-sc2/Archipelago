@@ -573,7 +573,7 @@ class SC2Logic:
         return state.has_any({item_names.RAVEN, item_names.SCIENCE_VESSEL, item_names.COMMAND_CENTER_SCANNER_SWEEP}, self.player)
     
     def zerg_mobile_detector(self, state: CollectionState) -> bool:
-        return state.has_any({item_names.OVERLORD_OVERSEER_ASPECT, item_names.BROOD_QUEEN}, self.player)
+        return state.has_any({item_names.OVERSEER, item_names.BROOD_QUEEN}, self.player)
     
     def protoss_mobile_detector(self, state: CollectionState) -> bool:
         return state.has_any({item_names.OBSERVER, item_names.ORACLE,}, self.player)
