@@ -866,6 +866,7 @@ class SC2Context(CommonContext):
             self.lowest_maximum_supply = args["slot_data"].get("lowest_maximum_supply", options.LowestMaximumSupply.default)
             self.research_cost_reduction_per_item = args["slot_data"].get("research_cost_reduction_per_item", options.ResearchCostReductionPerItem.default)
             self.nova_presence = args["slot_data"].get("nova_presence", options.NovaPresence.default)
+            self.nova_unit_available = args["slot_data"].get("nova_unit_available", True)
             if self.slot_data_version < 4:
                 if args["slot_data"].get("nova_covert_ops_only", True):
                     self.nova_presence = {NovaPresenceOptions.NCO_TERRAN},
@@ -876,7 +877,6 @@ class SC2Context(CommonContext):
                     self.nova_presence = {NovaPresenceOptions.NCO_TERRAN},
                 else:
                     self.nova_presence = {NovaPresenceOptions.NCO_TERRAN, NovaPresenceOptions.GHOST_OF_A_CHANCE},
-            self.nova_presence = args["slot_data"].get("nova_presence", options.NovaPresence.default)
             self.trade_enabled = args["slot_data"].get("enable_void_trade", EnableVoidTrade.option_false)
             self.trade_age_limit = args["slot_data"].get("void_trade_age_limit", VoidTradeAgeLimit.default)
             self.trade_workers_allowed = args["slot_data"].get("void_trade_workers", VoidTradeWorkers.default)
@@ -1576,16 +1576,28 @@ def calculate_kerrigan_options(ctx: SC2Context) -> int:
     return result
 
 def calculate_nova_presence(ctx: SC2Context, mission: SC2Mission) -> bool:
+    result = False
     if mission.campaign == SC2Campaign.NCO:
         if mission.race == SC2Race.TERRAN and NovaPresenceOptions.NCO_TERRAN in ctx.nova_presence:
-            return True
+            result = True
         elif mission.race == SC2Race.ZERG and NovaPresenceOptions.NCO_ZERG in ctx.nova_presence:
-            return True
+            result = True
         elif mission.race == SC2Race.PROTOSS and NovaPresenceOptions.NCO_PROTOSS in ctx.nova_presence:
-            return True
+            result = True
     if mission == SC2Mission.GHOST_OF_A_CHANCE and NovaPresenceOptions.GHOST_OF_A_CHANCE in ctx.nova_presence:
-        return True
-    return False
+        result = True
+    return result
+
+def calculate_story_tech(ctx: SC2Context, mission: SC2Mission) -> bool:
+    if (
+        MissionFlag.Nova in mission.flags
+        and MissionFlag.NoBuild in mission.flags
+        and not ctx.nova_unit_available
+    ):
+        result = GrantStoryTech.option_grant
+    else:
+        result = ctx.grant_story_tech
+    return result
 
 def calculate_soa_options(ctx: SC2Context, mission: SC2Mission) -> int:
     """
@@ -1759,6 +1771,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             kerrigan_level = get_kerrigan_level(self.ctx, start_items, missions_beaten)
             kerrigan_options = calculate_kerrigan_options(self.ctx)
             nova_presence = calculate_nova_presence(self.ctx, mission)
+            grant_story_tech = calculate_story_tech(self.ctx, mission)
             soa_options = calculate_soa_options(self.ctx, mission)
             generic_upgrade_options = calculate_generic_upgrade_options(self.ctx)
             trade_options = calculate_trade_options(self.ctx)
@@ -1781,7 +1794,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 f" {self.ctx.disable_forced_camera}"
                 f" {self.ctx.skip_cutscenes}"
                 f" {kerrigan_options}"
-                f" {self.ctx.grant_story_tech}"
+                f" {grant_story_tech}"
                 f" {self.ctx.take_over_ai_allies}"
                 f" {soa_options}"
                 f" {self.ctx.mission_order}"

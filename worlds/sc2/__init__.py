@@ -213,6 +213,7 @@ class SC2World(World):
         enabled_campaigns = get_enabled_campaigns(self)
         slot_data["plando_locations"] = get_plando_locations(self)
         slot_data["nova_presence"] = self.options.nova_presence.value
+        slot_data["nova_unit_available"] = self.logic.nova_unit_available
         slot_data["final_mission_ids"] = self.custom_mission_order.get_final_mission_ids()
         slot_data["custom_mission_order"] = self.custom_mission_order.get_slot_data()
         slot_data["version"] = 5
