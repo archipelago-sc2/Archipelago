@@ -3842,7 +3842,7 @@ class SC2Logic:
                 or not self.nova_unit_available
                 or state.has(item_names.NOVA_BLINK, self.player)
                 or (
-                    self.adv_tactics
+                    self.advanced_tactics
                     and state.has_all(
                         {
                             item_names.NOVA_DOMINATION,
