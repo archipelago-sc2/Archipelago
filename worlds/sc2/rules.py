@@ -3344,7 +3344,7 @@ class SC2Logic:
         return (
             self.grant_story_tech == GrantStoryTech.option_grant 
             or not self.nova_unit_available
-            or self.nova_any_nobuild_damage()
+            or self.nova_any_nobuild_damage(state)
         )
 
     def terran_able_to_snipe_defiler(self, state: CollectionState) -> bool:
