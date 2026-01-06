@@ -94,14 +94,7 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
         world.options.kerrigan_presence.value not in kerrigan_unit_available
         or SC2Campaign.HOTS not in enabled_campaigns
     )
-    novaless = (
-        SC2Campaign.NCO not in enabled_campaigns
-        or ( 
-            NovaPresenceOptions.NCO_TERRAN not in world.options.nova_presence or SC2Race.TERRAN not in get_enabled_races(world)
-            and NovaPresenceOptions.NCO_ZERG not in world.options.nova_presence or SC2Race.ZERG not in get_enabled_races(world)
-            and NovaPresenceOptions.NCO_PROTOSS not in world.options.nova_presence or SC2Race.PROTOSS not in get_enabled_races(world)
-        )
-    )
+    novaless = not world.logic.nova_unit_available
     # General changes for standard tactics
     if world.options.required_tactics.value == RequiredTactics.option_standard:
         pools.move_mission(SC2Mission.SMASH_AND_GRAB, Difficulty.STARTER, Difficulty.EASY)
