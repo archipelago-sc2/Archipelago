@@ -388,7 +388,7 @@ evil_logic_settings = {
 }
 
 full_campaign_settings = {
-    # mandatory full campaign, not recommended, but will be expected. 195 mission grid, all races. Reduced locations and filler values
+    # mandatory full campaign, not recommended, but will be expected. Max size mission grid, all races. Reduced locations and filler values
     OPTION_NAME[Accessibility]:                         Accessibility.option_full,
     OPTION_NAME[ProgressionBalancing]:                  ProgressionBalancing.default,
     OPTION_NAME[GameDifficulty]:                        GameDifficulty.option_normal,
