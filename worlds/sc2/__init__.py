@@ -123,16 +123,13 @@ class SC2World(World):
         self.custom_mission_order = create_mission_order(
             self, get_locations(self), self.location_cache
         )
-        if (NovaPresenceOptions.GHOST_OF_A_CHANCE_AUTO in self.options.nova_presence
-            and NovaPresenceOptions.GHOST_OF_A_CHANCE not in self.options.nova_presence
-            # if both options are set, Nova is forced on
+        if (
+            NovaPresenceOptions.GHOST_OF_A_CHANCE_AUTO in self.options.nova_presence
+            and MissionFlag.Nova in self.custom_mission_order.get_used_flags() 
+            and self.logic.nova_unit_available
         ):
-            for mission in self.custom_mission_order.get_used_missions():
-                # check if Nova is used anywhere
-                if MissionFlag.Nova in mission.flags and self.logic.nova_unit_available:
-                  # ...and just modify the option
-                  self.options.nova_presence.value.add(NovaPresenceOptions.GHOST_OF_A_CHANCE)
-                  break
+            # check if Nova is used anywhere and just modify the option
+            self.options.nova_presence.value.add(NovaPresenceOptions.GHOST_OF_A_CHANCE)
 
 
     def create_items(self) -> None:
