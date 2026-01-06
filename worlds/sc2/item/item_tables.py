@@ -1687,7 +1687,7 @@ item_table = {
     item_names.TEMPEST:
         ItemData(26 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Unit_2, 5, SC2Race.PROTOSS,
                  classification=ItemClassification.progression),
-    item_names.MOTHERSHIP:
+    item_names.MOTHERSHIP_TALDARIM:
         ItemData(27 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Unit_2, 6, SC2Race.PROTOSS,
                  classification=ItemClassification.progression),
     item_names.ARBITER:
@@ -1714,7 +1714,12 @@ item_table = {
     item_names.SKIRMISHER:
         ItemData(35 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Unit_2, 14, SC2Race.PROTOSS,
                  classification=ItemClassification.progression),
-    # 36, 37 reserved for Mothership
+    item_names.MOTHERSHIP_AIUR:
+        ItemData(36 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Unit_2, 15, SC2Race.PROTOSS,
+                 classification=ItemClassification.progression),
+    item_names.MOTHERSHIP_PURIFIER:
+        ItemData(37 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Unit_2, 16, SC2Race.PROTOSS,
+                 classification=ItemClassification.progression),
     item_names.OPPRESSOR:
         ItemData(38 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Unit_2, 17, SC2Race.PROTOSS,
                  classification=ItemClassification.progression),
@@ -1848,7 +1853,16 @@ item_table = {
     item_names.SUPPLICANT_ZENITH_PITCH: ItemData(395 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 5, SC2Race.PROTOSS, classification=ItemClassification.progression_skip_balancing, parent=item_names.SUPPLICANT),
     item_names.PULSAR_CHRONOCLYSM: ItemData(396 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 6, SC2Race.PROTOSS, parent=item_names.PULSAR),
     item_names.PULSAR_ENTROPIC_REVERSAL: ItemData(397 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 7, SC2Race.PROTOSS, parent=item_names.PULSAR),
-    # 398-407 reserved for Mothership
+    item_names.MOTHERSHIP_TIME_FIELD_MODULES: ItemData(398 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 8, SC2Race.PROTOSS, parent=parent_names.MOTHERSHIP),
+    item_names.MOTHERSHIP_WORMHOLE_MODULES: ItemData(399 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 9, SC2Race.PROTOSS, parent=parent_names.MOTHERSHIP),
+    item_names.MOTHERSHIP_HANGAR_INSTALLATIONS: ItemData(400 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 10, SC2Race.PROTOSS, parent=parent_names.MOTHERSHIP),
+    item_names.MOTHERSHIP_AIUR_ASTRAL_RESTORATION: ItemData(401 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 11, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_AIUR),
+    item_names.MOTHERSHIP_PURIFIER_PLANET_CRACKER: ItemData(402 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 12, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_PURIFIER),
+    item_names.MOTHERSHIP_TALDARIM_SUMMON_DEATH_FLEET: ItemData(403 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 13, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_TALDARIM),
+    item_names.MOTHERSHIP_AIUR_HARMONIZED_FEEDBACK_CONDUCTORS: ItemData(404 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 14, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_AIUR),
+    item_names.MOTHERSHIP_AIUR_KHALAI_SHIELD_RECHARGERS: ItemData(405 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 15, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_AIUR),
+    item_names.MOTHERSHIP_AIUR_SYMBOL_OF_UNITY: ItemData(406 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 16, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_AIUR),
+    item_names.MOTHERSHIP_PURIFIER_CYBROS_SHIELDING: ItemData(407 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 17, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_PURIFIER),
     item_names.OPPRESSOR_ACCELERATED_WARP: ItemData(408 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 18, SC2Race.PROTOSS, parent=item_names.OPPRESSOR),
     item_names.OPPRESSOR_ARMOR_MELTING_BLASTERS: ItemData(409 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 19, SC2Race.PROTOSS, parent=item_names.OPPRESSOR),
     item_names.CALADRIUS_SIDE_MISSILES: ItemData(410 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 20, SC2Race.PROTOSS, parent=item_names.CALADRIUS),
@@ -1861,7 +1875,12 @@ item_table = {
     item_names.DARK_TEMPLAR_ARCHON_MERGE: ItemData(417 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 27, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.DARK_TEMPLAR),
     item_names.ASCENDANT_ARCHON_MERGE: ItemData(418 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 28, SC2Race.PROTOSS, classification=ItemClassification.progression_skip_balancing, parent=item_names.ASCENDANT),
     item_names.SCOUT_SUPPLY_EFFICIENCY: ItemData(419 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_4, 29, SC2Race.PROTOSS, parent=item_names.SCOUT),
-    item_names.REAVER_BARGAIN_BIN_PRICES: ItemData(420 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 0, SC2Race.PROTOSS, parent=item_names.REAVER),
+    item_names.REAVER_BARGAIN_BIN_PRICES: ItemData(420 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 0, SC2Race.PROTOSS, parent=item_names.SCOUT),
+    item_names.MOTHERSHIP_PURIFIER_AMPLIFIED_POWER_REROUTER: ItemData(421 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 1, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_PURIFIER),
+    item_names.MOTHERSHIP_PURIFIER_PURIFIED_EMBERS: ItemData(422 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 2, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_PURIFIER),
+    item_names.MOTHERSHIP_TALDARIM_SHADOW_OF_DEATH: ItemData(423 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 3, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_TALDARIM),
+    item_names.MOTHERSHIP_TALDARIM_SOUL_FORGED_CONDUITS: ItemData(424 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 4, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_TALDARIM),
+    item_names.MOTHERSHIP_TALDARIM_BLOOD_FUSED_PARTICLES: ItemData(425 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 5, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_TALDARIM),
 
 
     # War Council
@@ -1910,8 +1929,9 @@ item_table = {
     item_names.SCOUT_EXPEDITIONARY_HULL: ItemData(542 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council_2, 12, SC2Race.PROTOSS, parent=item_names.SCOUT),
     item_names.ARBITER_VESSEL_OF_THE_CONCLAVE: ItemData(543 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council_2, 13, SC2Race.PROTOSS, parent=item_names.ARBITER),
     item_names.ORACLE_STASIS_CALIBRATION: ItemData(326 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council_2, 14, SC2Race.PROTOSS, parent=item_names.ORACLE),
-    item_names.MOTHERSHIP_INTEGRATED_POWER: ItemData(545 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council_2, 15, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP),
-    # 546-549 reserved for Mothership
+    item_names.MOTHERSHIP_TALDARIM_INTEGRATED_POWER: ItemData(545 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council_2, 15, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_TALDARIM),
+    item_names.MOTHERSHIP_AIUR_VALOROUS_RESOLVE: ItemData(546 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council_2, 16, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_AIUR),
+    item_names.MOTHERSHIP_PURIFIER_MOBILE_POWER_FIELD: ItemData(547 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council_2, 17, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_PURIFIER),
     item_names.OPPRESSOR_VULCAN_BLASTER: ItemData(550 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council_2, 20, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.OPPRESSOR),
     item_names.CALADRIUS_CORONA_BEAM: ItemData(551 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council_2, 21, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.CALADRIUS),
     item_names.MISTWING_PHANTOM_DASH: ItemData(552 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council_2, 22, SC2Race.PROTOSS, parent=item_names.MISTWING),

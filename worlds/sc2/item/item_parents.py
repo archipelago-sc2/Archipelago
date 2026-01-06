@@ -234,6 +234,10 @@ parent_present[parent_names.PROTOSS_ATTACKING_BUILDING] = AnyOf(
     (item_names.NEXUS_OVERCHARGE, item_names.PHOTON_CANNON, item_names.KHAYDARIN_MONOLITH),
     main_item=item_names.PHOTON_CANNON,
 )
+parent_present[parent_names.MOTHERSHIP] = AnyOf(
+    (item_names.MOTHERSHIP_AIUR, item_names.MOTHERSHIP_PURIFIER, item_names.MOTHERSHIP_TALDARIM),
+    main_item=item_names.MOTHERSHIP_TALDARIM,
+)
 
 
 parent_id_to_children: Dict[str, Sequence[str]] = {}

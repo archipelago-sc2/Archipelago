@@ -14,7 +14,7 @@ class ItemGroupsUnitTests(unittest.TestCase):
         )
         self.assertCountEqual(
             item_groups.protoss_units,
-            item_groups.gateway_units + item_groups.robo_units + item_groups.stargate_units
+            item_groups.gateway_units + item_groups.robo_units + item_groups.stargate_units + item_groups.nexus_units
         )
     
     def test_terran_original_progressive_group_fully_contained_in_wol_upgrades(self) -> None:

@@ -66,8 +66,8 @@ class TestItemFiltering(Sc2SetupTestBase):
                 item_names.THOR: -1,
                 item_names.GHOST: -1,
                 item_names.SPECTRE: -1,
-                item_groups.ItemGroupNames.MENGSK_UNITS: -1,
-                item_groups.ItemGroupNames.TERRAN_VETERANCY_UNITS: -1,
+                item_groups.ItemGroupNames.COOP_MENGSK_UNITS: -1,
+                item_groups.ItemGroupNames.TERRAN_ROYAL_GUARD_UNITS: -1,
             },
             'unexcluded_items': {
                 item_names.NOVA_PLASMA_RIFLE: 1,       # Necessary to pass logic
@@ -1006,7 +1006,7 @@ class TestItemFiltering(Sc2SetupTestBase):
             },
             # Exclude many items to get filler to generate
             'excluded_items': {
-                item_groups.ItemGroupNames.TERRAN_VETERANCY_UNITS: 0,
+                item_groups.ItemGroupNames.TERRAN_ROYAL_GUARD_UNITS: 0,
             },
             'max_number_of_upgrades': 2,
             'mission_order': options.MissionOrder.option_grid,
@@ -1042,7 +1042,7 @@ class TestItemFiltering(Sc2SetupTestBase):
             },
             # Exclude many items to get filler to generate
             'excluded_items': {
-                item_groups.ItemGroupNames.TERRAN_VETERANCY_UNITS: 0,
+                item_groups.ItemGroupNames.TERRAN_ROYAL_GUARD_UNITS: 0,
                 item_groups.ItemGroupNames.ZERG_MORPHS: 0,
             },
             'max_number_of_upgrades': 2,
@@ -1336,7 +1336,7 @@ class TestItemFiltering(Sc2SetupTestBase):
         starting_inventory = [item.name for item in self.multiworld.precollected_items[self.player]]
 
         # A unit nerf happens due to excluding OP items
-        self.assertNotIn(item_names.MOTHERSHIP_INTEGRATED_POWER, starting_inventory)
+        self.assertNotIn(item_names.MOTHERSHIP_TALDARIM_INTEGRATED_POWER, starting_inventory)
 
     def test_terran_nobuild_sections_get_marine_medic_upgrades_with_units_excluded(self) -> None:
         world_options = {

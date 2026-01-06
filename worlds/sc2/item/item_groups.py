@@ -110,13 +110,17 @@ class ItemGroupNames:
     TERRAN_PROGRESSIVE_UPGRADES = "Terran Progressive Upgrades"
     TERRAN_ORIGINAL_PROGRESSIVE_UPGRADES = "Terran Original Progressive Upgrades"
     """Progressive items where level 1 appeared in WoL"""
-    MENGSK_UNITS = "Mengsk Units"
     TERRAN_SC1_UNITS = "Terran SC1 Units"
     TERRAN_SC1_BUILDINGS = "Terran SC1 Buildings"
     TERRAN_LADDER_UNITS = "Terran Ladder Units"
-    TERRAN_VETERANCY_UNITS = "Terran Veterancy Units"
+    TERRAN_ROYAL_GUARD_UNITS = "Terran Royal Guard Units"
     ORBITAL_COMMAND_ABILITIES = "Orbital Command Abilities"
     WOL_ORBITAL_COMMAND_ABILITIES = "WoL Command Center Abilities"
+    COOP_RAYNOR_UNITS = "Co-op Raynor Units"
+    COOP_SWANN_UNITS = "Co-op Swann Units"
+    COOP_NOVA_UNITS = "Co-op Nova Units"
+    COOP_HAN_AND_HORNER_UNITS = "Co-op Han and Horner Units"
+    COOP_MENGSK_UNITS = "Co-op Mengsk Units"
 
     ZERG_ITEMS = "Zerg Items"
     ZERG_UNITS = "Zerg Units"
@@ -153,12 +157,18 @@ class ItemGroupNames:
     ZERG_MORPHS = "Zerg Morphs"
     ZERG_MERCENARIES = "Zerg Mercenaries"
     ZERG_BUILDINGS = "Zerg Buildings"
-    INF_TERRAN_ITEMS = "Infested Terran Items"
     """All items from Stukov co-op subfaction"""
-    INF_TERRAN_UNITS = "Infested Terran Units"
-    INF_TERRAN_UPGRADES = "Infested Terran Upgrades"
+    INFESTED_TERRAN_UNITS = "Infested Terran Units"
+    INFESTED_TERRAN_ITEMS = "Infested Terran Items"
+    INFESTED_TERRAN_UPGRADES = "Infested Terran Upgrades"
     ZERG_SC1_UNITS = "Zerg SC1 Units"
     ZERG_LADDER_UNITS = "Zerg Ladder Units"
+    COOP_KERRIGAN_UNITS = "Co-op Kerrigan Units"
+    COOP_ZAGARA_UNITS = "Co-op Zagara Units"
+    COOP_ABATHUR_UNITS = "Co-op Abathur Units"
+    COOP_STUKOV_UNITS = "Co-op Stukov Units"
+    COOP_DEHAKA_UNITS = "Co-op Dehaka Units"
+    COOP_STETMANN_UNITS = "Co-op Stetmann Units"
 
     PROTOSS_ITEMS = "Protoss Items"
     PROTOSS_UNITS = "Protoss Units"
@@ -184,6 +194,13 @@ class ItemGroupNames:
     PROTOSS_SC1_UNITS = "Protoss SC1 Units"
     PROTOSS_SC1_BUILDINGS = "Protoss SC1 Buildings"
     PROTOSS_LADDER_UNITS = "Protoss Ladder Units"
+    NEXUS_UNITS = "Nexus Units"
+    COOP_ARTANIS_UNITS = "Co-op Artanis Units"
+    COOP_VORAZUN_UNITS = "Co-op Vorazun Units"
+    COOP_KARAX_UNITS = "Co-op Karax Units"
+    COOP_ALARAK_UNITS = "Co-op Alarak Units"
+    COOP_FENIX_UNITS = "Co-op Fenix Units"
+    COOP_ZERATUL_UNITS = "Co-op Zeratul Units"
 
     VANILLA_ITEMS = "Vanilla Items"
     OVERPOWERED_ITEMS = "Overpowered Items"
@@ -305,16 +322,17 @@ item_name_groups[ItemGroupNames.TERRAN_BUILDINGS] = terran_buildings = [
     item_names.PSI_INDOCTRINATOR,
     item_names.ARGUS_AMPLIFIER,
 ]
-item_name_groups[ItemGroupNames.MENGSK_UNITS] = [
+item_name_groups[ItemGroupNames.TERRAN_ROYAL_GUARD_UNITS] = [
+    # Elite Barracks
+    item_names.SON_OF_KORHAL, item_names.FIELD_RESPONSE_THETA,
     item_names.AEGIS_GUARD, item_names.EMPERORS_SHADOW,
+    # Elite Factory
+    item_names.BULWARK_COMPANY, 
     item_names.SHOCK_DIVISION, item_names.BLACKHAMMER,
+    # Elite Starport
     item_names.PRIDE_OF_AUGUSTRGRAD, item_names.SKY_FURY,
-    item_names.DOMINION_TROOPER,
-]
-item_name_groups[ItemGroupNames.TERRAN_VETERANCY_UNITS] = [
-    item_names.AEGIS_GUARD, item_names.EMPERORS_SHADOW, item_names.SHOCK_DIVISION, item_names.BLACKHAMMER,
-    item_names.PRIDE_OF_AUGUSTRGRAD, item_names.SKY_FURY, item_names.SON_OF_KORHAL, item_names.FIELD_RESPONSE_THETA,
-    item_names.BULWARK_COMPANY, item_names.NIGHT_HAWK, item_names.EMPERORS_GUARDIAN, item_names.NIGHT_WOLF,
+    item_names.NIGHT_HAWK, item_names.EMPERORS_GUARDIAN,
+    item_names.NIGHT_WOLF,
 ]
 item_name_groups[ItemGroupNames.ORBITAL_COMMAND_ABILITIES] = orbital_command_abilities = [
     item_names.COMMAND_CENTER_SCANNER_SWEEP,
@@ -508,6 +526,66 @@ item_name_groups[ItemGroupNames.WOL_ITEMS] = vanilla_wol_items = (
     + orbital_command_abilities
     + terran_generic_upgrades
 )
+
+# Co-op Terran
+item_name_groups[ItemGroupNames.COOP_RAYNOR_UNITS] = [
+    item_names.MARINE,
+    item_names.MARAUDER,
+    item_names.FIREBAT,
+    item_names.MEDIC,
+    item_names.VULTURE,
+    item_names.SIEGE_TANK,
+    item_names.VIKING,
+    item_names.BANSHEE,
+    item_names.BATTLECRUISER,
+]
+item_name_groups[ItemGroupNames.COOP_SWANN_UNITS] = [
+    item_names.HELLION,
+    # (Hellbat)
+    item_names.GOLIATH,
+    item_names.SIEGE_TANK,
+    item_names.CYCLONE,
+    item_names.THOR,
+    item_names.WRAITH,
+    item_names.HERCULES,
+    item_names.SCIENCE_VESSEL,
+]
+item_name_groups[ItemGroupNames.COOP_NOVA_UNITS] = [
+    # Note: Co-op Nova has elite variants of these units
+    item_names.MARINE,
+    item_names.MARAUDER,
+    item_names.GHOST,
+    item_names.HELLION,
+    # (Hellbat)
+    item_names.GOLIATH,
+    item_names.SIEGE_TANK,
+    item_names.LIBERATOR,
+    item_names.BANSHEE,
+    item_names.RAVEN,
+]
+item_name_groups[ItemGroupNames.COOP_HAN_AND_HORNER_UNITS] = [
+    # Not implemented: Assault Galleon
+    item_names.REAPER,
+    item_names.WIDOW_MINE,
+    item_names.HELLION,
+    # (Hellbat)
+    # Note: Co-op Horner has elite variants of these units
+    item_names.WRAITH,
+    item_names.VIKING,
+    item_names.RAVEN,
+    item_names.BATTLECRUISER,
+]
+item_name_groups[ItemGroupNames.COOP_MENGSK_UNITS] = [
+    item_names.AEGIS_GUARD,
+    item_names.EMPERORS_SHADOW,
+    item_names.SHOCK_DIVISION,
+    item_names.BLACKHAMMER,
+    item_names.PRIDE_OF_AUGUSTRGRAD,
+    item_names.SKY_FURY,
+    item_names.DOMINION_TROOPER,
+    item_names.MEDIVAC,  # Imperial Intercessor
+    # Not implemented: Imperial Witness
+]
 
 # Zerg
 item_name_groups[ItemGroupNames.ZERG_ITEMS] = zerg_items = [
@@ -710,8 +788,8 @@ item_name_groups[ItemGroupNames.HOTS_ITEMS] = vanilla_hots_items = (
     + zerg_generic_upgrades
 )
 
-# Zerg - Infested Terran (Stukov Co-op)
-item_name_groups[ItemGroupNames.INF_TERRAN_UNITS] = infterr_units = [
+# Zerg - Infested Terran
+item_name_groups[ItemGroupNames.INFESTED_TERRAN_UNITS] = infterr_units = [
     item_names.INFESTED_MARINE,
     item_names.INFESTED_BUNKER,
     item_names.BULLFROG,
@@ -720,7 +798,7 @@ item_name_groups[ItemGroupNames.INF_TERRAN_UNITS] = infterr_units = [
     item_names.INFESTED_LIBERATOR,
     item_names.INFESTED_BANSHEE,
 ]
-item_name_groups[ItemGroupNames.INF_TERRAN_UPGRADES] = infterr_upgrades = [
+item_name_groups[ItemGroupNames.INFESTED_TERRAN_UPGRADES] = infterr_upgrades = [
     item_names.INFESTED_SCV_BUILD_CHARGES,
     item_names.INFESTED_MARINE_PLAGUED_MUNITIONS,
     item_names.INFESTED_MARINE_RETINAL_AUGMENTATION,
@@ -753,11 +831,79 @@ item_name_groups[ItemGroupNames.INF_TERRAN_UPGRADES] = infterr_upgrades = [
     item_names.INFESTED_MISSILE_TURRET_BIOELECTRIC_PAYLOAD,
     item_names.INFESTED_MISSILE_TURRET_ACID_SPORE_VENTS,
 ]
-item_name_groups[ItemGroupNames.INF_TERRAN_ITEMS] = (
+item_name_groups[ItemGroupNames.INFESTED_TERRAN_ITEMS] = (
     infterr_units
     + infterr_upgrades
     + [item_names.INFESTED_MISSILE_TURRET]
 )
+# Co-op Zerg
+item_name_groups[ItemGroupNames.COOP_KERRIGAN_UNITS] = [
+    item_names.ZERGLING,
+    item_names.SWARM_QUEEN,  # Not implemented: Hive Queen
+    item_names.HYDRALISK,
+    item_names.LURKER,
+    item_names.ULTRALISK,
+    item_names.MUTALISK,
+    item_names.BROOD_LORD,
+]
+item_name_groups[ItemGroupNames.COOP_ZAGARA_UNITS] = [
+    item_names.ZERGLING,
+    item_names.SWARM_QUEEN,  # Not implemented: Hive Queen
+    item_names.BANELING,
+    item_names.ABERRATION,
+    item_names.SCOURGE,
+    item_names.CORRUPTOR,
+    # item_names.BILE_LAUNCHER,
+]
+item_name_groups[ItemGroupNames.COOP_ABATHUR_UNITS] = [
+    item_names.ROACH,
+    item_names.RAVAGER,
+    item_names.SWARM_HOST,
+    item_names.MUTALISK,
+    item_names.GUARDIAN,
+    item_names.DEVOURER,
+    item_names.VIPER,  # From larva
+    item_names.SWARM_QUEEN,
+    # Not implemented: Brutalisk
+    # Not implemented: Leviathan
+]
+item_name_groups[ItemGroupNames.COOP_STUKOV_UNITS] = [
+    # Not implemented: Infested Colonist
+    item_names.INFESTED_MARINE,
+    item_names.INFESTED_BUNKER,
+    item_names.INFESTED_DIAMONDBACK,
+    item_names.INFESTED_SIEGE_TANK,
+    item_names.INFESTED_LIBERATOR,
+    item_names.INFESTED_BANSHEE,
+    item_names.BROOD_QUEEN,
+    item_names.OVERSEER,
+]
+item_name_groups[ItemGroupNames.COOP_DEHAKA_UNITS] = [
+    # Note: Co-op Dehaka has reskinned versions of most of these units
+    item_names.ZERGLING,
+    # Not implemented: Ravasaur
+    item_names.ROACH,
+    item_names.PRIMAL_IGNITER,
+    item_names.GUARDIAN,  # Morphs from 2 roaches
+    item_names.HYDRALISK,
+    item_names.MUTALISK,  # Morphs from 2 hydralisks
+    item_names.IMPALER,
+    item_names.SWARM_HOST,  # Primal Host
+    # Not implemented: Creeper Host
+    item_names.ULTRALISK,
+    item_names.TYRANNOZOR,
+]
+item_name_groups[ItemGroupNames.COOP_STETMANN_UNITS] = [
+    # Note: Co-op Stetmann has different variants of these units
+    item_names.ZERGLING,
+    item_names.BANELING,
+    item_names.HYDRALISK,
+    item_names.LURKER,
+    item_names.CORRUPTOR,
+    item_names.BROOD_LORD,  # Mecha Battlecarrier Lord
+    item_names.INFESTOR,
+    item_names.ULTRALISK,
+]
 
 # Protoss
 item_name_groups[ItemGroupNames.PROTOSS_ITEMS] = protoss_items = [
@@ -784,7 +930,8 @@ protoss_air_wa = [
     item_names.PHOENIX, item_names.MIRAGE, item_names.CORSAIR, item_names.SKIRMISHER,
     item_names.VOID_RAY, item_names.DESTROYER, item_names.PULSAR, item_names.DAWNBRINGER,
     item_names.CARRIER, item_names.SKYLORD, item_names.TRIREME,
-    item_names.SCOUT, item_names.TEMPEST, item_names.MOTHERSHIP,
+    item_names.SCOUT, item_names.TEMPEST, item_names.MOTHERSHIP_TALDARIM,
+    item_names.MOTHERSHIP_AIUR, item_names.MOTHERSHIP_PURIFIER,
     item_names.ARBITER, item_names.ORACLE, item_names.OPPRESSOR,
     item_names.CALADRIUS, item_names.MISTWING,
 ]
@@ -802,7 +949,7 @@ item_name_groups[ItemGroupNames.LOTV_UNITS] = lotv_units = [
     item_names.COLOSSUS, item_names.WRATHWALKER, item_names.REAVER,
     item_names.PHOENIX, item_names.MIRAGE, item_names.CORSAIR,
     item_names.VOID_RAY, item_names.DESTROYER, item_names.ARBITER,
-    item_names.CARRIER, item_names.TEMPEST, item_names.MOTHERSHIP,
+    item_names.CARRIER, item_names.TEMPEST, item_names.MOTHERSHIP_TALDARIM,
 ]
 item_name_groups[ItemGroupNames.PROPHECY_UNITS] = prophecy_units = [
     item_names.ZEALOT, item_names.STALKER, item_names.HIGH_TEMPLAR, item_names.DARK_TEMPLAR,
@@ -830,9 +977,12 @@ item_name_groups[ItemGroupNames.STARGATE_UNITS] = stargate_units = [
     item_names.PHOENIX, item_names.SKIRMISHER, item_names.MIRAGE, item_names.CORSAIR,
     item_names.VOID_RAY, item_names.DESTROYER, item_names.PULSAR, item_names.DAWNBRINGER,
     item_names.CARRIER, item_names.SKYLORD, item_names.TRIREME,
-    item_names.TEMPEST, item_names.SCOUT, item_names.MOTHERSHIP,
+    item_names.TEMPEST, item_names.SCOUT, item_names.MOTHERSHIP_TALDARIM,
     item_names.ARBITER, item_names.ORACLE, item_names.OPPRESSOR,
     item_names.CALADRIUS, item_names.MISTWING,
+]
+item_name_groups[ItemGroupNames.NEXUS_UNITS] = nexus_units = [
+    item_names.MOTHERSHIP_AIUR, item_names.MOTHERSHIP_PURIFIER,
 ]
 item_name_groups[ItemGroupNames.PROTOSS_BUILDINGS] = protoss_buildings = [
     item_name for item_name, item_data in item_tables.item_table.items()
@@ -840,7 +990,7 @@ item_name_groups[ItemGroupNames.PROTOSS_BUILDINGS] = protoss_buildings = [
 ]
 item_name_groups[ItemGroupNames.AIUR_UNITS] = [
     item_names.ZEALOT, item_names.DRAGOON, item_names.SENTRY, item_names.AVENGER, item_names.HIGH_TEMPLAR,
-    item_names.IMMORTAL, item_names.REAVER,
+    item_names.IMMORTAL, item_names.REAVER, item_names.MOTHERSHIP_AIUR, 
     item_names.PHOENIX, item_names.SCOUT, item_names.ARBITER, item_names.CARRIER,
 ]
 item_name_groups[ItemGroupNames.NERAZIM_UNITS] = [
@@ -851,13 +1001,13 @@ item_name_groups[ItemGroupNames.NERAZIM_UNITS] = [
 item_name_groups[ItemGroupNames.TAL_DARIM_UNITS] = [
     item_names.SUPPLICANT, item_names.SLAYER, item_names.HAVOC, item_names.BLOOD_HUNTER, item_names.ASCENDANT,
     item_names.VANGUARD, item_names.WRATHWALKER,
-    item_names.SKIRMISHER, item_names.DESTROYER, item_names.SKYLORD, item_names.MOTHERSHIP, item_names.OPPRESSOR,
+    item_names.SKIRMISHER, item_names.DESTROYER, item_names.SKYLORD, item_names.MOTHERSHIP_TALDARIM, item_names.OPPRESSOR,
 ]
 item_name_groups[ItemGroupNames.PURIFIER_UNITS] = [
     item_names.SENTINEL, item_names.ADEPT, item_names.INSTIGATOR, item_names.ENERGIZER,
     item_names.STALWART, item_names.COLOSSUS, item_names.DISRUPTOR,
     item_names.MIRAGE, item_names.DAWNBRINGER, item_names.TRIREME, item_names.TEMPEST,
-    item_names.CALADRIUS,
+    item_names.CALADRIUS, item_names.MOTHERSHIP_PURIFIER,
 ]
 item_name_groups[ItemGroupNames.SOA_PASSIVES] = spear_of_adun_passives = [
     item_names.RECONSTRUCTION_BEAM,
@@ -944,9 +1094,67 @@ item_name_groups[ItemGroupNames.PROTOSS_LADDER_UNITS] = [
     item_names.ORACLE,
     item_names.CARRIER,
     item_names.TEMPEST,
-    item_names.MOTHERSHIP,  # Replace: Aiur Mothership
+    item_names.MOTHERSHIP_AIUR,  # Replace: Aiur Mothership
+]
+# Co-op Protoss
+item_name_groups[ItemGroupNames.COOP_ARTANIS_UNITS] = [
+    item_names.ZEALOT,
+    item_names.DRAGOON,
+    item_names.HIGH_TEMPLAR,
+    # High Archon
+    item_names.IMMORTAL,
+    item_names.REAVER,
+    item_names.PHOENIX,
+    item_names.TEMPEST,
+]
+item_name_groups[ItemGroupNames.COOP_VORAZUN_UNITS] = [
+    item_names.CENTURION,
+    item_names.STALKER,
+    item_names.DARK_TEMPLAR,
+    item_names.DARK_ARCHON,
+    item_names.CORSAIR,
+    item_names.VOID_RAY,
+    item_names.ORACLE,
+]
+item_name_groups[ItemGroupNames.COOP_KARAX_UNITS] = [
+    item_names.SENTINEL,
+    item_names.ENERGIZER,
+    item_names.IMMORTAL,
+    item_names.COLOSSUS,
+    item_names.MIRAGE,
+    item_names.CARRIER,
+]
+item_name_groups[ItemGroupNames.COOP_ALARAK_UNITS] = [
+    item_names.SUPPLICANT,
+    item_names.SLAYER,
+    item_names.HAVOC,
+    item_names.ASCENDANT,
+    item_names.VANGUARD,
+    item_names.WARP_PRISM,
+    item_names.DESTROYER,  # Death Fleet, P3
+    item_names.MOTHERSHIP_TALDARIM,  # Death Fleet, P3
+]
+item_name_groups[ItemGroupNames.COOP_FENIX_UNITS] = [
+    item_names.SENTINEL,  # Legionnaire
+    item_names.ADEPT,
+    item_names.SENTRY,  # Conservator
+    item_names.IMMORTAL,
+    item_names.COLOSSUS,
+    item_names.DISRUPTOR,
+    item_names.SCOUT,
+    item_names.CARRIER,
+]
+item_name_groups[ItemGroupNames.COOP_ZERATUL_UNITS] = [
+    # Note: Co-op Zeratul has elite variants of these units
+    item_names.STALKER,  # Ambusher
+    item_names.SENTRY,  # Shieldguard
+    item_names.AVENGER,  # Void Templar
+    item_names.IMMORTAL,  # Enforcer
+    item_names.DISRUPTOR,  # Abrogator
+    item_names.WARP_PRISM,  # Void Array
 ]
 
+# Faction-agnostic groups
 item_name_groups[ItemGroupNames.VANILLA_ITEMS] = vanilla_items = (
     vanilla_wol_items + vanilla_hots_items + vanilla_lotv_items
 )
@@ -990,7 +1198,7 @@ item_name_groups[ItemGroupNames.OVERPOWERED_ITEMS] = overpowered_items = [
 
     # Protoss general
     item_names.QUATRO,
-    item_names.MOTHERSHIP_INTEGRATED_POWER,
+    item_names.MOTHERSHIP_TALDARIM_INTEGRATED_POWER,
     item_names.IMMORTAL_ANNIHILATOR_ADVANCED_TARGETING,
 
     # Mindless Broodwar garbage
