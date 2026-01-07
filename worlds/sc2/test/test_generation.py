@@ -1133,7 +1133,7 @@ class TestItemFiltering(Sc2SetupTestBase):
             'custom_mission_order': {
                 'test': {
                     'type': 'column',
-                    'size': 2,
+                    'size': 3,
                     'mission_pool': [
                         SC2Mission.LIBERATION_DAY.mission_name, # Starter mission
                         SC2Mission.GHOST_OF_A_CHANCE.mission_name,
