@@ -126,7 +126,7 @@ class SC2World(World):
         if (
             NovaPresenceOptions.GHOST_OF_A_CHANCE_AUTO in self.options.nova_presence
             and MissionFlag.Nova in self.custom_mission_order.get_used_flags() 
-            and self.logic.nova_grant_story_tech
+            and not self.logic.nova_grant_story_tech
         ):
             # check if Nova is used anywhere and just modify the option
             self.options.nova_presence.value.add(NovaPresenceOptions.GHOST_OF_A_CHANCE)
