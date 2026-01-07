@@ -14,6 +14,7 @@ from .options import (
     SpearOfAdunPresence,
     MissionOrder,
     EnableMorphling,
+    EnableRaceSwapVariants,
     NovaPresence,
     get_enabled_campaigns,
     get_enabled_races,
@@ -69,6 +70,7 @@ class SC2Logic:
         )
         self.enabled_campaigns = get_enabled_campaigns(world)
         self.enabled_races = get_enabled_races(world)
+        self.enabled_raceswaps = False if world is None else world.options.enable_race_swap.value != EnableRaceSwapVariants.option_disabled
 
         self.mission_order = MissionOrder.default if world is None else world.options.mission_order.value
         self.generic_upgrade_missions = 0 if world is None else world.options.generic_upgrade_missions.value
@@ -81,11 +83,16 @@ class SC2Logic:
         # TODO: consider actual missions rolled, also allow this behavior to be turned off
         self.nova_grant_story_tech = (
             False if world is None else (
-                SC2Campaign.NCO in get_enabled_campaigns(world)
-                and (
+                SC2Campaign.NCO not in get_enabled_campaigns(world)
+                or not (
                     (NovaPresenceOptions.NCO_TERRAN in self.nova_presence and SC2Race.TERRAN in self.enabled_races)
-                    or (NovaPresenceOptions.NCO_ZERG in self.nova_presence and SC2Race.ZERG in self.enabled_races)
-                    or (NovaPresenceOptions.NCO_PROTOSS in self.nova_presence and SC2Race.PROTOSS in self.enabled_races)
+                    or (
+                        self.enabled_raceswaps
+                        and (
+                            (NovaPresenceOptions.NCO_ZERG in self.nova_presence and SC2Race.ZERG in self.enabled_races)
+                            or (NovaPresenceOptions.NCO_PROTOSS in self.nova_presence and SC2Race.PROTOSS in self.enabled_races)
+                        )
+                    )
                 )
             )
         )
