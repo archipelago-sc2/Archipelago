@@ -883,11 +883,11 @@ class NovaPresence(OptionSet):
     """
     Determines which missions will use the NCO Nova hero
     
-    Nova Covert Ops (Terran):        Nova is present in vanilla NCO missions.
-    Nova Covert Ops (Zerg):          Nova is present in Zerg NCO missions.
-    Nova Covert Ops (Protoss):       Nova is present in Protoss NCO missions.
-    Ghost of a Chance:               Vanilla WoL Nova is replaced with NCO Nova.
-    Ghost of a Chance (Auto):        NCO Nova is used only if Nova is enabled in any build missions 
+    Nova Covert Ops (Terran): Nova is present in vanilla NCO missions.
+    Nova Covert Ops (Zerg): Nova is present in Zerg NCO missions.
+    Nova Covert Ops (Protoss): Nova is present in Protoss NCO missions.
+    Ghost of a Chance: Vanilla WoL Nova is replaced with NCO Nova.
+    Ghost of a Chance (Auto): NCO Nova is used only if Nova is enabled in any build missions 
 
     Not including any of the options will disable Nova for those missions.
     """

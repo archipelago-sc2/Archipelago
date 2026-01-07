@@ -593,12 +593,16 @@ def flag_mission_based_item_excludes(world: SC2World, item_list: List[FilterItem
         mission for mission in missions
         if MissionFlag.Nova in mission.flags
             and ( 
-                MissionFlag.Terran in mission.flags
-                and NovaPresenceOptions.NCO_TERRAN in world.options.nova_presence
-                or MissionFlag.Zerg in mission.flags
-                and NovaPresenceOptions.NCO_ZERG in world.options.nova_presence
-                or MissionFlag.Protoss in mission.flags
-                and NovaPresenceOptions.NCO_PROTOSS in world.options.nova_presence
+               (
+                    MissionFlag.Terran in mission.flags
+                    and NovaPresenceOptions.NCO_TERRAN in world.options.nova_presence
+                )
+                or (MissionFlag.Zerg in mission.flags
+                    and NovaPresenceOptions.NCO_ZERG in world.options.nova_presence
+                )
+                or (MissionFlag.Protoss in mission.flags
+                    and NovaPresenceOptions.NCO_PROTOSS in world.options.nova_presence
+                )
             )
         or (
             NovaPresenceOptions.GHOST_OF_A_CHANCE in world.options.nova_presence

@@ -3668,7 +3668,6 @@ class SC2Logic:
             NovaPresenceOptions.NCO_TERRAN not in self.nova_presence
             or self.nova_any_nobuild_damage(state)
             or self.grant_story_tech == GrantStoryTech.option_grant 
-            or not self.nova_unit_available
             or (
                 state.has(item_names.NOVA_PROGRESSIVE_STEALTH_SUIT_MODULE, self.player, 2)
                 and state.has_any((item_names.NOVA_FLASHBANG_GRENADES, item_names.NOVA_BLINK), self.player)
@@ -3680,7 +3679,6 @@ class SC2Logic:
             NovaPresenceOptions.NCO_ZERG not in self.nova_presence
             or self.nova_any_nobuild_damage(state)
             or self.grant_story_tech == GrantStoryTech.option_grant
-            or not self.nova_unit_available
             or (
                 state.has(item_names.NOVA_PROGRESSIVE_STEALTH_SUIT_MODULE, self.player, 2)
                 and state.has_any((item_names.NOVA_FLASHBANG_GRENADES, item_names.NOVA_BLINK), self.player)
@@ -3692,7 +3690,6 @@ class SC2Logic:
             NovaPresenceOptions.NCO_PROTOSS not in self.nova_presence
             or self.nova_any_nobuild_damage(state)
             or self.grant_story_tech == GrantStoryTech.option_grant
-            or not self.nova_unit_available
             or (
                 state.has(item_names.NOVA_PROGRESSIVE_STEALTH_SUIT_MODULE, self.player, 2)
                 and state.has_any((item_names.NOVA_FLASHBANG_GRENADES, item_names.NOVA_BLINK), self.player)
@@ -3866,9 +3863,12 @@ class SC2Logic:
         return (
             self.grant_story_tech == GrantStoryTech.option_grant 
             or not self.nova_unit_available
-            or self.nova_any_nobuild_damage(state) 
-            and (
-                state.has(item_names.NOVA_BLINK, self.player) or state.has_all((item_names.NOVA_HOLO_DECOY, item_names.NOVA_DOMINATION), self.player)
+            or (
+                self.nova_any_nobuild_damage(state) 
+                and (
+                    state.has(item_names.NOVA_BLINK, self.player) 
+                    or state.has_all((item_names.NOVA_HOLO_DECOY, item_names.NOVA_DOMINATION), self.player)
+                )
             )
         )
 
@@ -3892,7 +3892,10 @@ class SC2Logic:
             and (
                 self.grant_story_tech == GrantStoryTech.option_grant
                 or not self.nova_unit_available
-                or ((self.nova_full_stealth(state) and self.enemy_shadow_tripwires_tool(state)) or (self.nova_heal(state) and self.nova_splash(state)))
+                or (
+                    self.nova_full_stealth(state) and self.enemy_shadow_tripwires_tool(state)
+                    or (self.nova_heal(state) and self.nova_splash(state))
+                )
             )
         )
 
