@@ -1129,7 +1129,7 @@ class TestItemFiltering(Sc2SetupTestBase):
         world_options = {
             **self.TERRAN_CAMPAIGNS,
             'mission_order': MissionOrder.option_custom,
-            'nova_presence': {NovaPresenceOptions.GHOST_OF_A_CHANCE},
+            'nova_presence': {NovaPresenceOptions.GHOST_OF_A_CHANCE, NovaPresenceOptions.NCO_TERRAN},
             'custom_mission_order': {
                 'test': {
                     'type': 'column',
@@ -1137,6 +1137,7 @@ class TestItemFiltering(Sc2SetupTestBase):
                     'mission_pool': [
                         SC2Mission.LIBERATION_DAY.mission_name, # Starter mission
                         SC2Mission.GHOST_OF_A_CHANCE.mission_name,
+                        SC2Mission.FLASHPOINT.mission_name, # A NCO mission. Grants Nova story tech otherwise
                     ]
                 }
             }
