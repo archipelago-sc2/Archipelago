@@ -74,8 +74,13 @@ class SC2Logic:
         self.generic_upgrade_missions = 0 if world is None else world.options.generic_upgrade_missions.value
         self.all_in_map = AllInMap.option_ground if world is None else world.options.all_in_map.value
         self.nova_presence = NovaPresence.default if world is None else world.options.nova_presence.value
-        self.nova_unit_available = (
-            True if world is None else (
+
+        # If Nova is only used in no-build missions, she will be granted story tech for those missions for now
+        # Currently, this is determined only by the options, not by the actual missions rolled
+        # This can break, if players manually exclude missions, or the mission order happens to not roll NCO build missions
+        # TODO: consider actual missions rolled, also allow this behavior to be turned off
+        self.nova_grant_story_tech = (
+            False if world is None else (
                 SC2Campaign.NCO in get_enabled_campaigns(world)
                 and (
                     (NovaPresenceOptions.NCO_TERRAN in self.nova_presence and SC2Race.TERRAN in self.enabled_races)
@@ -3338,7 +3343,7 @@ class SC2Logic:
         return ( 
             self.grant_story_tech == GrantStoryTech.option_grant 
             or self.mission_order == MissionOrder.option_vanilla and self.enabled_campaigns == {SC2Campaign.NCO}
-            or not self.nova_unit_available
+            or self.nova_grant_story_tech
         )
 
     def the_escape_first_stage_requirement(self, state: CollectionState) -> bool:
@@ -3350,7 +3355,7 @@ class SC2Logic:
     def the_escape_hard_rule(self, state: CollectionState) -> bool:
         return (
             self.grant_story_tech == GrantStoryTech.option_grant 
-            or not self.nova_unit_available
+            or self.nova_grant_story_tech
             or self.nova_any_nobuild_damage(state)
         )
 
@@ -3827,14 +3832,14 @@ class SC2Logic:
     def enemy_shadow_tripwires_tool(self, state: CollectionState) -> bool:
         return (
             self.grant_story_tech == GrantStoryTech.option_grant 
-            or not self.nova_unit_available
+            or self.nova_grant_story_tech
             or state.has_any({item_names.NOVA_FLASHBANG_GRENADES, item_names.NOVA_BLINK, item_names.NOVA_DOMINATION}, self.player)
         )
 
     def enemy_shadow_door_unlocks_tool(self, state: CollectionState) -> bool:
         return (
             self.grant_story_tech == GrantStoryTech.option_grant 
-            or not self.nova_unit_available
+            or self.nova_grant_story_tech
             or state.has_any({item_names.NOVA_DOMINATION, item_names.NOVA_BLINK, item_names.NOVA_JUMP_SUIT_MODULE}, self.player)
         )
     
@@ -3843,7 +3848,7 @@ class SC2Logic:
             self.enemy_shadow_second_stage(state)
             and (
                 self.grant_story_tech == GrantStoryTech.option_grant 
-                or not self.nova_unit_available
+                or self.nova_grant_story_tech
                 or state.has(item_names.NOVA_BLINK, self.player)
                 or (
                     self.advanced_tactics
@@ -3862,7 +3867,7 @@ class SC2Logic:
     def enemy_shadow_nova_damage_and_blazefire_unlock(self, state: CollectionState) -> bool:
         return (
             self.grant_story_tech == GrantStoryTech.option_grant 
-            or not self.nova_unit_available
+            or self.nova_grant_story_tech
             or (
                 self.nova_any_nobuild_damage(state) 
                 and (
@@ -3875,7 +3880,7 @@ class SC2Logic:
     def enemy_shadow_domination(self, state: CollectionState) -> bool:
         return (
             self.grant_story_tech == GrantStoryTech.option_grant 
-            or not self.nova_unit_available
+            or self.nova_grant_story_tech
             or (
                 self.nova_ranged_weapon(state)
                 and (
@@ -3891,7 +3896,7 @@ class SC2Logic:
             self.enemy_shadow_domination(state) 
             and (
                 self.grant_story_tech == GrantStoryTech.option_grant
-                or not self.nova_unit_available
+                or self.nova_grant_story_tech
                 or (
                     self.nova_full_stealth(state) and self.enemy_shadow_tripwires_tool(state)
                     or (self.nova_heal(state) and self.nova_splash(state))
@@ -3904,7 +3909,7 @@ class SC2Logic:
             self.enemy_shadow_first_stage(state) 
             and (
                 self.grant_story_tech == GrantStoryTech.option_grant
-                or not self.nova_unit_available
+                or self.nova_grant_story_tech
                 or (self.nova_splash(state) or self.nova_heal(state) or self.nova_escape_assist(state))
                 and (self.advanced_tactics or state.has(item_names.NOVA_GHOST_VISOR, self.player))
             )
@@ -3915,7 +3920,7 @@ class SC2Logic:
             self.enemy_shadow_second_stage(state) 
             and (
                 self.grant_story_tech == GrantStoryTech.option_grant 
-                or not self.nova_unit_available
+                or self.nova_grant_story_tech
                 or self.enemy_shadow_door_unlocks_tool(state)
             )
         )
@@ -3925,7 +3930,7 @@ class SC2Logic:
             self.enemy_shadow_door_controls(state) 
             and (
                 self.grant_story_tech == GrantStoryTech.option_grant 
-                or not self.nova_unit_available
+                or self.nova_grant_story_tech
                 or (self.nova_heal(state) and self.nova_beat_stone(state))
             )
         )

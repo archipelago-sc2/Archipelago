@@ -94,7 +94,7 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
         world.options.kerrigan_presence.value not in kerrigan_unit_available
         or SC2Campaign.HOTS not in enabled_campaigns
     )
-    novaless = not world.logic.nova_unit_available
+    nova_grant_story_tech = world.logic.nova_grant_story_tech
     # General changes for standard tactics
     if world.options.required_tactics.value == RequiredTactics.option_standard:
         pools.move_mission(SC2Mission.SMASH_AND_GRAB, Difficulty.STARTER, Difficulty.EASY)
@@ -119,7 +119,7 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
 
     # Don't start on Ghost of a Chance if it will require Nova items
     if (grant_story_tech != GrantStoryTech.option_grant
-        and not novaless 
+        and not nova_grant_story_tech 
         and NovaPresenceOptions.GHOST_OF_A_CHANCE in world.options.nova_presence
     ):
         # Using NCO tech for this mission that must be acquired
@@ -137,7 +137,7 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
         # Additional starter mission if player is granted story tech
         pools.move_mission(SC2Mission.ENEMY_WITHIN, Difficulty.EASY, Difficulty.STARTER)
         pools.move_mission(SC2Mission.TEMPLAR_S_RETURN, Difficulty.MEDIUM, Difficulty.STARTER)
-    if grant_story_tech == GrantStoryTech.option_grant or novaless:
+    if grant_story_tech == GrantStoryTech.option_grant or nova_grant_story_tech:
         # Additional starter mission if player is granted story tech, or Nova only appears in no-builds
         pools.move_mission(SC2Mission.THE_ESCAPE, Difficulty.MEDIUM, Difficulty.STARTER)
         pools.move_mission(SC2Mission.IN_THE_ENEMY_S_SHADOW, Difficulty.MEDIUM, Difficulty.STARTER)
@@ -148,7 +148,7 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
         pools.move_mission(SC2Mission.SUPREME, Difficulty.MEDIUM, Difficulty.STARTER)
         pools.move_mission(SC2Mission.THE_INFINITE_CYCLE, Difficulty.HARD, Difficulty.STARTER)
         pools.move_mission(SC2Mission.CONVICTION, Difficulty.MEDIUM, Difficulty.STARTER)
-    if  (grant_story_tech != GrantStoryTech.option_grant and not novaless 
+    if  (grant_story_tech != GrantStoryTech.option_grant and not nova_grant_story_tech 
         and NovaPresenceOptions.GHOST_OF_A_CHANCE in world.options.nova_presence):
         # Using NCO tech for this mission that must be acquired
         pools.move_mission(SC2Mission.GHOST_OF_A_CHANCE, Difficulty.STARTER, Difficulty.MEDIUM)
