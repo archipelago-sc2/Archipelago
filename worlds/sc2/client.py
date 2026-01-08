@@ -21,6 +21,7 @@ import random
 import concurrent.futures
 import time
 import uuid
+import pathlib
 from pathlib import Path
 
 # CommonClient import first to trigger ModuleUpdater
