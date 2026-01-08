@@ -5666,7 +5666,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 701,
             LocationType.VANILLA,
             logic.enemy_shadow_domination,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.enemy_shadow_hard_rule,
         ),
         make_location_data(
             SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
@@ -5674,7 +5674,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 702,
             LocationType.EXTRA,
             logic.enemy_shadow_first_stage,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.enemy_shadow_hard_rule,
         ),
         make_location_data(
             SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
@@ -5682,7 +5682,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 703,
             LocationType.VANILLA,
             logic.enemy_shadow_first_stage,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.enemy_shadow_hard_rule,
         ),
         make_location_data(
             SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
@@ -5690,7 +5690,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 704,
             LocationType.VANILLA,
             logic.enemy_shadow_door_controls,
-            hard_rule=lambda state: logic.nova_any_nobuild_damage(state)
+            hard_rule=lambda state: logic.enemy_shadow_hard_rule(state)
             and logic.enemy_shadow_door_unlocks_tool(state),
         ),
         make_location_data(
@@ -5699,7 +5699,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 705,
             LocationType.VANILLA,
             logic.enemy_shadow_door_controls,
-            hard_rule=lambda state: logic.nova_any_nobuild_damage(state)
+            hard_rule=lambda state: logic.enemy_shadow_hard_rule(state)
             and logic.enemy_shadow_door_unlocks_tool(state),
         ),
         make_location_data(
@@ -5716,7 +5716,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 707,
             LocationType.VANILLA,
             logic.enemy_shadow_second_stage,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.enemy_shadow_hard_rule,
         ),
         make_location_data(
             SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
@@ -5724,7 +5724,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 708,
             LocationType.VANILLA,
             logic.enemy_shadow_second_stage,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.enemy_shadow_hard_rule,
         ),
         make_location_data(
             SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
@@ -5732,7 +5732,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 709,
             LocationType.EXTRA,
             logic.enemy_shadow_first_stage,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.enemy_shadow_hard_rule,
         ),
         make_location_data(
             SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
@@ -5740,7 +5740,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 710,
             LocationType.EXTRA,
             logic.enemy_shadow_second_stage,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.enemy_shadow_hard_rule,
         ),
         make_location_data(
             SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
@@ -5748,7 +5748,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 711,
             LocationType.EXTRA,
             logic.enemy_shadow_second_stage,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.enemy_shadow_hard_rule,
         ),
         make_location_data(
             SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
@@ -5756,7 +5756,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 712,
             LocationType.EXTRA,
             logic.enemy_shadow_second_stage,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.enemy_shadow_hard_rule,
         ),
         make_location_data(
             SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
@@ -5764,7 +5764,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2NCO_LOC_ID_OFFSET + 713,
             LocationType.EXTRA,
             logic.enemy_shadow_second_stage,
-            hard_rule=logic.nova_any_nobuild_damage,
+            hard_rule=logic.enemy_shadow_hard_rule,
         ),
         make_location_data(
             SC2Mission.DARK_SKIES.mission_name,

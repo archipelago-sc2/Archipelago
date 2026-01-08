@@ -691,8 +691,10 @@ class SC2Logic:
         """
         Used for any units logic for beating Stone. Shotgun may not be possible; may need feedback.
         """
-        return (
-            state.has_any((
+        return ( 
+            self.grant_story_tech == GrantStoryTech.option_grant 
+            or self.nova_grant_story_tech
+            or state.has_any((
                 item_names.NOVA_DOMINATION,
                 item_names.NOVA_BLAZEFIRE_GUNBLADE,
                 item_names.NOVA_C20A_CANISTER_RIFLE,
@@ -3941,6 +3943,13 @@ class SC2Logic:
                 or self.nova_grant_story_tech
                 or (self.nova_heal(state) and self.nova_beat_stone(state))
             )
+        )
+    
+    def enemy_shadow_hard_rule(self, state: CollectionState) -> bool:
+        return (
+            self.grant_story_tech == GrantStoryTech.option_grant 
+            or self.nova_grant_story_tech
+            or self.nova_any_nobuild_damage(state)
         )
 
     def dark_skies_requirement(self, state: CollectionState) -> bool:
