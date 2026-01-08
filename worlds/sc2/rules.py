@@ -3602,13 +3602,14 @@ class SC2Logic:
     
     def zerg_enemy_intelligence_first_stage_requirement(self, state: CollectionState) -> bool:
         return (
-            self.zerg_enemy_intelligence_garrisonable_unit(state)
+            self.zerg_enemy_intelligence_garrisonable_unit(state) 
+            # TODO: adjust to Nova presence, revisit defense ratings
             and self.zerg_competent_comp(state) and self.zerg_defense_rating(state, True, True) >= 5
         )
     
     def protoss_enemy_intelligence_first_stage_requirement(self, state: CollectionState) -> bool:
         return (
-            self.protoss_enemy_intelligence_garrisonable_unit(state)
+            self.protoss_enemy_intelligence_garrisonable_unit(state) 
             and self.protoss_competent_comp(state) and self.protoss_defense_rating(state, True) >= 5
         )
 
@@ -3720,7 +3721,8 @@ class SC2Logic:
         else: 
             return (
                 self.terran_beats_protoss_deathball(state)
-                and self.terran_defense_rating(state, True, True) >= 7
+                # TODO: revisit defense ratings
+                and self.terran_defense_rating(state, True, True) >= 5
                 and self.terran_power_rating(state) >= 5
             )
     
@@ -3736,7 +3738,7 @@ class SC2Logic:
         else: 
             return (
                 self.zerg_base_buster(state)
-                and self.zerg_defense_rating(state, True, True) >= 7
+                and self.zerg_defense_rating(state, True, True) >= 5
                 and self.zerg_power_rating(state) >= 5
             )
     
@@ -3752,7 +3754,7 @@ class SC2Logic:
         else: 
             return (
                 self.protoss_deathball(state)
-                and self.protoss_defense_rating(state, True) >= 7
+                and self.protoss_defense_rating(state, True) >= 5
                 and self.protoss_power_rating(state) >= 5
             )
 
@@ -3795,14 +3797,12 @@ class SC2Logic:
     def zerg_night_terrors_requirement(self, state: CollectionState) -> bool:
         return (
             self.zerg_competent_comp(state)
-            and self.zerg_defense_rating(state, True, True) >= 5
             and self.zerg_power_rating(state) >= 3
         )
     
     def protoss_night_terrors_requirement(self, state: CollectionState) -> bool:
         return (
             self.protoss_competent_comp(state)
-            and self.protoss_defense_rating(state, True) >= 5
             and self.protoss_power_rating(state) >= 3
         )
     
@@ -3810,6 +3810,7 @@ class SC2Logic:
         return (
             self.terran_competent_comp(state)
             and self.terran_mobile_detector(state)
+            # TODO: revisit defense ratings
             and self.terran_defense_rating(state, True, False) >= 6
             and self.terran_army_weapon_armor_upgrade_min_level(state) >= 2
             and (self.nova_splash(state) or NovaPresenceOptions.NCO_TERRAN not in self.nova_presence)
@@ -3943,6 +3944,7 @@ class SC2Logic:
         )
 
     def dark_skies_requirement(self, state: CollectionState) -> bool:
+        # TODO: revisit defense ratings
         return self.terran_common_unit(state) and self.terran_beats_protoss_deathball(state) and self.terran_defense_rating(state, False, True) >= 8
     
     def zerg_dark_skies_requirement(self, state: CollectionState) -> bool:
