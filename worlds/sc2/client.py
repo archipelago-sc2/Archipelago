@@ -90,10 +90,6 @@ DATA_REPO_OWNER = "archipelago-sc2"
 DATA_REPO_NAME = "Archipelago-SC2-data"
 DATA_API_VERSION = "API5"
 
-# Bot controller
-CONTROLLER_HEALTH: int = 38281
-CONTROLLER2_HEALTH: int = 38282
-
 # Void Trade
 TRADE_UNIT = "AP_TradeStructure" # ID of the unit
 TRADE_SEND_BUTTON = "AP_TradeStructureDummySend" # ID of the button
@@ -606,7 +602,7 @@ class SC2Bank():
     def __init__(self, name: str) -> None:
         self.fileName = name
         self.sections: typing.Dict[str, typing.Dict[str, str]] = {}
-
+        
     def addSection(self, sectionName: str) -> None:
         self.sections[sectionName] = {}
 
@@ -615,7 +611,28 @@ class SC2Bank():
             self.addSection(sectionName)
         self.sections[sectionName][key]=value
 
+    def removeEntryFromFile(self, key: str) -> None:
+        path = f"{get_bank_folder()}/{self.fileName}"
+        print(f"checking for: {str}")
+        with open(path, "r") as f:
+            lines = f.readlines()
+        with open(path, "w") as f:
+            deleting = False
+            for line in lines:
+                print(line)
+                if f'<Key name="{key}">' in line:
+                    print("key")
+                    deleting = True
+                elif '</Key>' in line and deleting:
+                    print("deleting")
+                    deleting = False
+                elif deleting == False:
+                    print("writing")
+                    f.write(line)          
+
     def makeFile(self) -> None:
+        # Making a bank in the client should always be a backup
+        dir = f"{get_bank_folder()}/Backup"
         content =          f'<?xml version="1.0" encoding="utf-8"?>\n<Bank version="1">\n'
         for name, section in self.sections.items():
             content +=     f'    <Section name="{name}">\n'
@@ -625,7 +642,8 @@ class SC2Bank():
                 content += f'        </Key>\n'
             content +=     f'    </Section>\n'
         content +=         f'</Bank>'
-        with open(get_bank_folder() + f"/Backup/{self.fileName}_backup_0.SC2Bank", "w") as f:
+        Path(dir).mkdir(parents=True, exist_ok=True)
+        with open(f"{dir}/{self.fileName}_backup_1.SC2Bank", "w") as f:
             f.write(content)
             
 class SC2Context(CommonContext):
@@ -1215,13 +1233,16 @@ class SC2Context(CommonContext):
         
 
     async def trade_receive(self, amount: int = 1):
+        trade_received_bank = SC2Bank("ArchipelagoVoidTradeReceive")
         """
         Tries to pop `amount` units out of the trade storage.
-        """
+        """                    
+        print("trade_receive")
         reply = await self.trade_acquire_storage(True)
 
         if reply is None:
-            self.trade_response = "?TradeFail Void Trade failed: Could not communicate with server. Trade cost refunded."
+            trade_received_bank.addEntry("VoidTrade", "TradeResponse", "FailConnection")
+            trade_received_bank.makeFile()
             return None
 
         # Find available units
@@ -1267,7 +1288,7 @@ class SC2Context(CommonContext):
             units = []
         else:
             units = random.sample(available_units, amount, counts = available_counts)
-
+        print("found units")
         # Build response data
         unit_counts: typing.Dict[str, int] = {}
         slots_to_update: typing.Dict[str, typing.Dict[int, typing.Dict[str, int]]] = {}
@@ -1282,7 +1303,7 @@ class SC2Context(CommonContext):
             # Clean up trades that were completely exhausted
             if len(slots_to_update[slot][send_time]) == 0:
                 slots_to_update[slot].pop(send_time)
-
+        print("made string")
         await self.send_msgs([
             {   # Update server storage
                 "cmd": "Set",
@@ -1295,19 +1316,27 @@ class SC2Context(CommonContext):
                 "operations": [{ "operation": "update", "value": { TRADE_DATASTORAGE_LOCK: 0 } }]
             }
         ])
-
-        # Give units to bot
-        self.trade_response = f"?Trade {refunds} " + " ".join(f"{unit} {count}" for (unit, count) in unit_counts.items())
+        print("pop storage")
+        # Write unite to bank
+        value = f"ReceiveUnits {refunds} " + " ".join(f"{unit} {count}" for (unit, count) in unit_counts.items())
+        trade_received_bank.addEntry("VoidTrade", "TradeResponse", value)
+        trade_received_bank.makeFile()
+        self.trade_response = None
+        self.trade_underway = False
+        print(f"save bank: {value}")
+        #self.trade_response = f"?Trade {refunds} " + " ".join(f"{unit} {count}" for (unit, count) in unit_counts.items())
 
 
     async def trade_send(self, units: typing.List[str]):
+        trade_received_bank = SC2Bank("ArchipelagoVoidTradeReceive")
         """
         Tries to upload `units` to the trade DataStorage.
         """
         reply = await self.trade_acquire_storage(True)
 
         if reply is None:
-            self.trade_response = "?TradeFail Void Trade failed: Could not communicate with server. Your units remain."
+            trade_received_bank.addEntry("VoidTrade", "TradeResponse", "FailConnection")
+            trade_received_bank.makeFile()
             return None
         
         # Create a storage entry for the time the trade was confirmed
@@ -1334,7 +1363,13 @@ class SC2Context(CommonContext):
         ])
         
         # Notify the game
-        self.trade_response = "?TradeSuccess Void Trade successful: Units sent!"
+            
+        trade_received_bank.addEntry("VoidTrade", "TradeResponse", "Success")
+        trade_received_bank.makeFile()
+        self.trade_response = None
+        self.trade_underway = False
+        
+
 
 
 class CompatItemHolder(typing.NamedTuple):
@@ -1857,6 +1892,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             core_options_bank.makeFile()
 
             self.last_received_update = len(self.ctx.items_received)
+
         else:
             #if self.ctx.pending_color_update:
             #    await self.update_colors()
@@ -1875,6 +1911,42 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 message = self.ctx.announcements.get(timeout=1)
                 self.send_chat_message({message})
                 self.ctx.announcements.task_done()
+
+        
+            trade_send_string = self.get_trade_units_sent()
+            # Message format:
+            # <unit1> <unit2> <unit3>...
+            if len(trade_send_string) > 0:
+                units_to_send: typing.List[str] = []
+                non_ap_units: typing.Set[str] = set()
+                for unit_id in trade_send_string.split():
+                    if unit_id.startswith("AP_"):
+                        units_to_send.append(normalized_unit_types.get(unit_id, unit_id))
+                    else:
+                        non_ap_units.add(unit_id)
+                    if len(non_ap_units) > 0:
+                        sc2_logger.info(f"Void Trade tried to send non-AP units: {', '.join(non_ap_units)}")
+                        self.ctx.trade_response = "?TradeFail Void Trade rejected: Trade contains invalid units."
+                        self.ctx.trade_underway = True
+                    else:
+                        self.ctx.trade_response = None
+                        self.ctx.trade_underway = True
+                        async_start(self.ctx.trade_send(units_to_send))
+            
+            trade_receive_string = self.get_trade_receive_request()
+            # Message format:
+            # <count>
+            if len(trade_receive_string) > 0:
+                if int(trade_receive_string) == 1:
+                    self.ctx.trade_underway = True
+                    self.ctx.trade_response = None
+                    async_start(self.ctx.trade_receive(1))
+                    # TODO: handle supply, self.ctx.trade_response = "?TradeFail Void Trade rejected: Not enough supply."
+                elif int(trade_receive_string) == 5:
+                    self.ctx.trade_underway = True
+                    self.ctx.trade_response = None
+                    async_start(self.ctx.trade_receive(5))
+
 
             '''
             for unit in self.all_own_units():
@@ -1940,6 +2012,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                                         "Starcraft 2 (This is likely a map issue)"})
                 
             if os.path.isfile(f"{get_bank_folder()}/ArchipelagoUpdate.SC2Bank"):
+                # if bank exists, we want an update prompt. No need to check the values
                 self.last_received_update = 0
                 os.remove(f"{get_bank_folder()}/ArchipelagoUpdate.SC2Bank")
                 
@@ -1994,7 +2067,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                     
                     # Send Void Trade results
                     if self.ctx.trade_response is not None and self.trade_reply_cooldown == 0:
-                        await self.chat_send(self.ctx.trade_response)
+                        await self.send_chat_message(self.ctx.trade_response)
                         # Wait an arbitrary amount of frames before trying again
                         self.trade_reply_cooldown = 60
                 else:
@@ -2007,24 +2080,66 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
         bank = SC2Bank("ArchipelagoMessages")
         i = 0
         for msg in messages:
-            #TODO: Check for limits/staggering
+            # TODO: Check for limits/staggering
             i+=1
             bank.addEntry("Messages",f"Message{str(i)}", self.clean_chat_message(msg))
         bank.makeFile()
 
     def get_locations(self) -> str:
-            result = "0"
+        result = 0
+        path = f"{get_bank_folder()}/ArchipelagoLocations.SC2Bank"
+        if os.path.isfile(path):
             next_line = False
             l = '<Value string="'
             r = '"/>'
-            with open(get_bank_folder() + "/ArchipelagoLocations.SC2Bank") as locationBank:
+            with open(path) as locationBank:
                 for line in locationBank:
                     if next_line:
                         result = int(line[line.find(l) + len(l):line.rfind(r)])
                         break
                     if '<Key name="GameState">' in line:
                         next_line = True
-            return result
+        return result
+    
+    def get_trade_units_sent(self) -> str:
+        result = ""
+        key = "UnitTypes"
+        path = f"{get_bank_folder()}/ArchipelagoVoidTradeSend.SC2Bank"
+        if os.path.isfile(path):
+            next_line = False
+            l = '<Value string="'
+            r = '"/>'
+            with open(path) as locationBank:
+                for line in locationBank:
+                    if next_line:
+                        result = line[line.find(l) + len(l):line.rfind(r)]
+                        break
+                    if f'<Key name="{key}">' in line:
+                        next_line = True
+        if result != "":
+            bank = SC2Bank("ArchipelagoVoidTradeSend.SC2Bank")
+            bank.removeEntryFromFile(key)
+        return result
+    
+    def get_trade_receive_request(self) -> str:
+        result = ""
+        key = "Count"
+        path = f"{get_bank_folder()}/ArchipelagoVoidTradeSend.SC2Bank"
+        if os.path.isfile(path):
+            next_line = False
+            l = '<Value string="'
+            r = '"/>'
+            with open(path) as locationBank:
+                for line in locationBank:
+                    if next_line:
+                        result = line[line.find(l) + len(l):line.rfind(r)]
+                        break
+                    if f'<Key name="{key}">' in line:
+                        next_line = True
+        if result != "":
+            bank = SC2Bank("ArchipelagoVoidTradeSend.SC2Bank")
+            bank.removeEntryFromFile(key)
+        return result
     
     def get_uncollected_objectives(self) -> typing.List[int]:
         result = [
@@ -2039,11 +2154,12 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
 
     def get_colors(self) -> str:
         self.ctx.pending_color_update = False
-        return f"""{str(self.ctx.player_color_raynor)} 
-                   {str(self.ctx.player_color_zerg)} 
-                   {str(self.ctx.player_color_zerg_primal)} 
-                   {str(self.ctx.player_color_protoss)} 
-                   {str(self.ctx.player_color_nova)}  
+        return f"""\
+        {str(self.ctx.player_color_raynor)} \
+        {str(self.ctx.player_color_zerg)} \
+        {str(self.ctx.player_color_zerg_primal)} \
+        {str(self.ctx.player_color_protoss)} \
+        {str(self.ctx.player_color_nova)}  \
         """
 
     def get_resources(self, current_items: typing.Dict[SC2Race, typing.List[int]]) -> str:
