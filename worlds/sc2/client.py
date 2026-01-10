@@ -613,21 +613,16 @@ class SC2Bank():
 
     def removeEntryFromFile(self, key: str) -> None:
         path = f"{get_bank_folder()}/{self.fileName}"
-        print(f"checking for: {str}")
         with open(path, "r") as f:
             lines = f.readlines()
         with open(path, "w") as f:
             deleting = False
             for line in lines:
-                print(line)
                 if f'<Key name="{key}">' in line:
-                    print("key")
                     deleting = True
                 elif '</Key>' in line and deleting:
-                    print("deleting")
                     deleting = False
                 elif deleting == False:
-                    print("writing")
                     f.write(line)          
 
     def makeFile(self) -> None:
@@ -643,6 +638,7 @@ class SC2Bank():
             content +=     f'    </Section>\n'
         content +=         f'</Bank>'
         Path(dir).mkdir(parents=True, exist_ok=True)
+        # TODO: Handle multiple backups in the same step (if needed)
         with open(f"{dir}/{self.fileName}_backup_1.SC2Bank", "w") as f:
             f.write(content)
             
@@ -1233,11 +1229,10 @@ class SC2Context(CommonContext):
         
 
     async def trade_receive(self, amount: int = 1):
-        trade_received_bank = SC2Bank("ArchipelagoVoidTradeReceive")
         """
         Tries to pop `amount` units out of the trade storage.
-        """                    
-        print("trade_receive")
+        """     
+        trade_received_bank = SC2Bank("ArchipelagoVoidTradeReceive")               
         reply = await self.trade_acquire_storage(True)
 
         if reply is None:
@@ -1288,7 +1283,6 @@ class SC2Context(CommonContext):
             units = []
         else:
             units = random.sample(available_units, amount, counts = available_counts)
-        print("found units")
         # Build response data
         unit_counts: typing.Dict[str, int] = {}
         slots_to_update: typing.Dict[str, typing.Dict[int, typing.Dict[str, int]]] = {}
@@ -1303,7 +1297,6 @@ class SC2Context(CommonContext):
             # Clean up trades that were completely exhausted
             if len(slots_to_update[slot][send_time]) == 0:
                 slots_to_update[slot].pop(send_time)
-        print("made string")
         await self.send_msgs([
             {   # Update server storage
                 "cmd": "Set",
@@ -1316,22 +1309,20 @@ class SC2Context(CommonContext):
                 "operations": [{ "operation": "update", "value": { TRADE_DATASTORAGE_LOCK: 0 } }]
             }
         ])
-        print("pop storage")
         # Write unite to bank
         value = f"ReceiveUnits {refunds} " + " ".join(f"{unit} {count}" for (unit, count) in unit_counts.items())
         trade_received_bank.addEntry("VoidTrade", "TradeResponse", value)
         trade_received_bank.makeFile()
         self.trade_response = None
         self.trade_underway = False
-        print(f"save bank: {value}")
         #self.trade_response = f"?Trade {refunds} " + " ".join(f"{unit} {count}" for (unit, count) in unit_counts.items())
 
 
     async def trade_send(self, units: typing.List[str]):
-        trade_received_bank = SC2Bank("ArchipelagoVoidTradeReceive")
         """
         Tries to upload `units` to the trade DataStorage.
         """
+        trade_received_bank = SC2Bank("ArchipelagoVoidTradeReceive")
         reply = await self.trade_acquire_storage(True)
 
         if reply is None:
@@ -1362,8 +1353,7 @@ class SC2Context(CommonContext):
             }
         ])
         
-        # Notify the game
-            
+        # Notify the game 
         trade_received_bank.addEntry("VoidTrade", "TradeResponse", "Success")
         trade_received_bank.makeFile()
         self.trade_response = None
@@ -1905,11 +1895,11 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             #    else:
             #        break
             #if messages:
-            #    self.send_chat_message(messages)
+            #    self.send_ap_message(messages)
 
             if not self.ctx.announcements.empty():
                 message = self.ctx.announcements.get(timeout=1)
-                self.send_chat_message({message})
+                self.send_ap_message({message})
                 self.ctx.announcements.task_done()
 
         
@@ -1924,14 +1914,17 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                         units_to_send.append(normalized_unit_types.get(unit_id, unit_id))
                     else:
                         non_ap_units.add(unit_id)
-                    if len(non_ap_units) > 0:
-                        sc2_logger.info(f"Void Trade tried to send non-AP units: {', '.join(non_ap_units)}")
-                        self.ctx.trade_response = "?TradeFail Void Trade rejected: Trade contains invalid units."
-                        self.ctx.trade_underway = True
-                    else:
-                        self.ctx.trade_response = None
-                        self.ctx.trade_underway = True
-                        async_start(self.ctx.trade_send(units_to_send))
+                if len(non_ap_units) > 0:
+                    sc2_logger.info(f"Void Trade tried to send non-AP units: {', '.join(non_ap_units)}")
+                    trade_received_bank = SC2Bank("ArchipelagoVoidTradeReceive")               
+                    trade_received_bank.addEntry("VoidTrade", "TradeResponse", "FailNonAPUnits")
+                    trade_received_bank.makeFile()
+                    #self.ctx.trade_response = "?TradeFail Void Trade rejected: Trade contains invalid units."
+                    self.ctx.trade_underway = True
+                else:
+                    self.ctx.trade_response = None
+                    self.ctx.trade_underway = True
+                    async_start(self.ctx.trade_send(units_to_send))
             
             trade_receive_string = self.get_trade_receive_request()
             # Message format:
@@ -1948,59 +1941,59 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                     async_start(self.ctx.trade_receive(5))
 
 
-            '''
-            for unit in self.all_own_units():
-                if unit.name == TRADE_UNIT:
-                    # Handle Void Trade requests
-                    # Check for orders (for buildings this is usually research or training)
-                    if not unit.is_idle and not self.ctx.trade_underway:
-                        button = unit.orders[0].ability.button_name
-                        if button == TRADE_SEND_BUTTON and len(self.last_trade_cargo) > 0:
-                            units_to_send: typing.List[str] = []
-                            non_ap_units: typing.Set[str] = set()
-                            for passenger in self.last_trade_cargo:
-                                # Alternatively passenger._type_data.name but passenger.name seems to always match
-                                unit_name = passenger.name
-                                if unit_name.startswith("AP_"):
-                                    units_to_send.append(normalized_unit_types.get(unit_name, unit_name))
-                                else:
-                                    non_ap_units.add(unit_name)
-                            if len(non_ap_units) > 0:
-                                sc2_logger.info(f"Void Trade tried to send non-AP units: {', '.join(non_ap_units)}")
-                                self.ctx.trade_response = "?TradeFail Void Trade rejected: Trade contains invalid units."
-                                self.ctx.trade_underway = True
-                            else:
-                                self.ctx.trade_response = None
-                                self.ctx.trade_underway = True
-                                async_start(self.ctx.trade_send(units_to_send))
-                        elif button == TRADE_RECEIVE_1_BUTTON:
-                            self.ctx.trade_underway = True
-                            if self.supply_used != self.last_supply_used:
-                                self.ctx.trade_response = None
-                                async_start(self.ctx.trade_receive(1))
-                            else:
-                                self.ctx.trade_response = "?TradeFail Void Trade rejected: Not enough supply."
-                        elif button == TRADE_RECEIVE_5_BUTTON:
-                            self.ctx.trade_underway = True
-                            if self.supply_used != self.last_supply_used:
-                                self.ctx.trade_response = None
-                                async_start(self.ctx.trade_receive(5))
-                            else:
-                                self.ctx.trade_response = "?TradeFail Void Trade rejected: Not enough supply."
-                    elif not unit.is_idle and self.trade_reply_cooldown > 0:
-                        self.trade_reply_cooldown -= 1
-                    elif unit.is_idle and self.trade_reply_cooldown > 0:
-                        self.trade_reply_cooldown = 0
-                        self.ctx.trade_response = None
-                        self.ctx.trade_underway = False
-                    else:
-                        # The API returns no passengers for researching/training buildings,
-                        # so we need to buffer the passengers each frame
-                        self.last_trade_cargo = unit.passengers
-                        # SC2 has no good means of detecting when a unit is queued while supply capped,
-                        # so a supply buffer here is the best we can do
-                        self.last_supply_used = self.supply_used
-            '''
+            
+            # for unit in self.all_own_units():
+            #     if unit.name == TRADE_UNIT:
+            #         # Handle Void Trade requests
+            #         # Check for orders (for buildings this is usually research or training)
+            #         if not unit.is_idle and not self.ctx.trade_underway:
+            #             button = unit.orders[0].ability.button_name
+            #             if button == TRADE_SEND_BUTTON and len(self.last_trade_cargo) > 0:
+            #                 units_to_send: typing.List[str] = []
+            #                 non_ap_units: typing.Set[str] = set()
+            #                 for passenger in self.last_trade_cargo:
+            #                     # Alternatively passenger._type_data.name but passenger.name seems to always match
+            #                     unit_name = passenger.name
+            #                     if unit_name.startswith("AP_"):
+            #                         units_to_send.append(normalized_unit_types.get(unit_name, unit_name))
+            #                     else:
+            #                         non_ap_units.add(unit_name)
+            #                 if len(non_ap_units) > 0:
+            #                     sc2_logger.info(f"Void Trade tried to send non-AP units: {', '.join(non_ap_units)}")
+            #                     self.ctx.trade_response = "?TradeFail Void Trade rejected: Trade contains invalid units."
+            #                     self.ctx.trade_underway = True
+            #                 else:
+            #                     self.ctx.trade_response = None
+            #                     self.ctx.trade_underway = True
+            #                     async_start(self.ctx.trade_send(units_to_send))
+            #             elif button == TRADE_RECEIVE_1_BUTTON:
+            #                 self.ctx.trade_underway = True
+            #                 if self.supply_used != self.last_supply_used:
+            #                     self.ctx.trade_response = None
+            #                     async_start(self.ctx.trade_receive(1))
+            #                 else:
+            #                     self.ctx.trade_response = "?TradeFail Void Trade rejected: Not enough supply."
+            #             elif button == TRADE_RECEIVE_5_BUTTON:
+            #                 self.ctx.trade_underway = True
+            #                 if self.supply_used != self.last_supply_used:
+            #                     self.ctx.trade_response = None
+            #                     async_start(self.ctx.trade_receive(5))
+            #                 else:
+            #                     self.ctx.trade_response = "?TradeFail Void Trade rejected: Not enough supply."
+            #         elif not unit.is_idle and self.trade_reply_cooldown > 0:
+            #             self.trade_reply_cooldown -= 1
+            #         elif unit.is_idle and self.trade_reply_cooldown > 0:
+            #             self.trade_reply_cooldown = 0
+            #             self.ctx.trade_response = None
+            #             self.ctx.trade_underway = False
+            #         else:
+            #             # The API returns no passengers for researching/training buildings,
+            #             # so we need to buffer the passengers each frame
+            #             self.last_trade_cargo = unit.passengers
+            #             # SC2 has no good means of detecting when a unit is queued while supply capped,
+            #             # so a supply buffer here is the best we can do
+            #             self.last_supply_used = self.supply_used
+            
 
             game_state = self.get_locations()
 
@@ -2008,7 +2001,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 self.can_read_game = True
 
             if iteration == 160 and not game_state & 1:
-                self.send_chat_message({"Warning: Archipelago unable to connect or has lost connection to " +
+                self.send_ap_message({"Warning: Archipelago unable to connect or has lost connection to " +
                                         "Starcraft 2 (This is likely a map issue)"})
                 
             if os.path.isfile(f"{get_bank_folder()}/ArchipelagoUpdate.SC2Bank"):
@@ -2026,7 +2019,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             
             if game_state & 1:
                 if not self.game_running:
-                    self.send_chat_message({"Archipelago Connected"})
+                    self.send_ap_message({"Archipelago Connected"})
                     #print("Archipelago Connected")
                     self.game_running = True
             
@@ -2067,23 +2060,26 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                     
                     # Send Void Trade results
                     if self.ctx.trade_response is not None and self.trade_reply_cooldown == 0:
-                        await self.send_chat_message(self.ctx.trade_response)
+                        self.send_ap_message({self.ctx.trade_response})
                         # Wait an arbitrary amount of frames before trying again
                         self.trade_reply_cooldown = 60
                 else:
-                    self.send_chat_message({"LostConnection - Lost connection to game."})
+                    self.send_ap_message({"LostConnection - Lost connection to game."})
 
-    def clean_chat_message(self, message: str) -> str:
+    def clean_ap_message(self, message: str) -> str:
         return message.replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
 
-    def send_chat_message(self, messages: typing.List[str]):
-        bank = SC2Bank("ArchipelagoMessages")
-        i = 0
-        for msg in messages:
-            # TODO: Check for limits/staggering
-            i+=1
-            bank.addEntry("Messages",f"Message{str(i)}", self.clean_chat_message(msg))
-        bank.makeFile()
+    def send_ap_message(self, messages: typing.List[str]):
+        if messages:
+            bank = SC2Bank("ArchipelagoMessages")
+            i = 0
+            for msg in messages:
+                if msg:
+                    # TODO: Check for limits/staggering
+                    i+=1
+                    bank.addEntry("Messages",f"Message{str(i)}", self.clean_ap_message(msg))
+            if i > 0:
+                bank.makeFile()
 
     def get_locations(self) -> str:
         result = 0
