@@ -2018,6 +2018,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
         return message.replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
 
     def send_ap_message(self, messages: typing.List[str]):
+        bank = SC2Bank("ArchipelagoMessages")
         if messages:
             i = 0
             for msg in messages:
@@ -2026,7 +2027,6 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                     i+=1
                     bank.add_entry("Messages",f"Message{str(i)}", self.clean_ap_message(msg))
             if i > 0:
-                bank = SC2Bank("ArchipelagoMessages")
                 bank.make_file()
 
     def get_locations(self) -> str:
