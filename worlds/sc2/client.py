@@ -21,6 +21,7 @@ import random
 import concurrent.futures
 import time
 import uuid
+import re
 from pathlib import Path
 
 # CommonClient import first to trigger ModuleUpdater
@@ -90,15 +91,69 @@ DATA_REPO_NAME = "Archipelago-SC2-data"
 DATA_API_VERSION = "API5"
 
 # Void Trade
-TRADE_UNIT = "AP_TradeStructure" # ID of the unit
-TRADE_SEND_BUTTON = "AP_TradeStructureDummySend" # ID of the button
-TRADE_RECEIVE_1_BUTTON = "AP_TradeStructureDummyReceive" # ID of the button
-TRADE_RECEIVE_5_BUTTON = "AP_TradeStructureDummyReceive5" # ID of the button
+# TRADE_UNIT = "AP_TradeStructure" # ID of the unit
+# TRADE_SEND_BUTTON = "AP_TradeStructureDummySend" # ID of the button
+# TRADE_RECEIVE_1_BUTTON = "AP_TradeStructureDummyReceive" # ID of the button
+# TRADE_RECEIVE_5_BUTTON = "AP_TradeStructureDummyReceive5" # ID of the button
 TRADE_DATASTORAGE_TEAM = "SC2_VoidTrade_" # + Team
 TRADE_DATASTORAGE_SLOT = "slot_" # + Slot
 TRADE_DATASTORAGE_LOCK = "_lock"
 TRADE_LOCK_TIME = 5 # Time in seconds that the DataStorage may be considered safe to edit
 TRADE_LOCK_WAIT_LIMIT = 540000 / 1.4 # Time in ms that the client may spend trying to get a lock (540000 = 9 minutes, 1.4 is 'faster' game speed's time scale)
+
+# Banks
+# file names, section names and key names have to match the SC2 trigger implementation
+#
+# Client -> SC2
+# Core Options
+BANK_CORE_OPTIONS_FILE_NAME = "ArchipelagoCoreOptions" # .SC2Bank
+BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS = "CoreOptions"
+BANK_CORE_OPTIONS_KEY_STARTING_RESOURCES = "StartingResources"
+BANK_CORE_OPTIONS_KEY_FACTION_COLORS = "FactionColors"
+BANK_CORE_OPTIONS_KEY_UNCOLLECTED_LOCATIONS = "UncollectedLocations"
+BANK_CORE_OPTIONS_KEY_LOAD_FINISHED = "LoadFinished"
+
+# Options
+# 2 types of options because they are handled in different mod files by SC2
+BANK_OPTIONS_FILE_NAME = "ArchipelagoOptions" # .SC2Bank
+BANK_OPTIONS_SECTION_OPTIONS = "GameOptions"
+BANK_OPTIONS_KEY_OPTIONS = "Options"
+
+# Items
+BANK_ITEMS_FILE_NAME = "ArchipelagoItems" # .SC2Bank
+BANK_ITEMS_SECTION_ITEMS = "Items"
+BANK_ITEMS_KEY_TERRAN_ITEMS = "TerranItems"
+BANK_ITEMS_KEY_ZERG_ITEMS = "ZergItems"
+BANK_ITEMS_KEY_PROTOSS_ITEMS = "ProtossItems"
+BANK_ITEMS_KEY_MISC_ITEMS = "MiscItems"
+
+# Messages
+BANK_MESSAGES_FILE_NAME = "ArchipelagoMessages" # .SC2Bank
+BANK_MESSAGES_SECTION_MESSAGES = "Messages"
+BANK_MESSAGES_KEY_MESSAGE = "Message" # Appends message number 'Message1' 'Message2' ...
+BANK_MESSAGES_KEY_LIMIT = 50 # Limit for messages per bank
+
+# Void Trade Receive (messages received by SC2)
+BANK_TRADE_RECEIVE_FILE_NAME = "ArchipelagoVoidTradeReceive" # .SC2Bank
+BANK_TRADE_RECEIVE_SECTION_TRADE = "VoidTrade"
+BANK_TRADE_RECEIVE_KEY_TRADE_RESPONSE = "TradeResponse"
+
+# SC2 -> Client
+# Locations 
+BANK_LOCATIONS_FILE_NAME = "ArchipelagoLocations" # .SC2Bank
+BANK_LOCATIONS_SECTION_LOCATIONS = "Locations"
+BANK_LOCATIONS_KEY_GAME_STATE = "GameState"
+
+# Update
+# Doesn't need sections or keys. The existence of the file is used as an update prompt for now
+BANK_UPDATE_NAME = "ArchipelagoUpdate" #.SC2Bank
+
+# Void Trade Send (messages sent by SC2)
+BANK_TRADE_SEND_FILE_NAME = "ArchipelagoVoidTradeSend"
+BANK_TRADE_SEND_SECTION_UNITS = "VoidTradeUnits"
+BANK_TRADE_SEND_KEY_UNIT_TYPES = "UnitTypes"
+BANK_TRADE_SEND_SECTION_RECEIVE_REQUEST = "VoidTradeReceiveRequest"
+BANK_TRADE_SEND_KEY_RECEIVE_COUNT = "Count"
 
 # Games
 STARCRAFT2 = "Starcraft 2"
@@ -596,37 +651,85 @@ class SC2JSONtoTextParser(JSONtoTextParser):
         return '<c val="' + self.color_codes[code] + '">'
 
 class SC2Bank():
+    # Banks are XML files used to handle communication between SC2 and the AP Client
     file_name = "NewBank"
     sections = {}
     def __init__(self, name: str) -> None:
-        self.fileName = name
+        self.file_name = name
         self.sections: typing.Dict[str, typing.Dict[str, str]] = {}
+    
+    def __str__(self) -> str:
+        result = []
+        result.append(f'{self.file_name}.SC2Bank:')
+        for name, section in self.sections.items():
+            result.append(f'Section {name}:')
+            for key, value in section.items():
+                result.append(f'  Key {key}:')
+                result.append(f'    Value: {value}')
+        return ('\n'.join(result))
         
-    def add_section(self, sectionName: str) -> None:
-        self.sections[sectionName] = {}
+    def add_section(self, section: str) -> None:
+        self.sections[section] = {}
 
-    def add_entry(self, sectionName: str, key: str, value: str) -> None:
-        if not sectionName in self.sections:
-            self.add_section(sectionName)
-        self.sections[sectionName][key] = value
+    def add_entry(self, section: str, key: str, value: str) -> None:
+        if not section in self.sections:
+            self.add_section(section)
+        self.sections[section][key] = value 
+    
+    def get_value(self, section: str, key: str) -> str:
+        result = ""
+        if section in self.sections:
+            if key in self.sections[section]:
+                result = self.sections[section][key]
+        return result
 
-    def remove_entry_from_file(self, key: str) -> None:
-        path = f"{get_bank_folder()}/{self.fileName}"
+    def read_file(self, path: Optional[str] = None) -> None:
+        # Read a bank file provided by SC2 and convert it into an SC2Bank object
+        # Assumes bank files to follow the structure provided by the game
+        # Asserts catch malformed files, should never happen unless the player manually edits the files
+        if not path:
+            path = f"{get_bank_folder()}/{self.file_name}.SC2Bank"
+        if not os.path.isfile(path):
+            return
         with open(path, "r") as f:
+            SECTION_PATTERN = re.compile(r'<Section name="(\w+)">')
+            KEY_PATTERN = re.compile(r'<Key name="(\w+)">')
+            VALUE_PATTERN = re.compile(r'<Value string="([^"]+)"/>')
+            END_KEY_PATTERN = '</Key>'
+            END_SECTION_PATTERN = '</Section>'
+            section = '' # Use the presence of a section/key as the state variable
+            key = ''     # empty string is not present
             lines = f.readlines()
-        with open(path, "w") as f:
-            deleting = False
             for line in lines:
                 line_content = line.strip()
-                if line_content == f'<Key name="{key}">':
-                    deleting = True
-                elif line_content == '</Key>':
-                    deleting = False
-                elif not deleting:
-                    f.write(line)          
+                if (m := SECTION_PATTERN.match(line_content)):
+                    assert not section, f"Encountered section {m.group(1)} while already inside section {section}"
+                    section = m.group(1)
+                    self.add_section(section)
+                    assert section not in self.sections.items(), f"Duplicate section definition for section {section}"
+                elif (m := KEY_PATTERN.match(line_content)):
+                    assert section, "Encountered a key while not in a section"
+                    assert not key, f"Encountered key {m.group(1)} while already inside key {key}"
+                    key = m.group(1)
+                    assert key not in self.sections[section].items(), f"Duplicate key definition for key {key}"
+                elif (m := VALUE_PATTERN.match(line_content)):
+                    assert section, "Encountered a value while not in a section"
+                    assert key, "Encountered a value while not in a key"
+                    value = m.group(1)
+                    self.add_entry(section, key, value)
+                elif line_content == END_KEY_PATTERN:
+                    assert key, "Closing a key while not already in a key"
+                    key = ''
+                elif line_content == END_SECTION_PATTERN:
+                    assert section, "Closing a section while not already in a section"
+                    section = ''
+                else:
+                    pass
 
-    def make_file(self) -> None:
-        # Making a bank in the client should always be a backup
+    def write_file(self) -> None:
+        # Write a bank file with the formatting expected from SC2
+        # SC2 reads data by restoring a bank from a backup
+        # so we write the new backup file here
         dir = f"{get_bank_folder()}/Backup"
         lines = []
         lines.append(         f'<?xml version="1.0" encoding="utf-8"?>')
@@ -635,14 +738,32 @@ class SC2Bank():
             lines.append(     f'    <Section name="{name}">')
             for key, value in section.items():
                 lines.append( f'        <Key name="{key}">')
-                lines.append( f'            <Value name="{value}"/>')
+                lines.append( f'            <Value string="{value}"/>')
                 lines.append( f'        </Key>')
             lines.append(     f'    </Section>')
         lines.append(         f'</Bank>')
         Path(dir).mkdir(parents=True, exist_ok=True)
         # TODO: Handle multiple backups in the same step (if needed)
-        with open(f"{dir}/{self.fileName}_backup_1.SC2Bank", "w") as f:
+        with open(f"{dir}/{self.file_name}_backup_1.SC2Bank", "w") as f:
             f.write('\n'.join(lines))
+        
+    def remove_entry_from_file(self, key: str) -> None:
+        # Remove one Key/Value pair from a bank file
+        path = f"{get_bank_folder()}/{self.file_name}"
+        with open(path, "r") as f:
+            lines = f.readlines()
+        with open(path, "w") as f:
+            deleting = False
+            for line in lines:
+                line_content = line.strip()
+                # Just find the key tag
+                if line_content == f'<Key name="{key}">':
+                    deleting = True
+                # and delete all lines until finding the closing tag
+                elif line_content == '</Key>':
+                    deleting = False
+                elif not deleting:
+                    f.write(line)         
             
 class SC2Context(CommonContext):
     command_processor = StarcraftClientProcessor
@@ -1096,7 +1217,7 @@ class SC2Context(CommonContext):
                     sc2_logger.warning("Starcraft 2 Client is still running!")
                 self.sc2_run_task.cancel()  # doesn't actually close the game, just stops the python task
             # clean up locations bank from previous map
-            Path(f"{get_bank_folder()}/ArchipelagoLocations.SC2Bank").unlink(missing_ok=True)
+            Path(f"{get_bank_folder()}/{BANK_LOCATIONS_FILE_NAME}.SC2Bank").unlink(missing_ok=True)
             if self.slot is None:
                 sc2_logger.warning("Launching Mission without Archipelago authentication, "
                                    "checks will not be registered to server.")
@@ -1234,12 +1355,16 @@ class SC2Context(CommonContext):
         """
         Tries to pop `amount` units out of the trade storage.
         """
-        trade_received_bank = SC2Bank("ArchipelagoVoidTradeReceive")               
+        trade_received_bank = SC2Bank(BANK_TRADE_RECEIVE_FILE_NAME)               
         reply = await self.trade_acquire_storage(True)
 
         if reply is None:
-            trade_received_bank.add_entry("VoidTrade", "TradeResponse", "FailConnection")
-            trade_received_bank.make_file()
+            trade_received_bank.add_entry(
+                BANK_TRADE_RECEIVE_SECTION_TRADE, 
+                BANK_TRADE_RECEIVE_KEY_TRADE_RESPONSE, 
+                 "FailConnection"
+            )
+            trade_received_bank.write_file()
             return None
 
         # Find available units
@@ -1313,8 +1438,12 @@ class SC2Context(CommonContext):
         ])
         # Write units to bank
         value = f"ReceiveUnits {refunds} " + " ".join(f"{unit} {count}" for (unit, count) in unit_counts.items())
-        trade_received_bank.add_entry("VoidTrade", "TradeResponse", value)
-        trade_received_bank.make_file()
+        trade_received_bank.add_entry(
+                BANK_TRADE_RECEIVE_SECTION_TRADE, 
+                BANK_TRADE_RECEIVE_KEY_TRADE_RESPONSE, 
+                value
+            )
+        trade_received_bank.write_file()
         self.trade_response = None
         self.trade_underway = False
 
@@ -1323,12 +1452,16 @@ class SC2Context(CommonContext):
         """
         Tries to upload `units` to the trade DataStorage.
         """
-        trade_received_bank = SC2Bank("ArchipelagoVoidTradeReceive")
+        trade_received_bank = SC2Bank(BANK_TRADE_RECEIVE_FILE_NAME)
         reply = await self.trade_acquire_storage(True)
 
         if reply is None:
-            trade_received_bank.add_entry("VoidTrade", "TradeResponse", "FailConnection")
-            trade_received_bank.make_file()
+            trade_received_bank.add_entry(
+                BANK_TRADE_RECEIVE_SECTION_TRADE, 
+                BANK_TRADE_RECEIVE_KEY_TRADE_RESPONSE, 
+                 "FailConnection"
+            )
+            trade_received_bank.write_file()
             return None
         
         # Create a storage entry for the time the trade was confirmed
@@ -1355,8 +1488,12 @@ class SC2Context(CommonContext):
         ])
         
         # Notify the game 
-        trade_received_bank.add_entry("VoidTrade", "TradeResponse", "Success")
-        trade_received_bank.make_file()
+        trade_received_bank.add_entry(
+            BANK_TRADE_RECEIVE_SECTION_TRADE, 
+            BANK_TRADE_RECEIVE_KEY_TRADE_RESPONSE, 
+            "Success"
+        )
+        trade_received_bank.write_file()
         self.trade_response = None
         self.trade_underway = False
         
@@ -1846,8 +1983,10 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             else:
                 game_speed = self.ctx.game_speed
 
-            options_bank = SC2Bank("ArchipelagoOptions")
-            options_bank.add_entry("GameOptions", "Options",
+            options_bank = SC2Bank(BANK_OPTIONS_FILE_NAME)
+            options_bank.add_entry(
+                BANK_OPTIONS_SECTION_OPTIONS,
+                BANK_OPTIONS_KEY_OPTIONS,
                 f" {difficulty}"
                 f" {generic_upgrade_options}"
                 f" {self.ctx.all_in_choice}"
@@ -1865,22 +2004,37 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 f" {mission_variant}"
                 f" {trade_options}"
                 f" {self.ctx.difficulty_damage_modifier}"
-                f" {self.ctx.mercenary_highlanders}" # TODO: Possibly rework it into unit options in the next cycle
+                f" {self.ctx.mercenary_highlanders}" # TODO: Possibly rework into unit options
                 f" {self.ctx.war_council_nerfs}"
             )
-            options_bank.make_file()
+            options_bank.write_file()
             self.update_tech(start_items, kerrigan_level)
 
             
-            core_options_bank = SC2Bank("ArchipelagoCoreOptions")
-            core_options_bank.add_entry("CoreOptions", "StartingResources", self.get_resources(start_items))
-            core_options_bank.add_entry("CoreOptions", "FactionColors", self.get_colors())
+            core_options_bank = SC2Bank(BANK_CORE_OPTIONS_FILE_NAME)
+            core_options_bank.add_entry(
+                BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS, 
+                BANK_CORE_OPTIONS_KEY_STARTING_RESOURCES, 
+                self.get_resources(start_items)
+            )
+            core_options_bank.add_entry(
+                BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
+                BANK_CORE_OPTIONS_KEY_FACTION_COLORS,
+                self.get_colors()
+            )
             if uncollected_objectives:
-                core_options_bank.add_entry("CoreOptions", "UncollectedLocations","{}".format(
-                    functools.reduce(lambda a, b: a + " " + b, [str(x) for x in uncollected_objectives])
-                ))
-            core_options_bank.add_entry("CoreOptions", "LoadFinished", "1")
-            core_options_bank.make_file()
+                core_options_bank.add_entry(
+                    BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
+                    BANK_CORE_OPTIONS_KEY_UNCOLLECTED_LOCATIONS,
+                    "{}".format(
+                        functools.reduce(lambda a, b: a + " " + b, [str(x) for x in uncollected_objectives])
+                    )
+                )
+            core_options_bank.add_entry(
+                BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
+                BANK_CORE_OPTIONS_KEY_LOAD_FINISHED,
+                "1")
+            core_options_bank.write_file()
 
             self.last_received_update = len(self.ctx.items_received)
 
@@ -1919,9 +2073,13 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                         non_ap_units.add(unit_id)
                 if len(non_ap_units) > 0:
                     sc2_logger.info(f"Void Trade tried to send non-AP units: {', '.join(non_ap_units)}")
-                    trade_received_bank = SC2Bank("ArchipelagoVoidTradeReceive")               
-                    trade_received_bank.add_entry("VoidTrade", "TradeResponse", "FailNonAPUnits")
-                    trade_received_bank.make_file()
+                    trade_received_bank = SC2Bank(BANK_TRADE_RECEIVE_FILE_NAME)               
+                    trade_received_bank.add_entry(
+                        BANK_TRADE_RECEIVE_SECTION_TRADE,
+                        BANK_TRADE_RECEIVE_KEY_TRADE_RESPONSE,
+                        "FailNonAPUnits"
+                    )
+                    trade_received_bank.write_file()
                     #self.ctx.trade_response = "?TradeFail Void Trade rejected: Trade contains invalid units."
                     self.ctx.trade_underway = True
                 else:
@@ -1952,10 +2110,11 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
                 self.send_ap_message({"Warning: Archipelago unable to connect or has lost connection to " +
                                         "Starcraft 2 (This is likely a map issue)"})
                 
-            if os.path.isfile(f"{get_bank_folder()}/ArchipelagoUpdate.SC2Bank"):
+            path =f"{get_bank_folder()}/{BANK_UPDATE_NAME}.SC2Bank"
+            if os.path.isfile(path):
                 # if bank exists, we want an update prompt. No need to check the values
                 self.last_received_update = 0
-                os.remove(f"{get_bank_folder()}/ArchipelagoUpdate.SC2Bank")
+                os.remove(path)
                 
             if self.last_received_update < len(self.ctx.items_received):
                 current_items = calculate_items(self.ctx)
@@ -2018,71 +2177,49 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
         return message.replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
 
     def send_ap_message(self, messages: typing.List[str]):
-        bank = SC2Bank("ArchipelagoMessages")
+        bank = SC2Bank(BANK_MESSAGES_FILE_NAME)
         if messages:
             i = 0
             for msg in messages:
                 if msg:
                     # TODO: Check for limits/staggering
                     i+=1
-                    bank.add_entry("Messages",f"Message{str(i)}", self.clean_ap_message(msg))
+                    bank.add_entry(
+                        BANK_MESSAGES_SECTION_MESSAGES,
+                        f"{BANK_MESSAGES_KEY_MESSAGE}{str(i)}", 
+                        self.clean_ap_message(msg)
+                    )
             if i > 0:
-                bank.make_file()
+                bank.write_file()
 
-    def get_locations(self) -> str:
-        result = 0
-        path = f"{get_bank_folder()}/ArchipelagoLocations.SC2Bank"
-        if os.path.isfile(path):
-            next_line = False
-            l = '<Value string="'
-            r = '"/>'
-            with open(path) as locationBank:
-                for line in locationBank:
-                    if next_line:
-                        result = int(line[line.find(l) + len(l):line.rfind(r)])
-                        break
-                    if '<Key name="GameState">' in line:
-                        next_line = True
-        return result
+    def get_locations(self) -> int:
+        location_bank = SC2Bank(BANK_LOCATIONS_FILE_NAME)
+        location_bank.read_file()
+        return int(location_bank.get_value(
+            BANK_LOCATIONS_SECTION_LOCATIONS,
+            BANK_LOCATIONS_KEY_GAME_STATE
+        ))
     
     def get_trade_units_sent(self) -> str:
-        result = ""
-        key = "UnitTypes"
-        path = f"{get_bank_folder()}/ArchipelagoVoidTradeSend.SC2Bank"
-        if os.path.isfile(path):
-            next_line = False
-            l = '<Value string="'
-            r = '"/>'
-            with open(path) as locationBank:
-                for line in locationBank:
-                    if next_line:
-                        result = line[line.find(l) + len(l):line.rfind(r)]
-                        break
-                    if f'<Key name="{key}">' in line:
-                        next_line = True
+        trade_send_bank = SC2Bank(BANK_TRADE_SEND_FILE_NAME)
+        trade_send_bank.read_file()
+        result = trade_send_bank.get_value(
+            BANK_TRADE_SEND_SECTION_UNITS,
+            BANK_TRADE_SEND_KEY_UNIT_TYPES
+        )
         if result != "":
-            bank = SC2Bank("ArchipelagoVoidTradeSend.SC2Bank")
-            bank.remove_entry_from_file(key)
+            trade_send_bank.remove_entry_from_file(BANK_TRADE_SEND_KEY_UNIT_TYPES)
         return result
     
     def get_trade_receive_request(self) -> str:
-        result = ""
-        key = "Count"
-        path = f"{get_bank_folder()}/ArchipelagoVoidTradeSend.SC2Bank"
-        if os.path.isfile(path):
-            next_line = False
-            l = '<Value string="'
-            r = '"/>'
-            with open(path) as locationBank:
-                for line in locationBank:
-                    if next_line:
-                        result = line[line.find(l) + len(l):line.rfind(r)]
-                        break
-                    if f'<Key name="{key}">' in line:
-                        next_line = True
+        trade_send_bank = SC2Bank(BANK_TRADE_SEND_FILE_NAME)
+        trade_send_bank.read_file()
+        result = trade_send_bank.get_value(
+            BANK_TRADE_SEND_SECTION_RECEIVE_REQUEST,
+            BANK_TRADE_SEND_KEY_RECEIVE_COUNT
+        )
         if result != "":
-            bank = SC2Bank("ArchipelagoVoidTradeSend.SC2Bank")
-            bank.remove_entry_from_file(key)
+            trade_send_bank.remove_entry_from_file(BANK_TRADE_SEND_KEY_RECEIVE_COUNT)
         return result
     
     def get_uncollected_objectives(self) -> typing.List[int]:
@@ -2151,18 +2288,26 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
         ))
 
     def update_tech(self, current_items: typing.Dict[SC2Race, typing.List[int]], kerrigan_level: int):
-        item_bank = SC2Bank("ArchipelagoItems")
-        item_bank.add_entry("Items", "TerranItems", self.get_terran_tech(current_items))
-        item_bank.add_entry("Items", "ZergItems", self.get_zerg_tech(current_items, kerrigan_level))
-        item_bank.add_entry("Items", "ProtossItems", self.get_protoss_tech(current_items))
-        item_bank.add_entry("Items", "MiscItems", self.get_misc_tech(current_items))
-        item_bank.make_file()
+        item_bank = SC2Bank(BANK_ITEMS_FILE_NAME)
+        section = BANK_ITEMS_SECTION_ITEMS
+        item_bank.add_entry(section, BANK_ITEMS_KEY_TERRAN_ITEMS, self.get_terran_tech(current_items))
+        item_bank.add_entry(section, BANK_ITEMS_KEY_ZERG_ITEMS, self.get_zerg_tech(current_items, kerrigan_level))
+        item_bank.add_entry(section, BANK_ITEMS_KEY_PROTOSS_ITEMS, self.get_protoss_tech(current_items))
+        item_bank.add_entry(section, BANK_ITEMS_KEY_MISC_ITEMS, self.get_misc_tech(current_items))
+        item_bank.write_file()
     
     def update_core_options(self, current_items: typing.Dict[SC2Race, typing.List[int]]):
-        core_options_bank = SC2Bank("ArchipelagoCoreOptions")
-        core_options_bank.add_entry("CoreOptions", "StartingResources", self.get_resources(current_items))
-        core_options_bank.add_entry("CoreOptions", "FactionColors", self.get_colors())
-        core_options_bank.make_file()
+        core_options_bank = SC2Bank(BANK_CORE_OPTIONS_FILE_NAME)
+        core_options_bank.add_entry(
+            BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
+            BANK_CORE_OPTIONS_KEY_STARTING_RESOURCES,
+            self.get_resources(current_items)
+        )
+        core_options_bank.add_entry(
+            BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
+            BANK_CORE_OPTIONS_KEY_FACTION_COLORS,
+            self.get_colors())
+        core_options_bank.write_file()
 
 def calc_unfinished_nodes(
         ctx: SC2Context
