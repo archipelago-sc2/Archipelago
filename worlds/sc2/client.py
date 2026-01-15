@@ -91,10 +91,6 @@ DATA_REPO_NAME = "Archipelago-SC2-data"
 DATA_API_VERSION = "API5"
 
 # Void Trade
-# TRADE_UNIT = "AP_TradeStructure" # ID of the unit
-# TRADE_SEND_BUTTON = "AP_TradeStructureDummySend" # ID of the button
-# TRADE_RECEIVE_1_BUTTON = "AP_TradeStructureDummyReceive" # ID of the button
-# TRADE_RECEIVE_5_BUTTON = "AP_TradeStructureDummyReceive5" # ID of the button
 TRADE_DATASTORAGE_TEAM = "SC2_VoidTrade_" # + Team
 TRADE_DATASTORAGE_SLOT = "slot_" # + Slot
 TRADE_DATASTORAGE_LOCK = "_lock"
@@ -683,7 +679,7 @@ class SC2Bank():
                 result = self.sections[section][key]
         return result
 
-    def read_file(self, path: Optional[str] = None) -> None:
+    def read_file(self, path: str = None) -> None:
         # Read a bank file provided by SC2 and convert it into an SC2Bank object
         # Assumes bank files to follow the structure provided by the game
         # Asserts catch malformed files, should never happen unless the player manually edits the files
@@ -2306,7 +2302,8 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
         core_options_bank.add_entry(
             BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
             BANK_CORE_OPTIONS_KEY_FACTION_COLORS,
-            self.get_colors())
+            self.get_colors()
+        )
         core_options_bank.write_file()
 
 def calc_unfinished_nodes(
