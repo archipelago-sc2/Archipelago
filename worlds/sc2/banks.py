@@ -66,7 +66,7 @@ def get_bank_folder() -> str:
         result = banks_folders[0]
     else:
         result = os.path.expanduser("~\\Documents\\StarCraft II\\Banks")
-    assert len(result) > 0, "Banks folder not found" 
+    assert os.path.isdir(result), "Banks folder not found" 
     return result
 
 
@@ -108,7 +108,7 @@ class SC2Bank():
         # Assumes bank files to follow the structure provided by the game
         # Asserts catch malformed files, should never happen unless the player manually edits the files
         if not path:
-            path = f"{get_bank_folder()}/{self.file_name}.SC2Bank"
+            path = f"{get_bank_folder()}\\{self.file_name}.SC2Bank"
         if not os.path.isfile(path):
             return
         with open(path, "r") as f:
