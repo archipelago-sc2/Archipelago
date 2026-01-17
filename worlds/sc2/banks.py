@@ -1,4 +1,5 @@
 from pathlib import Path
+from glob import glob
 import typing
 import os.path
 import re
@@ -59,11 +60,16 @@ BANK_TRADE_SEND_KEY_RECEIVE_COUNT = "Count"
 
 # file path to bank folder.
 def get_bank_folder() -> str:
-    return os.path.expanduser("~/Documents/StarCraft II/Banks")
+    # handle documents folder backed up by cloud service (OneDrive)
+    banks_folder = glob(os.path.expanduser("~\\*\\Documents\\StarCraft II\\Banks"))
+    if len(banks_folder) == 0:
+        banks_folder = os.path.expanduser("~\\Documents\\StarCraft II\\Banks")
+    assert len(banks_folder) > 0, "Banks folder not found" 
+    return banks_folder
 
 
 class SC2Bank():
-    # Banks are XML files used to handle communication between SC2 and the AP Client
+    # Has the same structure as bank files provided by SC2
     file_name = "NewBank"
     sections = {}
     def __init__(self, name: str) -> None:
