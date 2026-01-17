@@ -150,7 +150,7 @@ class SC2Bank():
         # Write a bank file with the formatting expected from SC2
         # SC2 reads data by restoring a bank from a backup
         # so we write the new backup file here
-        dir = f"{get_bank_folder()}/Backup"
+        dir = f"{get_bank_folder()}\\Backup"
         lines = []
         lines.append(         f'<?xml version="1.0" encoding="utf-8"?>')
         lines.append(         f'<Bank version="1">')
@@ -164,12 +164,12 @@ class SC2Bank():
         lines.append(         f'</Bank>')
         Path(dir).mkdir(parents=True, exist_ok=True)
         # TODO: Handle multiple backups in the same step (if needed)
-        with open(f"{dir}/{self.file_name}_backup_1.SC2Bank", "w") as f:
+        with open(f"{dir}\\{self.file_name}_backup_1.SC2Bank", "w") as f:
             f.write('\n'.join(lines))
         
     def remove_entry_from_file(self, key: str) -> None:
         # Remove one Key/Value pair from a bank file
-        path = f"{get_bank_folder()}/{self.file_name}"
+        path = f"{get_bank_folder()}\\{self.file_name}.SC2Bank"
         with open(path, "r") as f:
             lines = f.readlines()
         with open(path, "w") as f:
@@ -189,7 +189,7 @@ class SC2Bank():
 def file_cleanup() -> None:
     # Use at the start of a mission to delete old bank files
     # Locations needs cleanup, others are optional
-    Path(f"{get_bank_folder()}/{BANK_LOCATIONS_FILE_NAME}.SC2Bank").unlink(missing_ok=True)
+    Path(f"{get_bank_folder()}\\{BANK_LOCATIONS_FILE_NAME}.SC2Bank").unlink(missing_ok=True)
 
 def send_options(msg: str) -> None:
     bank = SC2Bank(BANK_OPTIONS_FILE_NAME)
@@ -281,7 +281,7 @@ def send_ap_message(messages: typing.List[str]):
 
 def update_prompt() -> bool:
     result = False
-    path =f"{get_bank_folder()}/{BANK_UPDATE_NAME}.SC2Bank"
+    path =f"{get_bank_folder()}\\{BANK_UPDATE_NAME}.SC2Bank"
     if os.path.isfile(path):
         # if bank exists, we want an update prompt. No need to check the values
         os.remove(path)
