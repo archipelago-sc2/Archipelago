@@ -61,11 +61,13 @@ BANK_TRADE_SEND_KEY_RECEIVE_COUNT = "Count"
 # file path to bank folder.
 def get_bank_folder() -> str:
     # handle documents folder backed up by cloud service (OneDrive)
-    banks_folder = glob(os.path.expanduser("~\\*\\Documents\\StarCraft II\\Banks"))
-    if len(banks_folder) == 0:
-        banks_folder = os.path.expanduser("~\\Documents\\StarCraft II\\Banks")
-    assert len(banks_folder) > 0, "Banks folder not found" 
-    return banks_folder
+    banks_folders = glob(os.path.expanduser("~\\*\\Documents\\StarCraft II\\Banks"))
+    if len(banks_folders) > 0:
+        result = banks_folders[0]
+    else:
+        result = os.path.expanduser("~\\Documents\\StarCraft II\\Banks")
+    assert len(result) > 0, "Banks folder not found" 
+    return result
 
 
 class SC2Bank():
