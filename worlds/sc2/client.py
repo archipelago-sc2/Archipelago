@@ -862,14 +862,14 @@ class SC2Context(CommonContext):
             self.nova_grant_story_tech = args["slot_data"].get("nova_grant_story_tech", False)
             if self.slot_data_version < 4:
                 if args["slot_data"].get("nova_covert_ops_only", True):
-                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN},
+                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN}
                 else:
-                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN, NovaPresenceOptions.GHOST_OF_A_CHANCE},
+                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN, NovaPresenceOptions.GHOST_OF_A_CHANCE}
             if self.slot_data_version < 5:
                 if args["slot_data"].get("use_nova_wol_fallback", True):
-                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN},
+                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN}
                 else:
-                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN, NovaPresenceOptions.GHOST_OF_A_CHANCE},
+                    self.nova_presence = {NovaPresenceOptions.NCO_TERRAN, NovaPresenceOptions.GHOST_OF_A_CHANCE}
             self.trade_enabled = args["slot_data"].get("enable_void_trade", EnableVoidTrade.option_false)
             self.trade_age_limit = args["slot_data"].get("void_trade_age_limit", VoidTradeAgeLimit.default)
             self.trade_workers_allowed = args["slot_data"].get("void_trade_workers", VoidTradeWorkers.default)
@@ -1770,6 +1770,7 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             kerrigan_level = get_kerrigan_level(self.ctx, start_items, missions_beaten)
             kerrigan_options = calculate_kerrigan_options(self.ctx)
             nova_presence = calculate_nova_presence(self.ctx, mission)
+            print(f"Nova presence: {nova_presence}")
             grant_story_tech = calculate_story_tech(self.ctx, mission)
             soa_options = calculate_soa_options(self.ctx, mission)
             generic_upgrade_options = calculate_generic_upgrade_options(self.ctx)
