@@ -49,7 +49,7 @@ BANK_LOCATIONS_KEY_GAME_STATE = "GameState"
 
 # Update
 # Doesn't need sections or keys. The existence of the file is used as an update prompt for now
-BANK_UPDATE_NAME = "ArchipelagoUpdate" #.SC2Bank
+BANK_UPDATE_FILE_NAME = "ArchipelagoUpdate" #.SC2Bank
 
 # Void Trade Send (messages sent by SC2)
 BANK_TRADE_SEND_FILE_NAME = "ArchipelagoVoidTradeSend"
@@ -281,7 +281,7 @@ def send_ap_message(messages: typing.List[str]):
 
 def update_prompt() -> bool:
     result = False
-    path =f"{get_bank_folder()}\\{BANK_UPDATE_NAME}.SC2Bank"
+    path =f"{get_bank_folder()}\\{BANK_UPDATE_FILE_NAME}.SC2Bank"
     if os.path.isfile(path):
         # if bank exists, we want an update prompt. No need to check the values
         os.remove(path)
