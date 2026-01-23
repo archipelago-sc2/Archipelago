@@ -1819,29 +1819,8 @@ class ArchipelagoBot(bot.bot_ai.BotAI):
             )
 
             self.last_received_update = len(self.ctx.items_received)
-
         else:
-            # TODO: re-enable color update
-            # if self.ctx.pending_color_update:
-            #    await self.update_colors()
-
-            # TODO: send multiple messages at once
-            # messages = []
-            # for i in range(20):
-            #     if not self.ctx.announcements.empty(): 
-            #         messages[i] = self.ctx.announcements.get_nowait()
-            #         self.ctx.announcements.task_done()
-            #     else:
-            #         break
-            # if messages:
-            #     banks.send_ap_message(messages)
-
-            if not self.ctx.announcements.empty():
-                message = self.ctx.announcements.get(timeout=1)
-                banks.send_ap_message({message})
-                self.ctx.announcements.task_done()
-
-        
+            banks.send_ap_messages_from_queue(self.ctx.announcements)
             trade_send_string = self.get_trade_units_sent()
             # Message format:
             # <unit1> <unit2> <unit3>...

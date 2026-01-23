@@ -1,6 +1,7 @@
 from pathlib import Path
 from glob import glob
 import typing
+import queue
 import os.path
 import re
 
@@ -57,6 +58,9 @@ BANK_TRADE_SEND_SECTION_UNITS = "VoidTradeUnits"
 BANK_TRADE_SEND_KEY_UNIT_TYPES = "UnitTypes"
 BANK_TRADE_SEND_SECTION_RECEIVE_REQUEST = "VoidTradeReceiveRequest"
 BANK_TRADE_SEND_KEY_RECEIVE_COUNT = "Count"
+
+# Limit for how many backup banks are saved per bank file
+BANK_BACKUP_FILE_LIMIT = 100
 
 # file path to bank folder.
 def get_bank_folder() -> str:
@@ -163,10 +167,20 @@ class SC2Bank():
             lines.append(     f'    </Section>')
         lines.append(         f'</Bank>')
         Path(dir).mkdir(parents=True, exist_ok=True)
-        # TODO: Handle multiple backups in the same step (if needed)
-        with open(f"{dir}\\{self.file_name}_backup_1.SC2Bank", "w") as f:
-            f.write('\n'.join(lines))
-        
+        # The game deletes a backup after reading. If a backup exists already, the game didn't read it yet
+        # In that case, just make a second backup, the game will read them in sequence
+        for i in range (1,BANK_BACKUP_FILE_LIMIT + 1):
+            # start at 1, makes handling in SC2 easier
+            path = f"{dir}\\{self.file_name}_backup_{i}.SC2Bank" 
+            if not os.path.isfile(path):
+                with open(path, "w") as f:
+                    f.write('\n'.join(lines))
+                return
+        # only the messages bank has any chance to hit this
+        # at current limits, this would be attempting to send 5000 messages in a single iteration
+        print("Too many bank backups, cannot write:")
+        print(self)
+
     def remove_entry_from_file(self, key: str) -> None:
         # Remove one Key/Value pair from a bank file
         path = f"{get_bank_folder()}\\{self.file_name}.SC2Bank"
@@ -263,13 +277,25 @@ def send_items(
 def clean_ap_message(message: str) -> str:
     return message.replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
 
+def send_ap_messages_from_queue(messageQueue: queue.Queue):
+    messages = []
+    for i in range(BANK_MESSAGES_KEY_LIMIT):
+        # send up to KEY_LIMIT messages in a single bank file
+        if not messageQueue.empty(): 
+            messages.append(messageQueue.get_nowait())
+            messageQueue.task_done()
+        else:
+            break
+    if messages:
+        send_ap_message(messages)
+
 def send_ap_message(messages: typing.List[str]):
+    # message list is expected to not contain more than KEY_LIMIT messages
     bank = SC2Bank(BANK_MESSAGES_FILE_NAME)
     if messages:
         i = 0
         for msg in messages:
-            if msg:
-                # TODO: Check for limits/staggering
+            if msg and i < BANK_MESSAGES_KEY_LIMIT:
                 i+=1
                 bank.add_entry(
                     BANK_MESSAGES_SECTION_MESSAGES,
