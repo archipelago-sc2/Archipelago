@@ -1,6 +1,6 @@
 from pathlib import Path
 from glob import glob
-import typing
+from typing import Dict, List
 import queue
 import os.path
 import re
@@ -43,7 +43,7 @@ BANK_TRADE_RECEIVE_SECTION_TRADE = "VoidTrade"
 BANK_TRADE_RECEIVE_KEY_TRADE_RESPONSE = "TradeResponse"
 
 # SC2 -> Client
-# Locations 
+# Locations
 BANK_LOCATIONS_FILE_NAME = "ArchipelagoLocations" # .SC2Bank
 BANK_LOCATIONS_SECTION_LOCATIONS = "Locations"
 BANK_LOCATIONS_KEY_GAME_STATE = "GameState"
@@ -65,23 +65,23 @@ BANK_BACKUP_FILE_LIMIT = 100
 # file path to bank folder.
 def get_bank_folder() -> str:
     # handle documents folder backed up by cloud service (OneDrive)
-    banks_folders = glob(os.path.expanduser("~\\*\\Documents\\StarCraft II\\Banks"))
+    banks_folders = glob(os.path.expanduser("~/*/Documents/StarCraft II/Banks"))
     if len(banks_folders) > 0:
         result = banks_folders[0]
     else:
-        result = os.path.expanduser("~\\Documents\\StarCraft II\\Banks")
-    assert os.path.isdir(result), "Banks folder not found" 
+        result = os.path.expanduser("~/Documents/StarCraft II/Banks")
+    assert os.path.isdir(result), "Banks folder not found"
     return result
 
 
 class SC2Bank:
     # Has the same structure as bank files provided by SC2
     def __init__(self, name: str) -> None:
-        self.file_name = name
-        self.sections: typing.Dict[str, typing.Dict[str, str]] = {}
-    
+        self.file_name: str = name
+        self.sections: Dict[str, Dict[str, str]] = {}
+
     def __str__(self) -> str:
-        result = []
+        result: list[str] = []
         result.append(f'{self.file_name}.SC2Bank:')
         for name, section in self.sections.items():
             result.append(f'Section {name}:')
@@ -89,15 +89,15 @@ class SC2Bank:
                 result.append(f'  Key {key}:')
                 result.append(f'    Value: {value}')
         return ('\n'.join(result))
-        
+
     def add_section(self, section: str) -> None:
         self.sections[section] = {}
 
     def add_entry(self, section: str, key: str, value: str) -> None:
-        if not section in self.sections:
+        if section not in self.sections:
             self.add_section(section)
-        self.sections[section][key] = value 
-    
+        self.sections[section][key] = value
+
     def get_value(self, section: str, key: str) -> str:
         result = ""
         if section in self.sections:
@@ -106,11 +106,13 @@ class SC2Bank:
         return result
 
     def read_file(self, path: str = None) -> None:
-        # Read a bank file provided by SC2 and convert it into an SC2Bank object
-        # Assumes bank files to follow the structure provided by the game
-        # Asserts catch malformed files, should never happen unless the player manually edits the files
+        """
+        Reads a bank file provided by SC2 and converts it into an SC2Bank object.
+        Assumes bank files follow the structure provided by the game.
+        Asserts catch malformed files, which should never happen unless the player manually edits the files.
+        """
         if not path:
-            path = f"{get_bank_folder()}\\{self.file_name}.SC2Bank"
+            path = f"{get_bank_folder()}/{self.file_name}.SC2Bank"
         if not os.path.isfile(path):
             return
         with open(path, "r") as f:
@@ -152,8 +154,8 @@ class SC2Bank:
         # Write a bank file with the formatting expected from SC2
         # SC2 reads data by restoring a bank from a backup
         # so we write the new backup file here
-        dir = f"{get_bank_folder()}\\Backup"
-        lines = []
+        dir = f"{get_bank_folder()}/Backup"
+        lines: list[str] = []
         lines.append(         f'<?xml version="1.0" encoding="utf-8"?>')
         lines.append(         f'<Bank version="1">')
         for name, section in self.sections.items():
@@ -167,21 +169,20 @@ class SC2Bank:
         Path(dir).mkdir(parents=True, exist_ok=True)
         # The game deletes a backup after reading. If a backup exists already, the game didn't read it yet
         # In that case, just make a second backup, the game will read them in sequence
-        for i in range (1,BANK_BACKUP_FILE_LIMIT + 1):
+        for i in range (1, BANK_BACKUP_FILE_LIMIT + 1):
             # start at 1, makes handling in SC2 easier
-            path = f"{dir}\\{self.file_name}_backup_{i}.SC2Bank" 
+            path = f"{dir}/{self.file_name}_backup_{i}.SC2Bank"
             if not os.path.isfile(path):
                 with open(path, "w") as f:
                     f.write('\n'.join(lines))
                 return
         # only the messages bank has any chance to hit this
         # at current limits, this would be attempting to send 5000 messages in a single iteration
-        print("Too many bank backups, cannot write:")
-        print(self)
+        # sc2_logger.info(f"Too many bank backups, cannot write:\n{self}")
 
     def remove_entry_from_file(self, key: str) -> None:
         # Remove one Key/Value pair from a bank file
-        path = f"{get_bank_folder()}\\{self.file_name}.SC2Bank"
+        path = f"{get_bank_folder()}/{self.file_name}.SC2Bank"
         with open(path, "r") as f:
             lines = f.readlines()
         with open(path, "w") as f:
@@ -195,33 +196,35 @@ class SC2Bank:
                 elif line_content == '</Key>':
                     deleting = False
                 elif not deleting:
-                    f.write(line)         
-            
+                    f.write(line)
+
 
 def file_cleanup() -> None:
     # Use at the start of a mission to delete old bank files
     # Locations needs cleanup, others are optional
-    Path(f"{get_bank_folder()}\\{BANK_LOCATIONS_FILE_NAME}.SC2Bank").unlink(missing_ok=True)
+    Path(f"{get_bank_folder()}/{BANK_LOCATIONS_FILE_NAME}.SC2Bank").unlink(missing_ok=True)
+
 
 def send_options(msg: str) -> None:
     bank = SC2Bank(BANK_OPTIONS_FILE_NAME)
     bank.add_entry(
-        BANK_OPTIONS_SECTION_OPTIONS, 
-        BANK_OPTIONS_KEY_OPTIONS, 
+        BANK_OPTIONS_SECTION_OPTIONS,
+        BANK_OPTIONS_KEY_OPTIONS,
         msg
     )
     bank.write_file()
 
+
 def send_core_options(
-        start_resources: str, 
-        colors: str, 
-        uncollected_objectives: str = None, 
-        finished_loading: str = None
-    ) -> None:
+    start_resources: str,
+    colors: str,
+    uncollected_objectives: str = None,
+    finished_loading: str = None
+) -> None:
     bank = SC2Bank(BANK_CORE_OPTIONS_FILE_NAME)
     bank.add_entry(
-        BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS, 
-        BANK_CORE_OPTIONS_KEY_STARTING_RESOURCES, 
+        BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
+        BANK_CORE_OPTIONS_KEY_STARTING_RESOURCES,
         start_resources
     )
     bank.add_entry(
@@ -243,74 +246,80 @@ def send_core_options(
         )
     bank.write_file()
 
+
 def send_items(
         terran_items: str,
         zerg_items: str,
         protoss_items: str,
-        misc_items: str, 
+        misc_items: str,
     ) -> None:
     bank = SC2Bank(BANK_ITEMS_FILE_NAME)
     bank.add_entry(
-        BANK_ITEMS_SECTION_ITEMS, 
-        BANK_ITEMS_KEY_TERRAN_ITEMS, 
+        BANK_ITEMS_SECTION_ITEMS,
+        BANK_ITEMS_KEY_TERRAN_ITEMS,
         terran_items
     )
     bank.add_entry(
-        BANK_ITEMS_SECTION_ITEMS, 
-        BANK_ITEMS_KEY_ZERG_ITEMS, 
+        BANK_ITEMS_SECTION_ITEMS,
+        BANK_ITEMS_KEY_ZERG_ITEMS,
         zerg_items
     )
     bank.add_entry(
-        BANK_ITEMS_SECTION_ITEMS, 
-        BANK_ITEMS_KEY_PROTOSS_ITEMS, 
+        BANK_ITEMS_SECTION_ITEMS,
+        BANK_ITEMS_KEY_PROTOSS_ITEMS,
         protoss_items
     )
     bank.add_entry(
-        BANK_ITEMS_SECTION_ITEMS, 
-        BANK_ITEMS_KEY_MISC_ITEMS, 
+        BANK_ITEMS_SECTION_ITEMS,
+        BANK_ITEMS_KEY_MISC_ITEMS,
         misc_items
     )
     bank.write_file()
 
-def clean_ap_message(message: str) -> str:
-    return message.replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
 
-def send_ap_messages_from_queue(messageQueue: queue.Queue):
+def escape_ap_message(message: str) -> str:
+    return message.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+
+
+def send_ap_messages_from_queue(message_queue: queue.Queue):
     messages = []
     for i in range(BANK_MESSAGES_KEY_LIMIT):
         # send up to KEY_LIMIT messages in a single bank file
-        if not messageQueue.empty(): 
-            messages.append(messageQueue.get_nowait())
-            messageQueue.task_done()
+        if not message_queue.empty():
+            messages.append(message_queue.get_nowait())
+            message_queue.task_done()
         else:
             break
     if messages:
         send_ap_message(messages)
 
-def send_ap_message(messages: typing.List[str]):
+
+def send_ap_message(messages: List[str]):
     # message list is expected to not contain more than KEY_LIMIT messages
     bank = SC2Bank(BANK_MESSAGES_FILE_NAME)
     if messages:
         i = 0
         for msg in messages:
             if msg and i < BANK_MESSAGES_KEY_LIMIT:
-                i+=1
+                i += 1
                 bank.add_entry(
                     BANK_MESSAGES_SECTION_MESSAGES,
-                    f"{BANK_MESSAGES_KEY_MESSAGE}{str(i)}", 
-                    clean_ap_message(msg)
+                    f"{BANK_MESSAGES_KEY_MESSAGE}{str(i)}",
+                    escape_ap_message(msg)
                 )
         if i > 0:
             bank.write_file()
 
+
 def update_prompt() -> bool:
     result = False
-    path =f"{get_bank_folder()}\\{BANK_UPDATE_FILE_NAME}.SC2Bank"
+    path = f"{get_bank_folder()}/{BANK_UPDATE_FILE_NAME}.SC2Bank"
     if os.path.isfile(path):
         # if bank exists, we want an update prompt. No need to check the values
         os.remove(path)
         result = True
     return result
+
 
 def read_locations() -> str:
     bank = SC2Bank(BANK_LOCATIONS_FILE_NAME)
@@ -321,15 +330,17 @@ def read_locations() -> str:
     )
     return result
 
+
 # Void Trade
 def send_trade_received(msg: str) -> None:
     bank = SC2Bank(BANK_TRADE_RECEIVE_FILE_NAME)
     bank.add_entry(
-        BANK_TRADE_RECEIVE_SECTION_TRADE, 
-        BANK_TRADE_RECEIVE_KEY_TRADE_RESPONSE, 
+        BANK_TRADE_RECEIVE_SECTION_TRADE,
+        BANK_TRADE_RECEIVE_KEY_TRADE_RESPONSE,
         msg
     )
     bank.write_file()
+
 
 def read_trade_units() -> str:
     bank = SC2Bank(BANK_TRADE_SEND_FILE_NAME)
@@ -341,6 +352,7 @@ def read_trade_units() -> str:
     if result:
         bank.remove_entry_from_file(BANK_TRADE_SEND_KEY_UNIT_TYPES)
     return result
+
 
 def read_trade_receive_request() -> str:
     bank = SC2Bank(BANK_TRADE_SEND_FILE_NAME)
