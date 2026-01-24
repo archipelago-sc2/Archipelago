@@ -74,10 +74,8 @@ def get_bank_folder() -> str:
     return result
 
 
-class SC2Bank():
+class SC2Bank:
     # Has the same structure as bank files provided by SC2
-    file_name = "NewBank"
-    sections = {}
     def __init__(self, name: str) -> None:
         self.file_name = name
         self.sections: typing.Dict[str, typing.Dict[str, str]] = {}
