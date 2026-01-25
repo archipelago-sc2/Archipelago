@@ -1,9 +1,9 @@
 from pathlib import Path
 from glob import glob
-from typing import Dict, List
 import queue
 import os.path
 import re
+import logging
 
 # Banks are XML files used to communicate with Starcraft 2
 # file names, section names and key names have to match the SC2 trigger implementation
@@ -62,6 +62,8 @@ BANK_TRADE_SEND_KEY_RECEIVE_COUNT = "Count"
 # Limit for how many backup banks are saved per bank file
 BANK_BACKUP_FILE_LIMIT = 100
 
+logger = logging.getLogger("Starcraft2")
+
 # file path to bank folder.
 def get_bank_folder() -> str:
     # handle documents folder backed up by cloud service (OneDrive)
@@ -78,7 +80,7 @@ class SC2Bank:
     # Has the same structure as bank files provided by SC2
     def __init__(self, name: str) -> None:
         self.file_name: str = name
-        self.sections: Dict[str, Dict[str, str]] = {}
+        self.sections: dict[str, dict[str, str]] = {}
 
     def __str__(self) -> str:
         result: list[str] = []
@@ -178,7 +180,7 @@ class SC2Bank:
                 return
         # only the messages bank has any chance to hit this
         # at current limits, this would be attempting to send 5000 messages in a single iteration
-        # sc2_logger.info(f"Too many bank backups, cannot write:\n{self}")
+        logger.info(f"Too many bank backups, cannot write:\n{self}")
 
     def remove_entry_from_file(self, key: str) -> None:
         # Remove one Key/Value pair from a bank file
@@ -294,7 +296,7 @@ def send_ap_messages_from_queue(message_queue: queue.Queue):
         send_ap_message(messages)
 
 
-def send_ap_message(messages: List[str]):
+def send_ap_message(messages: list[str]):
     # message list is expected to not contain more than KEY_LIMIT messages
     bank = SC2Bank(BANK_MESSAGES_FILE_NAME)
     if messages:
