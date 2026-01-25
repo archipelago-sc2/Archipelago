@@ -248,11 +248,11 @@ def send_core_options(
 
 
 def send_items(
-        terran_items: str,
-        zerg_items: str,
-        protoss_items: str,
-        misc_items: str,
-    ) -> None:
+    terran_items: str,
+    zerg_items: str,
+    protoss_items: str,
+    misc_items: str,
+) -> None:
     bank = SC2Bank(BANK_ITEMS_FILE_NAME)
     bank.add_entry(
         BANK_ITEMS_SECTION_ITEMS,
