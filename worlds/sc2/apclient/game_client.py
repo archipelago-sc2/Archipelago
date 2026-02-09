@@ -876,19 +876,19 @@ def calculate_kerrigan_options(ctx: 'SC2Context') -> int:
     return result
 
 
-def calculate_nova_presence(ctx: 'SC2Context', mission: SC2Mission) -> bool:
-    result = False
+def calculate_nova_presence(ctx: 'SC2Context', mission: SC2Mission) -> int:
+    result = 0
     if mission.campaign == SC2Campaign.NCO:
         if mission.race == SC2Race.TERRAN and options.NovaPresenceOptions.NCO_TERRAN in ctx.nova_presence:
-            result = True
+            result = 1
         elif mission.race == SC2Race.ZERG and options.NovaPresenceOptions.NCO_ZERG in ctx.nova_presence:
-            result = True
+            result = 1
         elif mission.race == SC2Race.PROTOSS and options.NovaPresenceOptions.NCO_PROTOSS in ctx.nova_presence:
-            result = True
+            result = 1
     if (mission == SC2Mission.GHOST_OF_A_CHANCE
         and options.NovaPresenceOptions.GHOST_OF_A_CHANCE in ctx.nova_presence
     ):
-        result = True
+        result = 1
     return result
 
 
