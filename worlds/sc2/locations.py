@@ -3942,6 +3942,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2LOTV_LOC_ID_OFFSET + 1006,
             LocationType.CHALLENGE,
             logic.protoss_last_stand_requirement,
+            flags=LocationFlag.SPEEDRUN,
         ),
         make_location_data(
             SC2Mission.FORBIDDEN_WEAPON.mission_name,
@@ -12221,6 +12222,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 11706,
             LocationType.CHALLENGE,
             logic.terran_last_stand_requirement,
+            flags=LocationFlag.SPEEDRUN,
         ),
         make_location_data(
             SC2Mission.LAST_STAND_Z.mission_name,
@@ -12270,6 +12272,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 11806,
             LocationType.CHALLENGE,
             logic.zerg_last_stand_requirement,
+            flags=LocationFlag.SPEEDRUN,
         ),
         make_location_data(
             SC2Mission.FORBIDDEN_WEAPON_T.mission_name,
