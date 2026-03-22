@@ -251,6 +251,14 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.EXTRA,
         ),
         make_location_data(
+            SC2Mission.THE_OUTLAWS.mission_name,
+            "Win In Under 10 Minutes",
+            SC2WOL_LOC_ID_OFFSET + 205,
+            LocationType.CHALLENGE,
+            logic.terran_common_unit,
+            flags=LocationFlag.SPEEDRUN,
+        ),
+        make_location_data(
             SC2Mission.ZERO_HOUR.mission_name,
             "Victory",
             SC2WOL_LOC_ID_OFFSET + 300,
@@ -3500,6 +3508,18 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             logic.protoss_ghosts_in_the_fog_east_rock_formation,
         ),
         make_location_data(
+            SC2Mission.GHOSTS_IN_THE_FOG.mission_name,
+            "All Rock Formations In Under 10 Minutes",
+            SC2LOTV_LOC_ID_OFFSET + 204,
+            LocationType.CHALLENGE,
+            lambda state: (
+                logic.protoss_competent_comp(state)
+                and logic.protoss_mineral_dump(state)
+                and logic.protoss_can_attack_behind_chasm(state)
+            ),
+            flags=LocationFlag.SPEEDRUN,
+        ),
+        make_location_data(
             SC2Mission.EVIL_AWOKEN.mission_name,
             "Victory",
             SC2LOTV_LOC_ID_OFFSET + 300,
@@ -3813,7 +3833,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
         ),
         make_location_data(
             SC2Mission.BROTHERS_IN_ARMS.mission_name,
-            "Win in under 15 minutes",
+            "Win In Under 15 Minutes",
             SC2LOTV_LOC_ID_OFFSET + 806,
             LocationType.CHALLENGE,
             logic.protoss_brothers_in_arms_speedrun,
@@ -3915,6 +3935,13 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2LOTV_LOC_ID_OFFSET + 1005,
             LocationType.VANILLA,
             logic.protoss_last_stand_1p5_billion,
+        ),
+        make_location_data(
+            SC2Mission.LAST_STAND.mission_name,
+            "All Zenith Stones In Under 10 Minutes",
+            SC2LOTV_LOC_ID_OFFSET + 1006,
+            LocationType.CHALLENGE,
+            logic.protoss_last_stand_requirement,
         ),
         make_location_data(
             SC2Mission.FORBIDDEN_WEAPON.mission_name,
@@ -4385,7 +4412,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
         ),
         make_location_data(
             SC2Mission.RAK_SHIR.mission_name,
-            "Win in under 15 minutes",
+            "Win In Under 15 Minutes",
             SC2LOTV_LOC_ID_OFFSET + 1806,
             LocationType.MASTERY,
             logic.protoss_rak_shir_requirement,
@@ -5584,6 +5611,14 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.EXTRA,
         ),
         make_location_data(
+            SC2Mission.THE_OUTLAWS_Z.mission_name,
+            "Win In Under 10 Minutes",
+            SC2_RACESWAP_LOC_ID_OFFSET + 305,
+            LocationType.CHALLENGE,
+            logic.zerg_common_unit,
+            flags=LocationFlag.SPEEDRUN,
+        ),
+        make_location_data(
             SC2Mission.THE_OUTLAWS_P.mission_name,
             "Victory",
             SC2_RACESWAP_LOC_ID_OFFSET + 400,
@@ -5628,6 +5663,14 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             "Close Resource Pickups",
             SC2_RACESWAP_LOC_ID_OFFSET + 404,
             LocationType.EXTRA,
+        ),
+        make_location_data(
+            SC2Mission.THE_OUTLAWS_P.mission_name,
+            "Win In Under 10 Minutes",
+            SC2_RACESWAP_LOC_ID_OFFSET + 405,
+            LocationType.CHALLENGE,
+            logic.protoss_common_unit,
+            flags=LocationFlag.SPEEDRUN,
         ),
         make_location_data(
             SC2Mission.ZERO_HOUR_Z.mission_name,
@@ -11375,6 +11418,18 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             logic.terran_ghosts_in_the_fog_east_rock_formation_requirement,
         ),
         make_location_data(
+            SC2Mission.GHOSTS_IN_THE_FOG_T.mission_name,
+            "All Rock Formations In Under 10 Minutes",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10104,
+            LocationType.CHALLENGE,
+            lambda state: (
+                logic.terran_beats_protoss_deathball(state)
+                and logic.terran_mineral_dump(state)
+                and logic.terran_can_grab_ghosts_in_the_fog_east_rock_formation(state)
+            ),
+            flags=LocationFlag.SPEEDRUN,
+        ),
+        make_location_data(
             SC2Mission.GHOSTS_IN_THE_FOG_Z.mission_name,
             "Victory",
             SC2_RACESWAP_LOC_ID_OFFSET + 10200,
@@ -11413,6 +11468,18 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 10203,
             LocationType.VANILLA,
             logic.zerg_ghosts_in_the_fog_east_rock_formation_requirement,
+        ),
+        make_location_data(
+            SC2Mission.GHOSTS_IN_THE_FOG_Z.mission_name,
+            "All Rock Formations In Under 10 Minutes",
+            SC2_RACESWAP_LOC_ID_OFFSET + 10204,
+            LocationType.CHALLENGE,
+            lambda state: (
+                logic.zerg_competent_comp(state)
+                and logic.zerg_mineral_dump(state)
+                and logic.zerg_can_grab_ghosts_in_the_fog_east_rock_formation(state)
+            ),
+            flags=LocationFlag.SPEEDRUN,
         ),
         make_location_data(
             SC2Mission.FOR_AIUR_T.mission_name,
@@ -11911,7 +11978,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
         ),
         make_location_data(
             SC2Mission.BROTHERS_IN_ARMS_T.mission_name,
-            "Win in under 15 Minutes",
+            "Win In Under 15 Minutes",
             SC2_RACESWAP_LOC_ID_OFFSET + 11306,
             LocationType.CHALLENGE,
             logic.terran_brothers_in_arms_speedrun,
@@ -11969,7 +12036,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
         ),
         make_location_data(
             SC2Mission.BROTHERS_IN_ARMS_Z.mission_name,
-            "Win in under 15 Minutes",
+            "Win In Under 15 Minutes",
             SC2_RACESWAP_LOC_ID_OFFSET + 11406,
             LocationType.CHALLENGE,
             logic.zerg_brothers_in_arms_speedrun,
@@ -12149,6 +12216,13 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             logic.terran_last_stand_1p5_billion,
         ),
         make_location_data(
+            SC2Mission.LAST_STAND_T.mission_name,
+            "All Zenith Stones In Under 10 Minutes",
+            SC2_RACESWAP_LOC_ID_OFFSET + 11706,
+            LocationType.CHALLENGE,
+            logic.terran_last_stand_requirement,
+        ),
+        make_location_data(
             SC2Mission.LAST_STAND_Z.mission_name,
             "Victory",
             SC2_RACESWAP_LOC_ID_OFFSET + 11800,
@@ -12188,6 +12262,13 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             "1.5 Billion Zerg",
             SC2_RACESWAP_LOC_ID_OFFSET + 11805,
             LocationType.VANILLA,
+            logic.zerg_last_stand_requirement,
+        ),
+        make_location_data(
+            SC2Mission.LAST_STAND_Z.mission_name,
+            "All Zenith Stones In Under 10 Minutes",
+            SC2_RACESWAP_LOC_ID_OFFSET + 11806,
+            LocationType.CHALLENGE,
             logic.zerg_last_stand_requirement,
         ),
         make_location_data(
@@ -13053,7 +13134,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
         ),
         make_location_data(
             SC2Mission.RAK_SHIR_T.mission_name,
-            "Win in under 15 minutes",
+            "Win In Under 15 Minutes",
             SC2_RACESWAP_LOC_ID_OFFSET + 13306,
             LocationType.MASTERY,
             logic.terran_rak_shir_requirement,
@@ -13106,7 +13187,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
         ),
         make_location_data(
             SC2Mission.RAK_SHIR_Z.mission_name,
-            "Win in under 15 minutes",
+            "Win In Under 15 Minutes",
             SC2_RACESWAP_LOC_ID_OFFSET + 13406,
             LocationType.MASTERY,
             logic.zerg_rak_shir_requirement,
