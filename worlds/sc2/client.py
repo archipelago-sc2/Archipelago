@@ -1226,7 +1226,7 @@ class SC2Context(CommonContext):
         until successful. Otherwise it will return `None` if it fails to
         acquire the lock.
         """
-        while not self.exit_event.is_set() and self.mission_client and not self.mission_client.is_game_closed():
+        while not self.exit_event.is_set() and self.mission_client and self.mission_client.check_game_running():
             lock = int(time.time_ns() / 1000000000) # in seconds
 
             # Make sure we're not past the waiting limit
