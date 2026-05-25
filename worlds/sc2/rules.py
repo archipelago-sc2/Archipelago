@@ -4682,7 +4682,7 @@ class SC2Logic:
         return (
             self.zerg_enemy_intelligence_garrisonable_unit(state)
             # TODO: revisit defense ratings
-            and self.zerg_competent_comp(state)
+            and self.zerg_competent_comp_competent_aa(state)
             and self.zerg_defense_rating(state, True, True) >= 5
         )
 
@@ -4801,7 +4801,7 @@ class SC2Logic:
         if presence != HeroFlag.NONE:
             return (
                 self.competent_hero(state, SC2Mission.TROUBLE_IN_PARADISE_Z)
-                and self.zerg_competent_comp(state)
+                and self.zerg_competent_comp_competent_aa(state)
                 and self.zerg_defense_rating(state, True, True) >= 5
                 and self.zerg_power_rating(state) >= 3
             )
@@ -4866,7 +4866,7 @@ class SC2Logic:
 
     def zerg_night_terrors_requirement(self, state: CollectionState) -> bool:
         return (
-            self.zerg_competent_comp(state)
+            self.zerg_competent_comp_moderate_aa(state)
             and self.zerg_power_rating(state) >= 3
         )
 
@@ -4907,7 +4907,7 @@ class SC2Logic:
 
     def zerg_flashpoint_far_requirement(self, state: CollectionState) -> bool:
         return (
-            self.zerg_competent_comp(state)
+            self.zerg_competent_comp_competent_aa(state)
             and self.zerg_mobile_detector(state)
             and self.zerg_defense_rating(state, True, False) >= 6
             and self.zerg_army_weapon_armor_upgrade_min_level(state) >= 2
@@ -5092,7 +5092,7 @@ class SC2Logic:
 
     def zerg_dark_skies_requirement(self, state: CollectionState) -> bool:
         return (
-            self.zerg_competent_comp(state)
+            self.zerg_competent_comp_competent_aa(state)
             and self.zerg_defense_rating(state, False, True) >= 8
             and self.zerg_power_rating(state) >= 5
             and self.competent_or_no_hero(state, SC2Mission.DARK_SKIES_Z)
