@@ -847,7 +847,7 @@ def calculate_items(ctx: 'SC2Context') -> dict[SC2Race, list[int]]:
 
     # Progressive Stimpack handling (Backwards compatibility):
     if ctx.slot_data_version < 5:
-        for name, count in stimpack_count:
+        for name, count in stimpack_count.items():
             if count > 1:
                 # stimpack level 2, grant medpack to upgrade to super stim
                 medpack_item_data: item.ItemData = item_list[compat_stimpack_to_medpack[name]]
