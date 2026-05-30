@@ -121,6 +121,7 @@ parent_present[parent_names.ORBITAL_COMMAND_AND_PLANETARY] = AnyOfGroupAndOneOth
     item_groups.orbital_command_abilities,
     item_names.PLANETARY_FORTRESS,
 )
+parent_present[parent_names.HELLION_OR_HELLBAT] = AnyOf([item_names.HELLION, item_names.HELLION_HELLBAT])
 parent_present[parent_names.SIEGE_TANK_AND_TRANSPORT] = AnyOfGroupAndOneOtherItem(
     (item_names.MEDIVAC, item_names.HERCULES),
     item_names.SIEGE_TANK,

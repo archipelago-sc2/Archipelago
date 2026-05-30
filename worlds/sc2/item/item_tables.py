@@ -276,7 +276,7 @@ item_table = {
                  classification=ItemClassification.progression_skip_balancing, parent=item_names.REAPER),
     item_names.HELLION_INFERNAL_PLATING:
         ItemData(240 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_2, 7, SC2Race.TERRAN,
-                 parent=item_names.HELLION),
+                 parent=parent_names.HELLION_OR_HELLBAT),
     item_names.VULTURE_JERRYRIGGED_PATCHUP:
         ItemData(241 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_2, 8, SC2Race.TERRAN,
                  parent=item_names.VULTURE),
@@ -322,19 +322,19 @@ item_table = {
                  parent=item_names.REAPER),
     item_names.HELLION_HELLBAT:
         ItemData(255 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_2, 21, SC2Race.TERRAN,
-                 classification=ItemClassification.progression, parent=item_names.HELLION),
+                 classification=ItemClassification.progression),
     item_names.HELLION_SMART_SERVOS:
         ItemData(256 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_2, 22, SC2Race.TERRAN,
                  parent=item_names.HELLION),
     item_names.HELLION_OPTIMIZED_LOGISTICS:
         ItemData(257 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_2, 23, SC2Race.TERRAN,
-                 parent=item_names.HELLION),
+                 parent=parent_names.HELLION_OR_HELLBAT),
     item_names.HELLION_JUMP_JETS:
         ItemData(258 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_2, 24, SC2Race.TERRAN,
-                 parent=item_names.HELLION),
+                 parent=parent_names.HELLION_OR_HELLBAT),
     item_names.HELLION_STIMPACK:
         ItemData(259 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_8, 4, SC2Race.TERRAN,
-                 parent=item_names.HELLION),
+                 parent=parent_names.HELLION_OR_HELLBAT),
     item_names.VULTURE_ION_THRUSTERS:
         ItemData(260 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_2, 25, SC2Race.TERRAN,
                  parent=item_names.VULTURE),
@@ -461,7 +461,7 @@ item_table = {
                  parent=item_names.HELLION),
     item_names.HELLION_THERMITE_FILAMENTS:
         ItemData(301 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_3, 17, SC2Race.TERRAN,
-                 parent=item_names.HELLION),
+                 parent=parent_names.HELLION_OR_HELLBAT),
     item_names.SPIDER_MINE_CERBERUS_MINE:
         ItemData(302 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_3, 18, SC2Race.TERRAN,
                  parent=parent_names.SPIDER_MINE_SOURCE),
@@ -991,7 +991,7 @@ item_table = {
                  parent=item_names.REAPER),
     item_names.HELLION_MEDPACK:
         ItemData(780 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_8, 9, SC2Race.TERRAN,
-                 parent=item_names.HELLION),
+                 parent=parent_names.HELLION_OR_HELLBAT),
 
     # Filler items to fill remaining spots
     item_names.STARTING_MINERALS:

@@ -9,6 +9,7 @@ DOMINION_TROOPER_WEAPONS = "Dominion Trooper Weapons"
 INFANTRY_UNITS = "Infantry Units"
 INFANTRY_WEAPON_UNITS = "Infantry Weapon Units"
 ORBITAL_COMMAND_AND_PLANETARY = "Orbital Command Abilities + Planetary Fortress"  # MULE | Scan | Supply Drop
+HELLION_OR_HELLBAT = "Hellion or Hellbat Aspect"
 SIEGE_TANK_AND_TRANSPORT = "Siege Tank + Transport"
 SIEGE_TANK_AND_MEDIVAC = "Siege Tank + Medivac"
 SPIDER_MINE_SOURCE = "Spider Mine Source"
