@@ -3823,10 +3823,7 @@ class SC2Logic:
                             state.has_all({item_names.LIBERATOR, item_names.LIBERATOR_SMART_SERVOS}, self.player)
                             and (
                                 (
-                                    (
-                                        state.has_all((item_names.HELLION, item_names.HELLION_HELLBAT), self.player)
-                                        or state.has(item_names.FIREBAT, self.player)
-                                    )
+                                    state.has_any((item_names.FIREBAT, item_names.HELLION_HELLBAT), self.player)
                                     and self.terran_bio_heal(state)
                                 )
                                 or state.has_all({item_names.VIKING, item_names.VIKING_SHREDDER_ROUNDS}, self.player)
@@ -4851,10 +4848,7 @@ class SC2Logic:
                         # Regular infesteds
                         (
                             self.terran_bio_heal(state)
-                            and (
-                                state.has_any((item_names.FIREBAT, item_names.REAPER), self.player)
-                                or state.has_all((item_names.HELLION, item_names.HELLION_HELLBAT), self.player)
-                            )
+                            and state.has_any((item_names.FIREBAT, item_names.REAPER, item_names.HELLION_HELLBAT), self.player)
                         )
                         or (self.advanced_tactics and state.has_any((item_names.PERDITION_TURRET, item_names.PLANETARY_FORTRESS), self.player))
                     )
