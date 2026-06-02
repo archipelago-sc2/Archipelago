@@ -281,7 +281,7 @@ item_descriptions = {
     item_names.REAPER_COMBAT_DRUGS: "Reapers regenerate life while out of combat.",
     item_names.HELLION_HELLBAT: "Allows building Hellbats. Allows Hellions to transform into Hellbats.",
     item_names.HELLION_SMART_SERVOS: "Transforms faster between modes. Hellions can attack while moving.",
-    item_names.HELLION_OPTIMIZED_LOGISTICS: "Increases Hellion training speed.",
+    item_names.HELLION_OPTIMIZED_LOGISTICS: "Increases Hellion and Hellbat training speed.",
     item_names.HELLION_JUMP_JETS: inspect.cleandoc("""
         Increases movement speed in Hellion mode.
         In Hellbat mode, launches the Hellbat toward enemy ground units and briefly stuns them.
@@ -362,7 +362,7 @@ item_descriptions = {
     item_names.COMMAND_CENTER_EXTRA_SUPPLIES: "Drops additional supplies, permanently increasing the supply output of the target Supply Depot by 8.",
     item_names.COMMAND_CENTER_TACTICAL_JUMP: "Allows a flying Command Center to warp to a target location anywhere on the map.",
     item_names.HELLION_TWIN_LINKED_FLAMETHROWER: "Doubles the width of the Hellion's flame attack.",
-    item_names.HELLION_THERMITE_FILAMENTS: "Hellions do an additional 10 damage to Light Armor.",
+    item_names.HELLION_THERMITE_FILAMENTS: "Hellions and Hellbats do an additional 10 damage to Light Armor.",
     item_names.SPIDER_MINE_CERBERUS_MINE: "Increases trigger and blast radius of Spider Mines.",
     item_names.VULTURE_PROGRESSIVE_REPLENISHABLE_MAGAZINE: inspect.cleandoc("""
         Level 1: Allows Vultures to replace used Spider Mines. Costs 15 minerals.
