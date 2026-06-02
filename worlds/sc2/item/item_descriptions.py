@@ -1046,7 +1046,8 @@ item_descriptions = {
     item_names.ORACLE_BOSONIC_CORE: "Increases starting energy by 150 and maximum energy by 50.",
     item_names.ORACLE_SURFACE_STABILIZER: inspect.cleandoc("""
         Allows the Oracle to transform into Ground mode.
-        Ground mode grants increased life and shields, and allows attacking only air units.
+        Ground mode grants increased life, shields and weapon range.
+        Pulsar Beam does not use energy in Ground mode, and can only target air units.
     """),
     item_names.ARBITER_CHRONOSTATIC_REINFORCEMENT: "Arbiters gain +50 maximum life and +1 armor.",
     item_names.ARBITER_KHAYDARIN_CORE: _get_start_and_max_energy_desc("Arbiters"),
