@@ -933,7 +933,7 @@ def calculate_story_tech(ctx: 'SC2Context', mission: SC2Mission) -> bool:
         result = options.GrantStoryTech.option_grant
     else:
         result = ctx.grant_story_tech
-    return result != 0
+    return result
 
 
 def calculate_soa_options(ctx: 'SC2Context', mission: SC2Mission) -> int:
