@@ -3201,6 +3201,21 @@ class SC2Logic:
                 or self.terran_infested_garrison_claimer(state)
             )
         )
+    def zerg_infested_garrison_claimer(self, state: CollectionState) -> bool:
+        return state.has_any((item_names.INFESTOR, item_names.DEFILER, item_names.HIVE_QUEEN), self.player)
+
+    def zerg_infested_requirement(self, state: CollectionState) -> bool:
+        if not self.zerg_common_unit(state):
+            return False
+        return ((
+                self.zerg_competent_anti_air(state)
+                and self.zerg_infested_garrison_claimer(state)
+            )
+            or (
+                self.advanced_tactics
+                and self.zerg_moderate_anti_air(state)
+            )
+        )
 
     def zerg_infested_science_facilities(self, state: CollectionState) -> bool:
         return (

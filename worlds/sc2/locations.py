@@ -2945,16 +2945,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             "Victory",
             SC2HOTS_LOC_ID_OFFSET + 1300,
             LocationType.VICTORY,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and (
-                    (
-                        logic.zerg_competent_anti_air(state)
-                        and state.has(item_names.INFESTOR, player)
-                    )
-                    or (adv_tactics and logic.zerg_moderate_anti_air(state))
-                )
-            ),
+            logic.zerg_infested_requirement,
             hard_rule=logic.zerg_kerrigan_or_any_anti_air,
         ),
         make_location_data(
@@ -3001,55 +2992,40 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             "East Garrison",
             SC2HOTS_LOC_ID_OFFSET + 1307,
             LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and logic.zerg_moderate_anti_air(state)
-                and (adv_tactics or state.has(item_names.INFESTOR, player))
-            ),
+            logic.zerg_infested_requirement,
+            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
         ),
         make_location_data(
             SC2Mission.INFESTED.mission_name,
             "Mid Garrison",
             SC2HOTS_LOC_ID_OFFSET + 1308,
             LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and logic.zerg_moderate_anti_air(state)
-                and (adv_tactics or state.has(item_names.INFESTOR, player))
-            ),
+            logic.zerg_infested_requirement,
+            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
         ),
         make_location_data(
             SC2Mission.INFESTED.mission_name,
             "North Garrison",
             SC2HOTS_LOC_ID_OFFSET + 1309,
             LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and logic.zerg_moderate_anti_air(state)
-                and (adv_tactics or state.has(item_names.INFESTOR, player))
-            ),
+            logic.zerg_infested_requirement,
+            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
         ),
         make_location_data(
             SC2Mission.INFESTED.mission_name,
             "Close Southwest Garrison",
             SC2HOTS_LOC_ID_OFFSET + 1310,
             LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and logic.zerg_moderate_anti_air(state)
-                and (adv_tactics or state.has(item_names.INFESTOR, player))
-            ),
+            logic.zerg_infested_requirement,
+            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
         ),
         make_location_data(
             SC2Mission.INFESTED.mission_name,
             "Far Southwest Garrison",
             SC2HOTS_LOC_ID_OFFSET + 1311,
             LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and logic.zerg_moderate_anti_air(state)
-                and (adv_tactics or state.has(item_names.INFESTOR, player))
-            ),
+            logic.zerg_infested_requirement,
+            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
         ),
         make_location_data(
             SC2Mission.HAND_OF_DARKNESS.mission_name,
