@@ -1109,7 +1109,7 @@ item_descriptions = {
     item_names.STALWART_SOLARITE_SCREEN: "Hardened Shields reduce damage to 5.",
     item_names.DISRUPTOR_CLOAKING_MODULE: "Disruptors are permanently cloaked.",
     item_names.DISRUPTOR_PERFECTED_POWER: "Allows Purification Nova to hit air units. Bonus damage to shields is now baseline for enemies.",
-    item_names.DISRUPTOR_RESTRAINED_DESTRUCTION: "Purification Nova does 75% reduced damage to friendly units, and only deals friendly fire at the center of the nova.",
+    item_names.DISRUPTOR_RESTRAINED_DESTRUCTION: "Purification Nova does 75% reduced damage to friendly units,\nand only deals friendly fire at the center of the nova.",
     item_names.COLOSSUS_PACIFICATION_PROTOCOL: "Increases Colossus attack speed.",
     item_names.WRATHWALKER_RAPID_POWER_CYCLING: "Reduces the charging time and increases attack speed of the Wrathwalker's Charged Blast.",
     item_names.WRATHWALKER_EYE_OF_WRATH: "Increases Wrathwalker weapon range by +1.",
