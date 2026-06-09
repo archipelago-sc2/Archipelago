@@ -12,7 +12,7 @@ class LargeTests(Sc2SetupTestBase):
     def test_any_starter_mission_works(self) -> None:
         base_options = {
             options.OPTION_NAME[options.SelectedRaces]: list(options.SelectedRaces.valid_keys),
-            options.OPTION_NAME[options.RequiredTactics]: options.RequiredTactics.option_standard,
+            options.OPTION_NAME[options.RequiredTactics]: options.RequiredTactics.option_basic,
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
             options.OPTION_NAME[options.ExcludeOverpoweredItems]: True,
             # options.OPTION_NAME[options.ExtraLocations]: options.ExtraLocations.option_disabled,

@@ -368,7 +368,7 @@ class TestItemFiltering(Sc2SetupTestBase):
                 item_groups.ItemGroupNames.TERRAN_STIMPACKS: -1,
             },
             # Avoid options that lock non-vanilla items for logic
-            'required_tactics': options.RequiredTactics.option_any_units,
+            'required_tactics': options.RequiredTactics.option_chaos,
             'mastery_locations': options.MasteryLocations.option_disabled,
             # Move the unit nerf items from the start inventory to the pool,
             # else this option could push non-vanilla items past this test
@@ -487,7 +487,7 @@ class TestItemFiltering(Sc2SetupTestBase):
             'enabled_campaigns': {
                 SC2Campaign.HOTS.campaign_name,
             },
-            'required_tactics': options.RequiredTactics.option_no_logic,
+            'required_tactics': options.RequiredTactics.option_chaos,
             'enable_morphling': options.EnableMorphling.option_true,
             'excluded_items': {
                 item_groups.ItemGroupNames.ZERG_UNITS.lower(): -1,
@@ -506,17 +506,29 @@ class TestItemFiltering(Sc2SetupTestBase):
         self.assertFalse(units_in_pool)
 
     def test_excluding_zerg_units_with_morphling_disabled_should_exclude_aspects(self) -> None:
+        allowed_units = {
+            # Units without morphs that should satisfy logic
+            item_names.PYGALISK: 1,
+            item_names.ABERRATION: 1,
+            item_names.INFESTED_DIAMONDBACK: 1,
+            item_names.SWARM_QUEEN: 1,
+            item_names.HIVE_QUEEN: 1,
+            item_names.BROOD_QUEEN: 1,
+        }
         world_options = {
             'enabled_campaigns': {
                 SC2Campaign.HOTS.campaign_name,
             },
-            'required_tactics': options.RequiredTactics.option_no_logic,
+            options.OPTION_NAME[options.MaximumCampaignSize]: 2,
+            options.OPTION_NAME[options.RequiredTactics]: options.RequiredTactics.option_chaos,
             'enable_morphling': options.EnableMorphling.option_false,
             'excluded_items': {
                 item_groups.ItemGroupNames.ZERG_UNITS.lower(): -1,
             },
             'unexcluded_items': {
                 item_groups.ItemGroupNames.ZERG_MORPHS.lower(): -1,
+                # units without morphs
+                **allowed_units,
             },
         }
         self.generate_world(world_options)
@@ -527,8 +539,12 @@ class TestItemFiltering(Sc2SetupTestBase):
             # Overseer morphs from Overlord, that's available always
             aspects_in_pool.remove(item_names.OVERSEER)
         self.assertFalse(aspects_in_pool)
-        units_in_pool = list(set(itempool).intersection(set(item_groups.zerg_units))
-                             .difference(set(item_groups.zerg_morphs)))
+        units_in_pool = (
+            set(itempool)
+            .intersection(item_groups.zerg_units)
+            .difference(item_groups.zerg_morphs)
+            .difference(allowed_units)
+        )
         self.assertFalse(units_in_pool)
 
     def test_deprecated_orbital_command_not_present(self) -> None:
@@ -770,7 +786,7 @@ class TestItemFiltering(Sc2SetupTestBase):
         world_options = {
             # Vanilla WoL with all missions
             'mission_order': options.MissionOrder.option_vanilla,
-            'required_tactics': options.RequiredTactics.option_standard,
+            'required_tactics': options.RequiredTactics.option_basic,
             'starter_unit': options.StarterUnit.option_off,
             'enabled_campaigns': {
                 SC2Campaign.WOL.campaign_name,
@@ -790,42 +806,11 @@ class TestItemFiltering(Sc2SetupTestBase):
         # Under standard tactics you need to place L3 upgrades for available unit classes
         self.assertEqual(len(upgrade_items), 3)
 
-    def test_weapon_armor_upgrades_generic_upgrade_missions_no_logic(self) -> None:
-        """
-        Tests the case when there aren't enough missions in order to get required weapon/armor upgrades
-        for logic requirements.
-
-        Except the case above it's No Logic, thus the fallback won't take place.
-        :return:
-        """
-        world_options = {
-            # Vanilla WoL with all missions
-            'mission_order': options.MissionOrder.option_vanilla,
-            'required_tactics': options.RequiredTactics.option_no_logic,
-            'starter_unit': options.StarterUnit.option_off,
-            'enabled_campaigns': {
-                SC2Campaign.WOL.campaign_name,
-            },
-            'all_in_map': options.AllInMap.option_air, # All-in air forces an air unit
-            'start_inventory': {
-                item_names.GOLIATH: 1 # Don't fail with early item placement
-            },
-            'generic_upgrade_items': options.GenericUpgradeItems.option_individual_items,
-            'generic_upgrade_missions': 100, # Fallback happens by putting weapon/armor upgrades into starting inventory
-        }
-
-        self.generate_world(world_options)
-        starting_inventory = [item.name for item in self.multiworld.precollected_items[self.player]]
-        upgrade_items = [x for x in starting_inventory if x == item_names.PROGRESSIVE_TERRAN_WEAPON_ARMOR_UPGRADE]
-
-        # No logic won't take the fallback to trigger
-        self.assertEqual(len(upgrade_items), 0)
-
     def test_weapon_armor_upgrades_generic_upgrade_missions_no_countermeasure_needed(self) -> None:
         world_options = {
             # Vanilla WoL with all missions
             'mission_order': options.MissionOrder.option_vanilla,
-            'required_tactics': options.RequiredTactics.option_standard,
+            'required_tactics': options.RequiredTactics.option_basic,
             'starter_unit': options.StarterUnit.option_off,
             'enabled_campaigns': {
                 SC2Campaign.WOL.campaign_name,
@@ -872,7 +857,7 @@ class TestItemFiltering(Sc2SetupTestBase):
                     }
                 }
             },
-            'required_tactics': options.RequiredTactics.option_standard,
+            'required_tactics': options.RequiredTactics.option_basic,
             'starter_unit': options.StarterUnit.option_off,
             'generic_upgrade_items': options.GenericUpgradeItems.option_individual_items,
             'grant_story_levels': options.GrantStoryLevels.option_disabled,
@@ -913,7 +898,7 @@ class TestItemFiltering(Sc2SetupTestBase):
                     }
                 }
             },
-            'required_tactics': options.RequiredTactics.option_standard,
+            'required_tactics': options.RequiredTactics.option_basic,
             'starter_unit': options.StarterUnit.option_off,
             'generic_upgrade_items': options.GenericUpgradeItems.option_individual_items,
             'grant_story_levels': options.GrantStoryLevels.option_disabled,
@@ -1358,7 +1343,7 @@ class TestItemFiltering(Sc2SetupTestBase):
             },
             'excluded_items': {item_names.MARINE: -1, item_names.MEDIC: -1},
             'shuffle_no_build': False,
-            'required_tactics': RequiredTactics.option_standard
+            'required_tactics': RequiredTactics.option_basic
         }
         mm_logic_upgrades = {
             item_names.MARINE_COMBAT_SHIELD,

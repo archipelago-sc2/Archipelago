@@ -253,15 +253,7 @@ class SC2World(World):
         self.multiworld.itempool += pool
 
     def set_rules(self) -> None:
-        if self.options.required_tactics == RequiredTactics.option_no_logic:
-            # Forcing completed goal and minimal accessibility on no logic
-            self.options.accessibility.value = Accessibility.option_minimal
-            required_items = self.custom_mission_order.get_items_to_lock()
-            self.multiworld.completion_condition[self.player] = lambda state, required_items=required_items: all(  # type: ignore
-                state.has(item, self.player, amount) for (item, amount) in required_items.items()
-            )
-        else:
-            self.multiworld.completion_condition[self.player] = self.custom_mission_order.get_completion_condition(self.player)
+        self.multiworld.completion_condition[self.player] = self.custom_mission_order.get_completion_condition(self.player)
 
     def get_filler_item_name(self) -> str:
         # Assume `self.filler_items_distribution` is validated and has at least one non-zero entry
@@ -314,10 +306,7 @@ class SC2World(World):
     def pre_fill(self) -> None:
         assert self.logic is not None
         self.logic.total_mission_count = self.custom_mission_order.get_mission_count()
-        if (
-            self.options.generic_upgrade_missions > 0
-            and self.options.required_tactics != RequiredTactics.option_no_logic
-        ):
+        if self.options.generic_upgrade_missions > 0:
             # Attempt to resolve a situation when the option is too high for the mission order rolled
             weapon_armor_item_names = [
                 item_names.PROGRESSIVE_TERRAN_WEAPON_ARMOR_UPGRADE,
@@ -334,10 +323,7 @@ class SC2World(World):
             self._fill_needed_items(
                 state_with_kerrigan_levels, weapon_armor_item_names, item_tables.WEAPON_ARMOR_UPGRADE_MAX_LEVEL
             )
-        if (
-            self.options.kerrigan_levels_per_mission_completed > 0
-            and self.options.required_tactics != RequiredTactics.option_no_logic
-        ):
+        if self.options.kerrigan_levels_per_mission_completed > 0:
             # Attempt to solve being locked by Kerrigan level requirements
             self._fill_needed_items(lambda: self.multiworld.get_all_state(False), [item_names.KERRIGAN_LEVELS_1], 70)
 
@@ -666,7 +652,7 @@ def flag_excludes_by_faction_presence(world: SC2World, item_list: list[FilterIte
             allowed_remaining_zerg_units.update(item_groups.ENEMY_WITHIN_ZERG_BASELINE_UNITS)
         if SC2Mission.ENEMY_WITHIN_T in missions:
             # Randomly select 4 units
-            if world.options.required_tactics.value == RequiredTactics.option_standard:
+            if world.options.required_tactics.value == RequiredTactics.option_basic:
                 allowed_remaining_terran_units.update(
                     world.random.sample(item_groups.ENEMY_WITHIN_TERRAN_STANDARD_UNITS, 4)
                 )
@@ -676,7 +662,7 @@ def flag_excludes_by_faction_presence(world: SC2World, item_list: list[FilterIte
                 )
         if SC2Mission.ENEMY_WITHIN_P in missions:
             # Randomly select 4 units
-            if world.options.required_tactics.value == RequiredTactics.option_standard:
+            if world.options.required_tactics.value == RequiredTactics.option_basic:
                 allowed_remaining_protoss_units.update(
                     world.random.sample(item_groups.ENEMY_WITHIN_PROTOSS_STANDARD_UNITS, 4)
                 )
@@ -685,7 +671,7 @@ def flag_excludes_by_faction_presence(world: SC2World, item_list: list[FilterIte
                     world.random.sample(item_groups.ENEMY_WITHIN_PROTOSS_UNITS, 4)
                 )
         if (SC2Mission.TEMPLAR_S_RETURN in missions
-            and world.options.required_tactics.value == RequiredTactics.option_standard
+            and world.options.required_tactics.value == RequiredTactics.option_basic
         ):
             # Randomly select 2 units for standard tactics
             allowed_remaining_protoss_units.update(
@@ -926,7 +912,7 @@ def flag_allowed_orphan_items(world: SC2World, item_list: list[FilterItem]) -> N
                 item.flags |= ItemFilterFlags.AllowedOrphan
                 item.flags &= ~ItemFilterFlags.FilterExcluded
     # These rules only trigger on Standard tactics
-    if SC2Mission.BELLY_OF_THE_BEAST in missions and world.options.required_tactics == RequiredTactics.option_standard:
+    if SC2Mission.BELLY_OF_THE_BEAST in missions and world.options.required_tactics == RequiredTactics.option_basic:
         for item in item_list:
             if item.name in (
                     item_names.MARINE_COMBAT_SHIELD,
@@ -942,7 +928,7 @@ def flag_allowed_orphan_items(world: SC2World, item_list: list[FilterItem]) -> N
             ):
                 item.flags |= ItemFilterFlags.AllowedOrphan
                 item.flags &= ~ItemFilterFlags.FilterExcluded
-    if SC2Mission.EVIL_AWOKEN in missions and world.options.required_tactics == RequiredTactics.option_standard:
+    if SC2Mission.EVIL_AWOKEN in missions and world.options.required_tactics == RequiredTactics.option_basic:
         for item in item_list:
             if item.name in (item_names.STALKER_PHASE_REACTOR, item_names.STALKER_DISINTEGRATING_PARTICLES, item_names.STALKER_PARTICLE_REFLECTION):
                 item.flags |= ItemFilterFlags.AllowedOrphan

@@ -93,7 +93,7 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
     kerrigan_items_granted = grant_story_tech  # TODO (Snarky): revisit when handling NCO-only generation
     nova_items_granted = grant_story_tech
     # General changes for standard tactics
-    if world.options.required_tactics.value == RequiredTactics.option_standard:
+    if world.options.required_tactics.value == RequiredTactics.option_basic:
         pools.move_mission(SC2Mission.SMASH_AND_GRAB, Difficulty.STARTER, Difficulty.EASY)
 
         if world.options.shuffle_no_build.value == ShuffleNoBuild.option_false:

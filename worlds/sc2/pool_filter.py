@@ -517,10 +517,7 @@ def filter_items(world: 'SC2World', location_cache: List[Location], item_pool: L
     reserved_filler_count = len(excluded_locations)
     target_nonfiller_item_count = inventory_size - reserved_filler_count
     filler_amount = (inventory_size * world.options.filler_percentage) // 100
-    if world.options.required_tactics.value == RequiredTactics.option_no_logic:
-        mission_requirements = []
-    else:
-        mission_requirements = [(location.name, location.access_rule) for location in location_cache]
+    mission_requirements = [(location.name, location.access_rule) for location in location_cache]
     valid_inventory = ValidInventory(world, item_pool)
 
     valid_items = valid_inventory.generate_reduced_inventory(target_nonfiller_item_count, filler_amount, mission_requirements)

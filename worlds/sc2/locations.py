@@ -164,7 +164,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
         logic_level = int(RequiredTactics.default)
     else:
         logic_level = world.options.required_tactics.value
-    adv_tactics = logic_level != RequiredTactics.option_standard
+    adv_tactics = logic_level != RequiredTactics.option_basic
     if world is not None and world.logic is not None:
         logic = world.logic
     else:

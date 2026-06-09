@@ -111,7 +111,7 @@ class StaticInventory:
 class TestRules(unittest.TestCase):
     def setUp(self) -> None:
         self.required_tactics_values: List[int] = [
-            options.RequiredTactics.option_standard, options.RequiredTactics.option_advanced
+            options.RequiredTactics.option_basic, options.RequiredTactics.option_advanced
         ]
         self.all_in_map_values: List[int] = [
             options.AllInMap.option_ground, options.AllInMap.option_air
@@ -146,7 +146,7 @@ class TestRules(unittest.TestCase):
             for location in location_data:
                 for _ in range(self.NUM_TEST_RUNS):
                     location.rule(test_inventory)
-    
+
     def test_items_in_all_in_are_progression(self):
         test_inventory = TestInventory()
         for test_options in itertools.product(self.required_tactics_values, self.all_in_map_values):
@@ -156,7 +156,7 @@ class TestRules(unittest.TestCase):
                     continue
                 for _ in range(self.NUM_TEST_RUNS):
                     location.rule(test_inventory)
-    
+
     # # TODO (Snarky): Make work with Hero Presence
     # def test_items_in_kerriganless_missions_are_progression(self):
     #     test_inventory = TestInventory()
@@ -179,11 +179,11 @@ class TestRules(unittest.TestCase):
                     continue
                 for _ in range(self.NUM_TEST_RUNS):
                     location.rule(test_inventory)
-    
+
     def test_items_in_hard_rules_are_progression(self):
         test_inventory = TestInventory()
         test_world = TestWorld()
-        test_world.options.required_tactics.value = options.RequiredTactics.option_any_units
+        test_world.options.required_tactics.value = options.RequiredTactics.option_chaos
         test_world.logic = SC2Logic(test_world)
         location_data = locations.get_locations(test_world)
         for location in location_data:
@@ -194,7 +194,7 @@ class TestRules(unittest.TestCase):
     def test_items_in_any_units_rules_are_progression(self):
         test_inventory = TestInventory()
         test_world = TestWorld()
-        test_world.options.required_tactics.value = options.RequiredTactics.option_any_units
+        test_world.options.required_tactics.value = options.RequiredTactics.option_chaos
         logic = SC2Logic(test_world)
         test_world.logic = logic
         for race in (SC2Race.TERRAN, SC2Race.PROTOSS, SC2Race.ZERG):

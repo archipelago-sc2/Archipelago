@@ -47,7 +47,7 @@ class SC2Logic:
         # Note: Don't store a reference to the world so we can cache this object on the world object
         self.player = -1 if world is None else world.player
         self.logic_level: int = world.options.required_tactics.value if world else RequiredTactics.default
-        self.advanced_tactics = self.logic_level != RequiredTactics.option_standard
+        self.advanced_tactics = self.logic_level != RequiredTactics.option_basic
         self.take_over_ai_allies = bool(world and world.options.take_over_ai_allies)
         self.kerrigan_levels_per_mission_completed = 0 if world is None else world.options.kerrigan_levels_per_mission_completed.value
         self.kerrigan_levels_per_mission_completed_cap = -1 if world is None else world.options.kerrigan_levels_per_mission_completed_cap.value
@@ -116,7 +116,7 @@ class SC2Logic:
         assert upgrade_item in upgrade_bundle_inverted_lookup.keys()
         count: int = 0
         if self.generic_upgrade_missions > 0:
-            if (not self.is_item_placement(state)) or self.logic_level == RequiredTactics.option_no_logic:
+            if (not self.is_item_placement(state)):
                 # Item pool filtering, W/A upgrades aren't items
                 # No Logic: Don't care about W/A in this case
                 return WEAPON_ARMOR_UPGRADE_MAX_LEVEL

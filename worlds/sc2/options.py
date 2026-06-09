@@ -472,23 +472,23 @@ class StarterUnit(Choice):
 
 class RequiredTactics(Choice):
     """
-    Determines the maximum tactical difficulty of the world (separate from mission difficulty).
-    Higher settings increase randomness.
+    Determines how easy the item placement is.
+    Harder options are more random, and thus may still randomly select easy arrangements.
 
-    Standard:  All missions can be completed with good micro and macro.
-    Advanced:  Completing missions may require relying on starting units and micro-heavy units.
-    Any Units: Logic guarantees faction-appropriate units appear early without regard to what those units are.
-               i.e. if the third mission is a protoss build mission,
-               logic guarantees at least 2 protoss units are reachable before starting it.
-               May render the run impossible on harder difficulties.
-    No Logic:  Units and upgrades may be placed anywhere. LIKELY TO RENDER THE RUN IMPOSSIBLE ON HARDER DIFFICULTIES!
-               Locks Grant Story Tech option to true.
+    Basic:  You are guaranteed a-move friendly units can be found early.
+    Advanced:  Early units may be casters. Beating missions may depend on keeping starting units alive.
+    Chaos:  Early units are near-unrestricted beyond being faction-appropriate.
+            Weaker units may be considered sufficient anti-air.
+            May render the run impossible on harder difficulties.
     """
-    display_name = "Required Tactics"
-    option_standard = 0
+    display_name = "Logic Level"
+    option_basic = 0
     option_advanced = 1
-    option_any_units = 2
-    option_no_logic = 3
+    option_chaos = 2
+
+    alias_no_logic = option_chaos
+    alias_any_units = option_chaos
+    alias_standard = option_basic
 
 
 class EnableVoidTrade(Toggle):
