@@ -94,7 +94,7 @@ class SC2Logic:
         self.has_protoss_ground_unit: bool = True
         self.has_protoss_air_unit: bool = True
 
-        self.unit_count_functions: Dict[Tuple[SC2Race, int], Callable[[CollectionState], bool]] = {}
+        self.unit_count_functions: dict[tuple[SC2Race, int, int], Callable[[CollectionState], bool]] = {}
         """Cache of logic functions used by any_units logic level"""
 
     # ###################################################################################################### #
@@ -5212,10 +5212,98 @@ class SC2Logic:
     # endregion NCO Missions
 
     # ###################################################################################################### #
-    # region Any Units ..................................................................................... #
+    # region Core Units .................................................................................... #
     # ###################################################################################################### #
+    def has_terran_basic_starter_unit(self, state: CollectionState) -> bool:
+        return state.has_any(item_groups.terran_basic_starter_units, self.player)
 
-    def has_terran_units(self, target: int) -> Callable[["CollectionState"], bool]:
+    def has_terran_advanced_starter_unit(self, state: CollectionState) -> bool:
+        return state.has_any(item_groups.terran_advanced_starter_units, self.player)
+
+    def has_terran_chaos_starter_unit(self, state: CollectionState) -> bool:
+        # Anything that can hit buildings
+        return (
+            state.has_any((
+                # Infantry
+                item_names.MARINE,
+                item_names.FIREBAT,
+                item_names.MARAUDER,
+                item_names.REAPER,
+                item_names.HERC,
+                item_names.DOMINION_TROOPER,
+                item_names.GHOST,
+                item_names.SPECTRE,
+                # Vehicles
+                item_names.HELLION,
+                item_names.VULTURE,
+                item_names.SIEGE_TANK,
+                item_names.WARHOUND,
+                item_names.GOLIATH,
+                item_names.DIAMONDBACK,
+                item_names.THOR,
+                item_names.PREDATOR,
+                item_names.CYCLONE,
+                # Ships
+                item_names.WRAITH,
+                item_names.VIKING,
+                item_names.BANSHEE,
+                item_names.RAVEN,
+                item_names.BATTLECRUISER,
+                # RG
+                item_names.SON_OF_KORHAL,
+                item_names.AEGIS_GUARD,
+                item_names.EMPERORS_SHADOW,
+                item_names.BULWARK_COMPANY,
+                item_names.SHOCK_DIVISION,
+                item_names.BLACKHAMMER,
+                item_names.SKY_FURY,
+                item_names.NIGHT_WOLF,
+                item_names.NIGHT_HAWK,
+                item_names.PRIDE_OF_AUGUSTGRAD,
+            ), self.player)
+            or state.has_all((item_names.LIBERATOR, item_names.LIBERATOR_RAID_ARTILLERY), self.player)
+            or state.has_all((item_names.EMPERORS_GUARDIAN, item_names.LIBERATOR_RAID_ARTILLERY), self.player)
+            or state.has_all((item_names.VALKYRIE, item_names.VALKYRIE_FLECHETTE_MISSILES), self.player)
+            or state.has_all((item_names.WIDOW_MINE, item_names.WIDOW_MINE_DEMOLITION_PAYLOAD), self.player)
+            or (
+                state.has_any((
+                    # Mercs with shortest initial cooldown (300s)
+                    item_names.WAR_PIGS,
+                    item_names.DEATH_HEADS,
+                    item_names.HELS_ANGELS,
+                    item_names.WINGED_NIGHTMARES,
+                ), self.player)
+                # + 2 upgrades that allow getting faster/earlier mercs
+                and state.count_from_list((
+                    item_names.RAPID_REINFORCEMENT,
+                    item_names.PROGRESSIVE_FAST_DELIVERY,
+                    item_names.ROGUE_FORCES,
+                    # item_names.SIGNAL_BEACON,  # Probably doesn't help too much on the first unit
+                ), self.player) >= 2
+            )
+        )
+
+    def has_terran_units(self, target: int, logic_level: int) -> Callable[["CollectionState"], bool]:
+        if logic_level == RequiredTactics.option_basic:
+            if target == 1:
+                return self.has_terran_basic_starter_unit
+            def _has_terran_basic_units(state: CollectionState) -> bool:
+                return (
+                    self.has_terran_basic_starter_unit(state)
+                    and state.count_from_list_unique(item_groups.terran_basic_units, self.player) >= target
+                )
+            return _has_terran_basic_units
+
+        if logic_level == RequiredTactics.option_advanced:
+            if target == 1:
+                return self.has_terran_advanced_starter_unit
+            def _has_terran_advanced_units(state: CollectionState) -> bool:
+                return (
+                    self.has_terran_advanced_starter_unit(state)
+                    and state.count_from_list_unique(item_groups.terran_advanced_units, self.player) >= target
+                )
+            return _has_terran_advanced_units
+
         def _has_terran_units(state: CollectionState) -> bool:
             return (
                 state.count_from_list_unique(
@@ -5225,72 +5313,109 @@ class SC2Logic:
                     target < 5
                     or self.terran_any_anti_air(state)
                 )
-                and (
-                    # Anything that can hit buildings
-                    state.has_any((
-                        # Infantry
-                        item_names.MARINE,
-                        item_names.FIREBAT,
-                        item_names.MARAUDER,
-                        item_names.REAPER,
-                        item_names.HERC,
-                        item_names.DOMINION_TROOPER,
-                        item_names.GHOST,
-                        item_names.SPECTRE,
-                        # Vehicles
-                        item_names.HELLION,
-                        item_names.VULTURE,
-                        item_names.SIEGE_TANK,
-                        item_names.WARHOUND,
-                        item_names.GOLIATH,
-                        item_names.DIAMONDBACK,
-                        item_names.THOR,
-                        item_names.PREDATOR,
-                        item_names.CYCLONE,
-                        # Ships
-                        item_names.WRAITH,
-                        item_names.VIKING,
-                        item_names.BANSHEE,
-                        item_names.RAVEN,
-                        item_names.BATTLECRUISER,
-                        # RG
-                        item_names.SON_OF_KORHAL,
-                        item_names.AEGIS_GUARD,
-                        item_names.EMPERORS_SHADOW,
-                        item_names.BULWARK_COMPANY,
-                        item_names.SHOCK_DIVISION,
-                        item_names.BLACKHAMMER,
-                        item_names.SKY_FURY,
-                        item_names.NIGHT_WOLF,
-                        item_names.NIGHT_HAWK,
-                        item_names.PRIDE_OF_AUGUSTGRAD,
-                    ), self.player)
-                    or state.has_all((item_names.LIBERATOR, item_names.LIBERATOR_RAID_ARTILLERY), self.player)
-                    or state.has_all((item_names.EMPERORS_GUARDIAN, item_names.LIBERATOR_RAID_ARTILLERY), self.player)
-                    or state.has_all((item_names.VALKYRIE, item_names.VALKYRIE_FLECHETTE_MISSILES), self.player)
-                    or state.has_all((item_names.WIDOW_MINE, item_names.WIDOW_MINE_DEMOLITION_PAYLOAD), self.player)
-                    or (
-                        state.has_any((
-                            # Mercs with shortest initial cooldown (300s)
-                            item_names.WAR_PIGS,
-                            item_names.DEATH_HEADS,
-                            item_names.HELS_ANGELS,
-                            item_names.WINGED_NIGHTMARES,
-                        ), self.player)
-                        # + 2 upgrades that allow getting faster/earlier mercs
-                        and state.count_from_list((
-                            item_names.RAPID_REINFORCEMENT,
-                            item_names.PROGRESSIVE_FAST_DELIVERY,
-                            item_names.ROGUE_FORCES,
-                            # item_names.SIGNAL_BEACON,  # Probably doesn't help too much on the first unit
-                        ), self.player) >= 2
-                    )
-                )
+                and self.has_terran_chaos_starter_unit(state)
             )
 
         return _has_terran_units
 
-    def has_zerg_units(self, target: int) -> Callable[["CollectionState"], bool]:
+    def has_zerg_basic_starter_unit(self, state: CollectionState) -> bool:
+        return state.has_any(item_groups.zerg_basic_starter_units, self.player)
+
+    def has_zerg_advanced_starter_unit(self, state: CollectionState) -> bool:
+        return state.has_any(item_groups.zerg_advanced_starter_units, self.player)
+
+    def has_zerg_chaos_starter_unit(self, state: CollectionState) -> bool:
+        return (
+            # Anything that can hit buildings
+            state.has_any((
+                item_names.ZERGLING,
+                item_names.SWARM_QUEEN,
+                item_names.HIVE_QUEEN,
+                item_names.ROACH,
+                item_names.HYDRALISK,
+                item_names.ABERRATION,
+                item_names.SWARM_HOST,
+                item_names.MUTALISK,
+                item_names.ULTRALISK,
+                item_names.PYGALISK,
+                item_names.INFESTED_MARINE,
+                item_names.INFESTED_BUNKER,
+                item_names.INFESTED_DIAMONDBACK,
+                item_names.INFESTED_SIEGE_TANK,
+                item_names.INFESTED_BANSHEE,
+            ), self.player)
+            or state.has_all((item_names.INFESTOR, item_names.INFESTOR_INFESTED_TERRAN), self.player)
+            or self.morph_baneling(state)
+            or self.morph_lurker(state)
+            or self.morph_impaler(state)
+            or self.morph_brood_lord(state)
+            or self.morph_guardian(state)
+            or self.morph_ravager(state)
+            or self.morph_igniter(state)
+            or self.morph_tyrannozor(state)
+            or (self.morph_devourer(state)
+                and state.has(item_names.DEVOURER_PRESCIENT_SPORES, self.player)
+            )
+            or (
+                state.has_any((
+                    # Mercs with <= 300s first drop time
+                    item_names.DEVOURING_ONES,
+                    item_names.HUNTER_KILLERS,
+                    item_names.CAUSTIC_HORRORS,
+                    item_names.HUNTERLING,
+                ), self.player)
+                # + 2 upgrades that allow getting faster/earlier mercs
+                and state.count_from_list((
+                    item_names.UNRESTRICTED_MUTATION,
+                    item_names.EVOLUTIONARY_LEAP,
+                    item_names.CELL_DIVISION,
+                    item_names.SELF_SUFFICIENT,
+                ), self.player) >= 2
+            )
+        )
+
+    def has_zerg_units(self, target: int, logic_level: int) -> Callable[["CollectionState"], bool]:
+        if logic_level == RequiredTactics.option_basic:
+            if target == 1:
+                return self.has_zerg_basic_starter_unit
+            def _has_zerg_basic_units(state: CollectionState) -> bool:
+                num_units = (
+                    state.count_from_list_unique(item_groups.zerg_basic_units, self.player)
+                    + self.morph_igniter(state)
+                    + self.morph_brood_lord(state)
+                    + self.morph_guardian(state)
+                    + self.morph_tyrannozor(state)
+                    + self.morph_lurker(state)
+                    + self.morph_impaler(state)
+                )
+                return (
+                    self.has_zerg_basic_starter_unit(state)
+                    and num_units >= target
+                )
+            return _has_zerg_basic_units
+
+        if logic_level == RequiredTactics.option_advanced:
+            if target == 1:
+                return self.has_zerg_advanced_starter_unit
+            def _has_zerg_advanced_units(state: CollectionState) -> bool:
+                num_units = (
+                    state.count_from_list_unique(item_groups.zerg_advanced_units, self.player)
+                    + self.morph_ravager(state)
+                    + self.morph_igniter(state)
+                    + self.morph_lurker(state)
+                    + self.morph_impaler(state)
+                    + self.morph_viper(state)
+                    + self.morph_devourer(state)
+                    + self.morph_brood_lord(state)
+                    + self.morph_guardian(state)
+                    + self.morph_tyrannozor(state)
+                )
+                return (
+                    self.has_zerg_advanced_starter_unit(state)
+                    and num_units >= target
+                )
+            return _has_zerg_advanced_units
+
         def _has_zerg_units(state: CollectionState) -> bool:
             num_units = (
                 state.count_from_list_unique(
@@ -5314,59 +5439,96 @@ class SC2Logic:
                     target < 5
                     or self.zerg_any_anti_air(state)
                 )
-                and (
-                    # Anything that can hit buildings
-                    state.has_any((
-                        item_names.ZERGLING,
-                        item_names.SWARM_QUEEN,
-                        item_names.HIVE_QUEEN,
-                        item_names.ROACH,
-                        item_names.HYDRALISK,
-                        item_names.ABERRATION,
-                        item_names.SWARM_HOST,
-                        item_names.MUTALISK,
-                        item_names.ULTRALISK,
-                        item_names.PYGALISK,
-                        item_names.INFESTED_MARINE,
-                        item_names.INFESTED_BUNKER,
-                        item_names.INFESTED_DIAMONDBACK,
-                        item_names.INFESTED_SIEGE_TANK,
-                        item_names.INFESTED_BANSHEE,
-                    ), self.player)
-                    or state.has_all((item_names.INFESTOR, item_names.INFESTOR_INFESTED_TERRAN), self.player)
-                    or self.morph_baneling(state)
-                    or self.morph_lurker(state)
-                    or self.morph_impaler(state)
-                    or self.morph_brood_lord(state)
-                    or self.morph_guardian(state)
-                    or self.morph_ravager(state)
-                    or self.morph_igniter(state)
-                    or self.morph_tyrannozor(state)
-                    or (self.morph_devourer(state)
-                        and state.has(item_names.DEVOURER_PRESCIENT_SPORES, self.player)
-                    )
-                    or (
-                        state.has_any((
-                            # Mercs with <= 300s first drop time
-                            item_names.DEVOURING_ONES,
-                            item_names.HUNTER_KILLERS,
-                            item_names.CAUSTIC_HORRORS,
-                            item_names.HUNTERLING,
-                        ), self.player)
-                        # + 2 upgrades that allow getting faster/earlier mercs
-                        and state.count_from_list((
-                            item_names.UNRESTRICTED_MUTATION,
-                            item_names.EVOLUTIONARY_LEAP,
-                            item_names.CELL_DIVISION,
-                            item_names.SELF_SUFFICIENT,
-                        ), self.player) >= 2
-                    )
-                )
+                and self.has_zerg_chaos_starter_unit(state)
             )
 
         return _has_zerg_units
 
-    def has_protoss_units(self, target: int) -> Callable[["CollectionState"], bool]:
+    def has_protoss_basic_starter_unit(self, state: CollectionState) -> bool:
+        return state.has_any(item_groups.protoss_basic_starter_units, self.player)
+
+    def has_protoss_advanced_starter_unit(self, state: CollectionState) -> bool:
+        return state.has_any(item_groups.protoss_advanced_starter_units, self.player)
+
+    def has_protoss_chaos_starter_unit(self, state: CollectionState) -> bool:
+        return (
+            # Anything that can hit buildings
+            state.has_any((
+                # Gateway
+                item_names.ZEALOT,
+                item_names.CENTURION,
+                item_names.SENTINEL,
+                item_names.SUPPLICANT,
+                item_names.STALKER,
+                item_names.INSTIGATOR,
+                item_names.SLAYER,
+                item_names.DRAGOON,
+                item_names.ADEPT,
+                item_names.SENTRY,
+                item_names.ENERGIZER,
+                item_names.AVENGER,
+                item_names.DARK_TEMPLAR,
+                item_names.BLOOD_HUNTER,
+                item_names.HIGH_TEMPLAR,
+                item_names.SIGNIFIER,
+                item_names.ASCENDANT,
+                item_names.DARK_ARCHON,
+                # Robo
+                item_names.IMMORTAL,
+                item_names.ANNIHILATOR,
+                item_names.VANGUARD,
+                item_names.STALWART,
+                item_names.COLOSSUS,
+                item_names.WRATHWALKER,
+                item_names.REAVER,
+                item_names.DISRUPTOR,
+                # Stargate
+                item_names.SKIRMISHER,
+                item_names.SCOUT,
+                item_names.MISTWING,
+                item_names.OPPRESSOR,
+                item_names.PULSAR,
+                item_names.VOID_RAY,
+                item_names.DESTROYER,
+                item_names.DAWNBRINGER,
+                item_names.ARBITER,
+                item_names.ORACLE,
+                item_names.CARRIER,
+                item_names.TRIREME,
+                item_names.SKYLORD,
+                item_names.TEMPEST,
+                item_names.MOTHERSHIP_TALDARIM,
+                # Nexus
+                item_names.MOTHERSHIP_AIUR,
+                item_names.MOTHERSHIP_PURIFIER,
+            ), self.player)
+            or state.has_all((item_names.WARP_PRISM, item_names.WARP_PRISM_PHASE_BLASTER), self.player)
+            or state.has_all((item_names.CALADRIUS, item_names.CALADRIUS_CORONA_BEAM), self.player)
+            or state.has_all((item_names.PHOTON_CANNON, item_names.KHALAI_INGENUITY), self.player)
+            or state.has_all((item_names.KHAYDARIN_MONOLITH, item_names.KHALAI_INGENUITY), self.player)
+        )
+
+    def has_protoss_units(self, target: int, logic_level: int) -> Callable[["CollectionState"], bool]:
+        if logic_level == RequiredTactics.option_basic:
+            if target == 1:
+                return self.has_protoss_basic_starter_unit
+            def _has_protoss_basic_units(state: CollectionState) -> bool:
+                return (
+                    self.has_protoss_basic_starter_unit(state)
+                    and state.count_from_list_unique(item_groups.protoss_basic_units, self.player) >= target
+                )
+            return _has_protoss_basic_units
+
+        if logic_level == RequiredTactics.option_advanced:
+            if target == 1:
+                return self.has_protoss_advanced_starter_unit
+            def _has_protoss_advanced_units(state: CollectionState) -> bool:
+                return (
+                    self.has_protoss_advanced_starter_unit(state)
+                    and state.count_from_list_unique(item_groups.protoss_advanced_units, self.player) >= target
+                )
+            return _has_protoss_advanced_units
+
         def _has_protoss_units(state: CollectionState) -> bool:
             return (
                 state.count_from_list_unique(item_groups.protoss_units + item_groups.protoss_buildings + [item_names.NEXUS_OVERCHARGE], self.player)
@@ -5374,79 +5536,26 @@ class SC2Logic:
             ) and (
                 target < 5
                 or self.protoss_any_anti_air_unit(state)
-            ) and (
-                # Anything that can hit buildings
-                state.has_any((
-                    # Gateway
-                    item_names.ZEALOT,
-                    item_names.CENTURION,
-                    item_names.SENTINEL,
-                    item_names.SUPPLICANT,
-                    item_names.STALKER,
-                    item_names.INSTIGATOR,
-                    item_names.SLAYER,
-                    item_names.DRAGOON,
-                    item_names.ADEPT,
-                    item_names.SENTRY,
-                    item_names.ENERGIZER,
-                    item_names.AVENGER,
-                    item_names.DARK_TEMPLAR,
-                    item_names.BLOOD_HUNTER,
-                    item_names.HIGH_TEMPLAR,
-                    item_names.SIGNIFIER,
-                    item_names.ASCENDANT,
-                    item_names.DARK_ARCHON,
-                    # Robo
-                    item_names.IMMORTAL,
-                    item_names.ANNIHILATOR,
-                    item_names.VANGUARD,
-                    item_names.STALWART,
-                    item_names.COLOSSUS,
-                    item_names.WRATHWALKER,
-                    item_names.REAVER,
-                    item_names.DISRUPTOR,
-                    # Stargate
-                    item_names.SKIRMISHER,
-                    item_names.SCOUT,
-                    item_names.MISTWING,
-                    item_names.OPPRESSOR,
-                    item_names.PULSAR,
-                    item_names.VOID_RAY,
-                    item_names.DESTROYER,
-                    item_names.DAWNBRINGER,
-                    item_names.ARBITER,
-                    item_names.ORACLE,
-                    item_names.CARRIER,
-                    item_names.TRIREME,
-                    item_names.SKYLORD,
-                    item_names.TEMPEST,
-                    item_names.MOTHERSHIP_TALDARIM,
-                    # Nexus
-                    item_names.MOTHERSHIP_AIUR,
-                    item_names.MOTHERSHIP_PURIFIER,
-                ), self.player)
-                or state.has_all((item_names.WARP_PRISM, item_names.WARP_PRISM_PHASE_BLASTER), self.player)
-                or state.has_all((item_names.CALADRIUS, item_names.CALADRIUS_CORONA_BEAM), self.player)
-                or state.has_all((item_names.PHOTON_CANNON, item_names.KHALAI_INGENUITY), self.player)
-                or state.has_all((item_names.KHAYDARIN_MONOLITH, item_names.KHALAI_INGENUITY), self.player)
-            )
+            ) and self.has_protoss_chaos_starter_unit(state)
 
         return _has_protoss_units
 
-    def has_race_units(self, target: int, race: SC2Race) -> Callable[["CollectionState"], bool]:
+    def has_race_units(
+        self, target: int, race: SC2Race, logic_level: int = RequiredTactics.option_chaos
+    ) -> Callable[["CollectionState"], bool]:
         if target == 0 or race == SC2Race.ANY:
             return Location.access_rule
-        result = self.unit_count_functions.get((race, target))
+        result = self.unit_count_functions.get((race, target, logic_level))
         if result is not None:
             return result
         if race == SC2Race.TERRAN:
-            result = self.has_terran_units(target)
-        if race == SC2Race.ZERG:
-            result = self.has_zerg_units(target)
-        if race == SC2Race.PROTOSS:
-            result = self.has_protoss_units(target)
-        assert result
-        self.unit_count_functions[(race, target)] = result
+            result = self.has_terran_units(target, logic_level)
+        elif race == SC2Race.ZERG:
+            result = self.has_zerg_units(target, logic_level)
+        elif race == SC2Race.PROTOSS:
+            result = self.has_protoss_units(target, logic_level)
+        assert result is not None
+        self.unit_count_functions[(race, target, logic_level)] = result
         return result
 
     # endregion Any Units
