@@ -203,7 +203,7 @@ item_table = {
                  classification=ItemClassification.progression, parent=item_names.REAPER),
     item_names.CYCLONE_MAG_FIELD_ACCELERATORS:
         ItemData(218 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_1, 18, SC2Race.TERRAN,
-                 parent=item_names.CYCLONE),
+                 classification=ItemClassification.progression, parent=item_names.CYCLONE),
     item_names.CYCLONE_MAG_FIELD_LAUNCHERS:
         ItemData(219 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_1, 19, SC2Race.TERRAN,
                  parent=item_names.CYCLONE),
@@ -597,7 +597,7 @@ item_table = {
                  parent=item_names.SCIENCE_VESSEL),
     item_names.CYCLONE_RESOURCE_EFFICIENCY:
         ItemData(349 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_5, 0, SC2Race.TERRAN,
-                 parent=item_names.CYCLONE),
+                 classification=ItemClassification.progression, parent=item_names.CYCLONE),
     item_names.BANSHEE_HYPERFLIGHT_ROTORS:
         ItemData(350 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_5, 1, SC2Race.TERRAN,
                  parent=item_names.BANSHEE),
@@ -666,7 +666,7 @@ item_table = {
                  classification=ItemClassification.progression, parent=item_names.CYCLONE),
     item_names.CYCLONE_RAPID_FIRE_LAUNCHERS:
         ItemData(373 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_5, 22, SC2Race.TERRAN,
-                 parent=item_names.CYCLONE),
+                 classification=ItemClassification.progression, parent=item_names.CYCLONE),
     item_names.LIBERATOR_CLOAK:
         ItemData(374 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_5, 23, SC2Race.TERRAN,
                  parent=item_names.LIBERATOR),
@@ -1580,7 +1580,7 @@ item_table = {
     item_names.LURKER_CARAPACE:
         ItemData(450 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_5, 26, SC2Race.ZERG, parent=item_names.LURKER),
     item_names.LURKER_SONAR_GLANDS:
-        ItemData(451 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_5, 27, SC2Race.ZERG, parent=item_names.LURKER),
+        ItemData(451 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_5, 27, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.LURKER),
     item_names.LURKER_PRESSURIZED_RELEASE:
         ItemData(452 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_5, 28, SC2Race.ZERG, parent=item_names.LURKER),
     item_names.LURKER_RAPID_MORPH:
@@ -1990,7 +1990,7 @@ item_table = {
     item_names.ANNIHILATOR_ADVANCED_TARGETING: ItemData(449 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 29, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.ANNIHILATOR),
     item_names.VANGUARD_ACCELERATED_WARP: ItemData(450 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_6, 0, SC2Race.PROTOSS, parent=item_names.VANGUARD),
     item_names.VANGUARD_BLOODSHARD_COATING: ItemData(451 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_6, 1, SC2Race.PROTOSS, parent=item_names.VANGUARD),
-    item_names.VANGUARD_FLARE: ItemData(452 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_6, 2, SC2Race.PROTOSS, parent=item_names.VANGUARD),
+    item_names.VANGUARD_FLARE: ItemData(452 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_6, 2, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.VANGUARD),
     item_names.DRAGOON_RESOURCE_EFFICIENCY: ItemData(453 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_6, 3, SC2Race.PROTOSS, parent=item_names.DRAGOON),
 
     # War Council
@@ -2212,118 +2212,6 @@ key_item_table.update(named_campaign_key_item_table)
 key_item_table.update(numbered_progressive_keys)
 key_item_table.update(special_keys)
 item_table.update(key_item_table)
-
-
-basic_units = {
-    SC2Race.TERRAN: {
-        item_names.MARINE,
-        item_names.MARAUDER,
-        item_names.DOMINION_TROOPER,
-        item_names.GOLIATH,
-        item_names.HELLION,
-        item_names.VULTURE,
-        item_names.WARHOUND,
-    },
-    SC2Race.ZERG: {
-        item_names.SWARM_QUEEN,
-        item_names.ROACH,
-        item_names.HYDRALISK,
-    },
-    SC2Race.PROTOSS: {
-        item_names.ZEALOT,
-        item_names.CENTURION,
-        item_names.SENTINEL,
-        item_names.STALKER,
-        item_names.INSTIGATOR,
-        item_names.SLAYER,
-        item_names.ADEPT,
-    }
-}
-
-advanced_basic_units = {
-    SC2Race.TERRAN: basic_units[SC2Race.TERRAN].union({
-        item_names.REAPER,
-        item_names.DIAMONDBACK,
-        item_names.VIKING,
-        item_names.SIEGE_TANK,
-        item_names.BANSHEE,
-        item_names.THOR,
-        item_names.BATTLECRUISER,
-        item_names.CYCLONE
-    }),
-    SC2Race.ZERG: basic_units[SC2Race.ZERG].union({
-        item_names.INFESTED_BANSHEE,
-        item_names.INFESTED_DIAMONDBACK,
-        item_names.INFESTOR,
-        item_names.ABERRATION,
-    }),
-    SC2Race.PROTOSS: basic_units[SC2Race.PROTOSS].union({
-        item_names.DARK_TEMPLAR,
-        item_names.DRAGOON,
-        item_names.AVENGER,
-        item_names.IMMORTAL,
-        item_names.ANNIHILATOR,
-        item_names.VANGUARD,
-        item_names.SKIRMISHER,
-    })
-}
-
-no_logic_basic_units = {
-    SC2Race.TERRAN: advanced_basic_units[SC2Race.TERRAN].union({
-        item_names.FIREBAT,
-        item_names.GHOST,
-        item_names.SPECTRE,
-        item_names.WRAITH,
-        item_names.RAVEN,
-        item_names.PREDATOR,
-        item_names.LIBERATOR,
-        item_names.HERC,
-    }),
-    SC2Race.ZERG: advanced_basic_units[SC2Race.ZERG].union({
-        item_names.ZERGLING,
-        item_names.PYGALISK,
-        item_names.INFESTED_SIEGE_TANK,
-        item_names.ULTRALISK,
-        item_names.SWARM_HOST
-    }),
-    SC2Race.PROTOSS: advanced_basic_units[SC2Race.PROTOSS].union({
-        item_names.BLOOD_HUNTER,
-        item_names.STALWART,
-        item_names.CARRIER,
-        item_names.SKYLORD,
-        item_names.TRIREME,
-        item_names.TEMPEST,
-        item_names.VOID_RAY,
-        item_names.DESTROYER,
-        item_names.PULSAR,
-        item_names.DAWNBRINGER,
-        item_names.COLOSSUS,
-        item_names.WRATHWALKER,
-        item_names.SCOUT,
-        item_names.OPPRESSOR,
-        item_names.MISTWING,
-        item_names.HIGH_TEMPLAR,
-        item_names.SIGNIFIER,
-        item_names.ASCENDANT,
-        item_names.DARK_ARCHON,
-        item_names.SUPPLICANT,
-    })
-}
-
-not_balanced_starting_units = {
-    item_names.SIEGE_TANK,
-    item_names.THOR,
-    item_names.BANSHEE,
-    item_names.BATTLECRUISER,
-    item_names.ULTRALISK,
-    item_names.CARRIER,
-    item_names.TEMPEST,
-}
-
-kerrigan_levels = [
-    item_name for item_name, item_data in item_table.items()
-    if item_data.type == ZergItemType.Level and item_data.race == SC2Race.ZERG
-]
 
 
 spear_of_adun_calldowns = {

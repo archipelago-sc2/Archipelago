@@ -1,10 +1,11 @@
 import logging
 from typing import Callable, Dict, List, Set, Tuple, TYPE_CHECKING, Iterable
+from collections import Counter
 
 from BaseClasses import Location, ItemClassification
-from .item import StarcraftItem, ItemFilterFlags, item_names, item_parents, item_groups
+from . import tables
+from .item import StarcraftItem, ItemFilterFlags, item_names, item_parents, item_groups, virtual_items
 from .item.item_tables import item_table, TerranItemType, ZergItemType, spear_of_adun_calldowns
-from .options import RequiredTactics
 
 if TYPE_CHECKING:
     from . import SC2World
@@ -110,12 +111,12 @@ class ValidInventory:
         self.player = world.player
         self.world: 'SC2World' = world
         # Track all Progression items and those with complex rules for filtering
-        self.logical_inventory: Dict[str, int] = {}
+        self.logical_inventory: Counter[str] = Counter()
         for item in item_pool:
             if not item_table[item.name].is_important_for_filtering():
                 continue
-            self.logical_inventory.setdefault(item.name, 0)
             self.logical_inventory[item.name] += 1
+            virtual_items.after_add_item(self.logical_inventory, item)
         self.item_pool = item_pool
         self.item_name_to_item: Dict[str, List[StarcraftItem]] = {}
         self.item_name_to_child_items: Dict[str, List[StarcraftItem]] = {}
@@ -172,10 +173,12 @@ class ValidInventory:
             # Only run logic checks when removing logic items
             if self.logical_inventory.get(item.name, 0) > 0:
                 self.logical_inventory[item.name] -= 1
+                virtual_items.after_remove_item(self.logical_inventory, item)
                 failed_rules = [name for name, requirement in mission_requirements if not requirement(self)]
                 if failed_rules:
                     # If item cannot be removed, lock and revert
                     self.logical_inventory[item.name] += 1
+                    virtual_items.after_add_item(self.logical_inventory, item)
                     item.filter_flags |= ItemFilterFlags.LogicLocked
                     return f"{len(failed_rules)} rules starting with \"{failed_rules[0]}\""
                 if not self.logical_inventory[item.name]:

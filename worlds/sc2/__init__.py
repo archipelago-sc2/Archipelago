@@ -5,12 +5,16 @@ from collections import Counter
 from typing import Any, ClassVar, Callable, Mapping
 from math import floor, ceil
 from BaseClasses import Item, MultiWorld, Location, Tutorial, ItemClassification, CollectionState
-from Options import Accessibility, OptionError
+from Options import OptionError
 from worlds.AutoWorld import WebWorld, World
 from . import location_groups
 from .item.item_groups import unreleased_items, war_council_upgrades, disabled_items
 from .item import (
-    item_groups, item_names, item_tables, item_parents,
+    item_groups,
+    item_names,
+    item_tables,
+    item_parents,
+    virtual_items,
     FilterItem, ItemFilterFlags, StarcraftItem,
     ZergItemType, ProtossItemType, TerranItemType,
     ItemData,
@@ -32,7 +36,7 @@ from .options import (
     is_mission_in_soa_presence,
 )
 from . import options
-from .rules import get_basic_units, SC2Logic
+from .rules import SC2Logic
 from . import settings
 from .pool_filter import filter_items
 from .mission_tables import SC2Campaign, SC2Mission, SC2Race, MissionFlag
@@ -121,6 +125,18 @@ class SC2World(World):
     def create_item(self, name: str) -> StarcraftItem:
         data = item_tables.item_table[name]
         return StarcraftItem(name, data.classification, data.code, self.player)
+
+    def collect(self, state: CollectionState, item: Item) -> bool:
+        change = super().collect(state, item)
+        if change:
+            virtual_items.after_add_item(state.prog_items[item.player], item)
+        return change
+
+    def remove(self, state: CollectionState, item: Item) -> bool:
+        change = super().remove(state, item)
+        if change:
+            virtual_items.after_remove_item(state.prog_items[item.player], item)
+        return change
 
     def generate_early(self) -> None:
         # Do some options validation/recovery here
@@ -311,7 +327,7 @@ class SC2World(World):
             weapon_armor_item_names = [
                 item_names.PROGRESSIVE_TERRAN_WEAPON_ARMOR_UPGRADE,
                 item_names.PROGRESSIVE_ZERG_WEAPON_ARMOR_UPGRADE,
-                item_names.PROGRESSIVE_PROTOSS_WEAPON_ARMOR_UPGRADE
+                item_names.PROGRESSIVE_PROTOSS_WEAPON_ARMOR_UPGRADE,
             ]
             def state_with_kerrigan_levels() -> CollectionState:
                 state: CollectionState = self.multiworld.get_all_state(False)
@@ -978,9 +994,28 @@ def flag_start_unit(world: SC2World, item_list: list[FilterItem], starter_unit: 
         }
 
         # The race of the early unit has been chosen
-        basic_units = get_basic_units(world.options.required_tactics.value, first_race)
+        basic_units = set({
+            (RequiredTactics.option_basic, SC2Race.TERRAN): item_groups.terran_basic_starter_units,
+            (RequiredTactics.option_advanced, SC2Race.TERRAN): item_groups.terran_advanced_starter_units,
+            (RequiredTactics.option_chaos, SC2Race.TERRAN): item_groups.terran_chaos_starter_units,
+            (RequiredTactics.option_basic, SC2Race.ZERG): item_groups.zerg_basic_starter_units,
+            (RequiredTactics.option_advanced, SC2Race.ZERG): item_groups.zerg_advanced_starter_units,
+            (RequiredTactics.option_chaos, SC2Race.ZERG): item_groups.zerg_chaos_starter_units,
+            (RequiredTactics.option_basic, SC2Race.PROTOSS): item_groups.protoss_basic_starter_units,
+            (RequiredTactics.option_advanced, SC2Race.PROTOSS): item_groups.protoss_advanced_starter_units,
+            (RequiredTactics.option_chaos, SC2Race.PROTOSS): item_groups.protoss_chaos_starter_units,
+        }[world.options.required_tactics.value, first_race])
         if starter_unit == StarterUnit.option_balanced:
-            basic_units = basic_units.difference(item_tables.not_balanced_starting_units)
+            # Imbalanced/too-strong starter units
+            basic_units = basic_units.difference({
+                item_names.SIEGE_TANK,
+                item_names.THOR,
+                item_names.BATTLECRUISER,
+                item_names.ULTRALISK,
+                item_names.CARRIER,
+                item_names.TEMPEST,
+                item_names.PRIDE_OF_AUGUSTGRAD,
+            })
         if first_mission == SC2Mission.DARK_WHISPERS:
             # Special case - you don't have a logicless location but need an AA
             basic_units = basic_units.difference(

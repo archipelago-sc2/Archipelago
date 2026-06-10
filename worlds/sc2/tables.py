@@ -1,5 +1,6 @@
 from enum import IntFlag
 
+
 class HeroOptions:
     KERRIGAN = "Kerrigan"
     NOVA = "Nova"
