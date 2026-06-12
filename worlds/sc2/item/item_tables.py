@@ -1334,7 +1334,7 @@ item_table = {
         ItemData(261 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 1, SC2Race.ZERG,
                  parent=item_names.VIPER),
     item_names.BROOD_LORD_POROUS_CARTILAGE:
-        ItemData(262 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 2, SC2Race.ZERG,
+        ItemData(262 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 2, SC2Race.ZERG, classification=ItemClassification.progression,
                  parent=item_names.BROOD_LORD),
     item_names.BROOD_LORD_BEHEMOTH_STELLARSKIN:
         ItemData(263 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 3, SC2Race.ZERG,

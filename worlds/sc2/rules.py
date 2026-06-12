@@ -36,11 +36,16 @@ def min2(a: int, b: int) -> int:
     return b
 
 
-class LogicSeries(enum.Enum):
+class LogicSeries(enum.IntFlag):
     CoreUnit = enum.auto()
     PowerComp = enum.auto()
     AntiAir = enum.auto()
     Detection = enum.auto()
+    Kerrigan = enum.auto()
+    Nova = enum.auto()
+    Artanis = enum.auto()
+
+    heroes = Kerrigan | Nova | Artanis
 
 
 class SC2Logic:
@@ -265,7 +270,7 @@ class SC2Logic:
     # region Global Terran ................................................................................. #
     # ###################################################################################################### #
 
-    @series(LogicSeries.CoreUnit, SC2Race.TERRAN, 1)
+    @series(LogicSeries.PowerComp, SC2Race.TERRAN, 1)
     def terran_upgraded_unit(self, state: CollectionState, upgrade: int) -> bool:
         return (
             (
@@ -285,7 +290,7 @@ class SC2Logic:
             )
         )
 
-    @series(LogicSeries.CoreUnit, SC2Race.TERRAN, 2)
+    @series(LogicSeries.PowerComp, SC2Race.TERRAN, 2)
     def terran_competent_comp(self, state: CollectionState, upgrade: int = 1) -> bool:
         # Infantry with Healing
         infantry_weapons = self.wa_upgrade_count(VirtualItem.TERRAN_INFANTRY_WEAPON, state)
@@ -1146,43 +1151,82 @@ class SC2Logic:
             state.has(item_names.ULTRALISK, self.player) or self.morphling_enabled
         )
 
-    def zerg_competent_comp(self, state: CollectionState) -> bool:
-        """Solid zerg comp. Does not include AA"""
-        if self.zerg_army_weapon_armor_upgrade_min_level(state) < 2:
+    @series(LogicSeries.PowerComp, SC2Race.ZERG, 2)
+    def zerg_competent_comp(self, state: CollectionState, upgrade: int = 1) -> bool:
+        if self.wa_upgrade_count(VirtualItem.ZERG_GROUND_ARMOR, state) < upgrade:
+            # All comps require at least one upgraded ground unit
             return False
-        advanced = self.advanced_tactics
+        has_melee_attack = self.wa_upgrade_count(VirtualItem.ZERG_MELEE_ATTACK.name, state) > upgrade
+        has_ranged_attack = self.wa_upgrade_count(VirtualItem.ZERG_RANGED_ATTACK.name, state) > upgrade
         core_unit = (
-            state.has_any((
-                item_names.ROACH,
-                item_names.ABERRATION,
-                item_names.ZERGLING,
-                item_names.INFESTED_DIAMONDBACK,
-            ), self.player)
-            or self.morph_igniter(state)
+            (
+                has_melee_attack
+                and state.has_any((
+                    item_names.ZERGLING, item_names.ABERRATION, item_names.PYGALISK,
+                ), self.player)
+            )
+            or (
+                has_ranged_attack
+                and (
+                    state.has_any((
+                        item_names.ROACH, item_names.INFESTED_DIAMONDBACK,
+                    ), self.player)
+                    or self.morph_igniter(state)
+                )
+            )
         )
         support_unit = (
-            state.has_any({item_names.SWARM_QUEEN, item_names.HYDRALISK, item_names.INFESTED_BANSHEE}, self.player)
+            state.has_any((item_names.SWARM_QUEEN, item_names.HYDRALISK, item_names.INFESTED_BANSHEE), self.player)
             or self.morph_brood_lord(state)
-            or state.has_all((item_names.MUTALISK, item_names.MUTALISK_SEVERING_GLAIVE, item_names.MUTALISK_VICIOUS_GLAIVE), self.player)
-            or (advanced
-                and (state.has_any((item_names.INFESTOR, item_names.DEFILER), self.player) or self.morph_viper(state))
+            or self.morph_guardian(state)
+            or (state.has(item_names.MUTALISK, self.player)
+                and state.count_from_list_unique((
+                    item_names.MUTALISK_VICIOUS_GLAIVE,
+                    item_names.MUTALISK_SEVERING_GLAIVE,
+                    item_names.MUTALISK_SUNDERING_GLAIVE,
+                    VirtualItem.ZERG_AIR_ATTACK,
+                ), self.player) >= 2
+            )
+            or (self.advanced_tactics
+                and (
+                    state.has_any((
+                        item_names.INFESTOR, item_names.DEFILER, item_names.HIVE_QUEEN,
+                    ), self.player)
+                    or self.morph_viper(state)
+                )
             )
         )
         if core_unit and support_unit:
             return True
+        has_air_attack = state.has(VirtualItem.ZERG_AIR_ATTACK, self.player) >= upgrade
         vespene_unit = (
-            state.has_any({item_names.ULTRALISK, item_names.ABERRATION}, self.player)
+            (
+                state.has_any((item_names.ULTRALISK, item_names.ABERRATION), self.player)
+                and has_melee_attack
+            )
             or (
                 self.morph_guardian(state)
-                and state.has_any(
-                    (item_names.GUARDIAN_SORONAN_ACID, item_names.GUARDIAN_EXPLOSIVE_SPORES, item_names.GUARDIAN_PRIMORDIAL_FURY), self.player
-                )
+                and has_air_attack
+                and state.has_any((
+                    item_names.GUARDIAN_SORONAN_ACID,
+                    item_names.GUARDIAN_EXPLOSIVE_SPORES,
+                    item_names.GUARDIAN_PRIMORDIAL_FURY,
+                ), self.player)
             )
-            or (advanced
+            or (
+                self.morph_brood_lord(state)
+                and has_air_attack
+                and has_melee_attack
+                and self.has(item_names.BROOD_LORD_POROUS_CARTILAGE, self.player)
+            )
+            or (self.advanced_tactics
                 and self.morph_viper(state)
             )
         )
-        return vespene_unit and state.has_any({item_names.ZERGLING, item_names.SWARM_QUEEN}, self.player)
+        return (
+            vespene_unit
+            and self.zerg_mineral_dump(state)
+        )
 
     def zerg_common_unit_basic_aa(self, state: CollectionState) -> bool:
         return self.zerg_common_unit(state) and self.zerg_basic_anti_air(state)
@@ -1212,7 +1256,10 @@ class SC2Logic:
             state.has_any((
                 item_names.ZERGLING, item_names.PYGALISK, item_names.INFESTED_BUNKER, item_names.HIVE_QUEEN,
             ), self.player)
-            or (self.advanced_tactics and self.spread_creep(state) and state.has(item_names.SPINE_CRAWLER, self.player))
+            or (self.advanced_tactics
+                and self.spread_creep(state)
+                and state.has_any((item_names.SPINE_CRAWLER, item_names.INFESTED_BUNKER), self.player)
+            )
         )
 
     def zerg_big_monsters(self, state: CollectionState) -> bool:
@@ -1325,20 +1372,18 @@ class SC2Logic:
         return (HeroFlag.NOVA not in presence
                 or self.basic_nova(state, mission, story_tech_available))
 
+    @series(LogicSeries.Kerrigan, SC2Race.ANY, 1)
     def basic_kerrigan(self, state: CollectionState, story_tech_available: bool = True) -> bool:
         if (story_tech_available or self.kerrigan_items_granted):
             return True
         # One active ability that can be used to defeat enemies directly
-        if not state.has_any(
-            (
-                item_names.KERRIGAN_LEAPING_STRIKE,
-                item_names.KERRIGAN_KINETIC_BLAST,
-                item_names.KERRIGAN_SPAWN_BANELINGS,
-                item_names.KERRIGAN_PSIONIC_SHIFT,
-                item_names.KERRIGAN_CRUSHING_GRIP,
-            ),
-            self.player,
-        ):
+        if not state.has_any((
+            item_names.KERRIGAN_LEAPING_STRIKE,
+            item_names.KERRIGAN_KINETIC_BLAST,
+            item_names.KERRIGAN_SPAWN_BANELINGS,
+            item_names.KERRIGAN_PSIONIC_SHIFT,
+            item_names.KERRIGAN_CRUSHING_GRIP,
+        ), self.player):
             return False
         # Two non-ultimate abilities
         count = 0
@@ -1349,6 +1394,7 @@ class SC2Logic:
                 return True
         return False
 
+    @series(LogicSeries.Artanis, SC2Race.ANY, 1)
     def basic_artanis(self, state: CollectionState, story_tech_available: bool = True) -> bool:
         if story_tech_available or self.artanis_items_granted:
             return True
@@ -1378,6 +1424,7 @@ class SC2Logic:
         return (presence == HeroFlag.NONE
             or self.competent_hero(state, mission))
 
+    @series(LogicSeries.Nova, SC2Race.ANY, 2)
     def competent_nova(self, state: CollectionState) -> bool:
         return (
             self.nova_any_weapon(state)
@@ -1389,6 +1436,7 @@ class SC2Logic:
             )
         )
 
+    @series(LogicSeries.Kerrigan, SC2Race.ANY, 2)
     def competent_kerrigan(self, state: CollectionState) -> bool:
         return (
             self.basic_kerrigan(state, False)
@@ -1397,6 +1445,7 @@ class SC2Logic:
             and state.count_from_list(item_groups.kerrigan_logic_ultimates, self.player) >= 1
         )
 
+    @series(LogicSeries.Artanis, SC2Race.ANY, 2)
     def competent_artanis(self, state: CollectionState) -> bool:
         return (
             self.artanis_any_weapon_aspect(state)
@@ -1415,6 +1464,7 @@ class SC2Logic:
             item_names.NOVA_DOMINATION,
         ), self.player)
 
+    @series(LogicSeries.Nova, SC2Race.ANY, 1)
     def nova_any_weapon(self, state: CollectionState) -> bool:
         return state.has_any((
             item_names.NOVA_C20A_CANISTER_RIFLE,
