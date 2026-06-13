@@ -1218,7 +1218,7 @@ item_table = {
     item_names.SWARM_HOST_BURROW:
         ItemData(215 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_1, 15, SC2Race.ZERG, parent=item_names.SWARM_HOST),
     item_names.SWARM_HOST_RAPID_INCUBATION:
-        ItemData(216 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_1, 16, SC2Race.ZERG, parent=item_names.SWARM_HOST),
+        ItemData(216 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_1, 16, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.SWARM_HOST),
     item_names.SWARM_HOST_PRESSURIZED_GLANDS:
         ItemData(217 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_1, 17, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.SWARM_HOST),
     item_names.ULTRALISK_BURROW_CHARGE:
@@ -1236,7 +1236,7 @@ item_table = {
     item_names.SCOURGE_RESOURCE_EFFICIENCY:
         ItemData(224 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_1, 24, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.SCOURGE),
     item_names.SCOURGE_SWARM_SCOURGE:
-        ItemData(225 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_1, 25, SC2Race.ZERG, parent=parent_names.SCOURGE_SOURCE),
+        ItemData(225 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_1, 25, SC2Race.ZERG, classification=ItemClassification.progression, parent=parent_names.SCOURGE_SOURCE),
     item_names.ZERGLING_SHREDDING_CLAWS:
         ItemData(226 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_1, 26, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.ZERGLING),
     item_names.ROACH_GLIAL_RECONSTITUTION:
@@ -1586,9 +1586,9 @@ item_table = {
     item_names.LURKER_RAPID_MORPH:
         ItemData(453 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_5, 29, SC2Race.ZERG, parent=item_names.LURKER),
     item_names.INFESTED_MARINE_ENDURING_STRAIN:
-        ItemData(454 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_6, 0, SC2Race.ZERG, parent=item_names.INFESTED_MARINE),
+        ItemData(454 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_6, 0, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.INFESTED_MARINE),
     item_names.INFESTED_MARINE_LEG_ENHANCEMENTS:
-        ItemData(455 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_6, 1, SC2Race.ZERG, parent=item_names.INFESTED_MARINE),
+        ItemData(455 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_6, 1, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.INFESTED_MARINE),
     item_names.INFESTED_SCV_CAUTERIZER:
         ItemData(456 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_6, 2, SC2Race.ZERG, parent=parent_names.INFESTED_UNITS),
     item_names.INFESTED_SCV_RESOURCEFUL:

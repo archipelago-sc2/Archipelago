@@ -1038,6 +1038,172 @@ class SC2Logic:
             or (self.morph_lurker(state) and state.has(item_names.LURKER_SONAR_GLANDS, self.player))
         )
 
+    @series(LogicSeries.AntiAir, SC2Race.ZERG, 1)
+    def zerg_any_anti_air(self, state: CollectionState) -> bool:
+        return (
+            state.has_any((
+                item_names.HYDRALISK,
+                item_names.SWARM_QUEEN,
+                item_names.HIVE_QUEEN,
+                item_names.BROOD_QUEEN,
+                item_names.MUTALISK,
+                item_names.CORRUPTOR,
+                item_names.SCOURGE,
+                item_names.INFESTOR,
+                item_names.INFESTED_MARINE,
+                item_names.INFESTED_LIBERATOR,
+                # buildings
+                item_names.SPORE_CRAWLER,
+                item_names.INFESTED_MISSILE_TURRET,
+                item_names.INFESTED_BUNKER,
+                # mercs
+                item_names.HUNTER_KILLERS,
+                item_names.CAUSTIC_HORRORS,
+            ), self.player)
+            or state.has_all((
+                item_names.SWARM_HOST,
+                item_names.SWARM_HOST_PRESSURIZED_GLANDS,
+            ), self.player)
+            or state.has_all((
+                item_names.ABERRATION,
+                item_names.ABERRATION_PROGRESSIVE_BANELING_LAUNCH,
+            ), self.player)
+            or state.has_all((
+                item_names.INFESTED_DIAMONDBACK,
+                item_names.INFESTED_DIAMONDBACK_PROGRESSIVE_FUNGAL_SNARE,
+            ), self.player)
+            or self.morph_ravager(state)
+            or self.morph_viper(state)
+            or self.morph_devourer(state)
+            or (
+                self.morph_guardian(state)
+                and state.has(item_names.GUARDIAN_PRIMAL_ADAPTATION, self.player)
+            )
+            # Note(mm): Noxious Ultralisks excluded for being a little too silly
+        )
+
+    @series(LogicSeries.AntiAir, SC2Race.ZERG, 2)
+    def zerg_basic_anti_air(self, state: CollectionState) -> bool:
+        spread_creep = self.spread_creep(state)
+        return (
+            state.has_any((
+                item_names.HYDRALISK,
+                item_names.MUTALISK,
+                item_names.SWARM_QUEEN,
+                item_names.HIVE_QUEEN,
+                item_names.HUNTER_KILLERS,
+                item_names.CAUSTIC_HORRORS,
+            ), self.player)
+            or state.has_all((
+                item_names.INFESTED_DIAMONDBACK,
+                item_names.INFESTED_DIAMONDBACK_PROGRESSIVE_FUNGAL_SNARE,
+            ), self.player)
+            or (state.has_all((
+                    item_names.INFESTED_MARINE, item_names.INFESTED_MARINE_ENDURING_STRAIN,
+                ), self.player)
+                and (
+                    spread_creep
+                    or state.has(item_names.INFESTED_MARINE_LEG_ENHANCEMENTS, self.player)
+                )
+            )
+            or state.has_all((
+                item_names.SWARM_HOST,
+                item_names.SWARM_HOST_PRESSURIZED_GLANDS,
+            ), self.player)
+            or (self.morph_guardian(state)
+                and state.has(item_names.GUARDIAN_PRIMAL_ADAPTATION, self.player)
+            )
+            or (self.morph_devourer(state)
+                and (
+                    # Note: Basic should never require using AA-only units
+                    state.has(item_names.DEVOURER_PRESCIENT_SPORES, self.player)
+                    or self.advanced_tactics
+                )
+            )
+            or (
+                self.advanced_tactics
+                and (
+                    state.has_any((
+                        item_names.CORRUPTOR,
+                        item_names.BROOD_QUEEN,
+                        item_names.SCOURGE,
+                    ), self.player)
+                    or state.has_all((item_names.INFESTOR, item_names.INFESTOR_INFESTED_TERRAN), self.player)
+                    or state.has_all((item_names.VIPER, item_names.VIPER_PARASITIC_BOMB), self.player)
+                    or state.has_all((
+                        item_names.INFESTED_LIBERATOR, item_names.INFESTED_LIBERATOR_CLOUD_DISPERSAL,
+                    ), self.player)
+                )
+            )
+            or (
+                spread_creep
+                and state.has(item_names.INFESTED_BUNKER, self.player)
+            )
+            or (self.advanced_tactics
+                and spread_creep
+                and state.has_any((item_names.SPORE_CRAWLER, item_names.INFESTED_MISSILE_TURRET), self.player)
+            )
+        )
+
+    @series(LogicSeries.AntiAir, SC2Race.ZERG, 3)
+    def zerg_competent_anti_air(self, state: CollectionState) -> bool:
+        ranged_attack_upgrades = self.wa_upgrade_count(VirtualItem.ZERG_RANGED_ATTACK, state)
+        air_attack_upgrades = self.wa_upgrade_count(VirtualItem.ZERG_AIR_ATTACK, state)
+        return (
+            (
+                ranged_attack_upgrades >= 1
+                and (
+                    state.has(item_names.HYDRALISK, self.player)
+                    or state.has_all((
+                        item_names.SWARM_QUEEN,
+                        item_names.SWARM_QUEEN_RESOURCE_EFFICIENCY,
+                        item_names.SWARM_QUEEN_BIO_MECHANICAL_TRANSFUSION,
+                    ))
+                )
+            )
+            or (
+                state.has(item_names.MUTALISK, self.player)
+                and air_attack_upgrades >= 1
+            )
+            or (
+                state.has_all((
+                    item_names.INFESTED_DIAMONDBACK,
+                ), self.player)
+                and state.has(item_names.INFESTED_DIAMONDBACK_PROGRESSIVE_FUNGAL_SNARE, self.player, 2)
+            )
+            or (
+                self.advanced_tactics
+                and (
+                    state.has_any((
+                        item_names.CORRUPTOR,
+                        item_names.BROOD_QUEEN,
+                    ), self.player)
+                    or (state.has_all((
+                            item_names.INFESTED_MARINE, item_names.INFESTED_MARINE_ENDURING_STRAIN,
+                        ), self.player)
+                        and ranged_attack_upgrades >= 1
+                        and self.spread_creep(state)
+                    )
+                    or state.has_all((
+                        item_names.SCOURGE,
+                        item_names.SCOURGE_RESOURCE_EFFICIENCY,
+                        item_names.SCOURGE_SWARM_SCOURGE,
+                        item_names.VESPENE_EFFICIENCY,
+                    ), self.player)
+                    or state.has_all((
+                        item_names.SWARM_HOST,
+                        item_names.SWARM_HOST_PRESSURIZED_GLANDS,
+                        item_names.SWARM_HOST_RAPID_INCUBATION,
+                    ), self.player)
+                    or state.has_all((item_names.INFESTOR, item_names.INFESTOR_INFESTED_TERRAN), self.player)
+                    or state.has_all((item_names.VIPER, item_names.VIPER_PARASITIC_BOMB), self.player)
+                    or state.has_all((
+                        item_names.INFESTED_LIBERATOR, item_names.INFESTED_LIBERATOR_CLOUD_DISPERSAL,
+                    ), self.player)
+                )
+            )
+        )
+
     def zerg_power_rating(self, state: CollectionState) -> int:
         power_score = self.base_power_rating
         # Passive Score (Economic upgrades and global army upgrades)
@@ -1146,26 +1312,27 @@ class SC2Logic:
     def zerg_can_collect_pickup_across_gap(self, state: CollectionState) -> bool:
         """Any way for zerg to get any ground unit across gaps longer than viper yoink range to collect a pickup."""
         return (
-            state.has_any(
-                (
-                    item_names.NYDUS_WORM,
-                    item_names.ECHIDNA_WORM,
-                    item_names.OVERLORD_VENTRAL_SACS,
-                    item_names.YGGDRASIL,
-                    item_names.INFESTED_BANSHEE,
-                ),
-                self.player,
+            state.has_any((
+                item_names.NYDUS_WORM,
+                item_names.ECHIDNA_WORM,
+                item_names.OVERLORD_VENTRAL_SACS,
+                item_names.YGGDRASIL,
+                item_names.INFESTED_BANSHEE,
+            ), self.player)
+            or (self.morph_ravager(state)
+                and state.has(item_names.RAVAGER_DEEP_TUNNEL, self.player)
             )
-            or (self.morph_ravager(state) and state.has(item_names.RAVAGER_DEEP_TUNNEL, self.player))
-            or state.has_all(
-                (
-                    item_names.INFESTED_SIEGE_TANK,
-                    item_names.INFESTED_SIEGE_TANK_DEEP_TUNNEL,
-                    item_names.OVERLORD_GENERATE_CREEP,
-                ),
-                self.player,
-            )
-            or state.has_all((item_names.SWARM_QUEEN_DEEP_TUNNEL, item_names.OVERSEER), self.player)  # Deep tunnel to a creep tumor
+            or state.has_all((
+                item_names.INFESTED_SIEGE_TANK,
+                item_names.INFESTED_SIEGE_TANK_DEEP_TUNNEL,
+                item_names.OVERLORD_GENERATE_CREEP,
+            ), self.player)
+            or state.has_all((
+                # Deep tunnel to a creep tumor
+                item_names.SWARM_QUEEN_DEEP_TUNNEL,
+                item_names.OVERSEER,
+                item_names.OVERLORD_GENERATE_CREEP,
+            ), self.player)
         )
 
     def zerg_has_infested_scv(self, state: CollectionState) -> bool:
@@ -1183,98 +1350,39 @@ class SC2Logic:
         )
 
     def zerg_very_hard_mission_weapon_armor_level(self, state: CollectionState) -> bool:
-        return self.zerg_army_weapon_armor_upgrade_min_level(state) >= self.get_very_hard_required_upgrade_level()
-
-    def zerg_common_unit(self, state: CollectionState) -> bool:
-        return state.has_any(self.basic_zerg_units, self.player)
-
-    def zerg_competent_anti_air(self, state: CollectionState) -> bool:
+        # todo(mm): remove this
         return (
-            state.has_any((
-                item_names.HYDRALISK, item_names.MUTALISK, item_names.CORRUPTOR, item_names.BROOD_QUEEN
-            ), self.player)
-            or (self.advanced_tactics and state.has(item_names.INFESTOR, self.player))
-        )
-
-    def zerg_moderate_anti_air(self, state: CollectionState) -> bool:
-        return (
-            self.zerg_competent_anti_air(state)
-            or self.zerg_basic_air_to_air(state)
-            or (
-                state.has(item_names.SWARM_QUEEN, self.player)
-                or state.has_all({item_names.SWARM_HOST, item_names.SWARM_HOST_PRESSURIZED_GLANDS}, self.player)
-                or (self.spread_creep(state, True) and state.has(item_names.INFESTED_BUNKER, self.player))
-            )
-            or (self.advanced_tactics and state.has(item_names.INFESTED_MARINE, self.player))
-        )
-
-    def zerg_kerrigan_or_any_anti_air(self, state: CollectionState) -> bool:
-        return not self.kerrigan_items_granted or self.zerg_any_anti_air(state)
-
-    def zerg_any_anti_air(self, state: CollectionState) -> bool:
-        return (
-            state.has_any(
-                (
-                    item_names.HYDRALISK,
-                    item_names.SWARM_QUEEN,
-                    item_names.BROOD_QUEEN,
-                    item_names.MUTALISK,
-                    item_names.CORRUPTOR,
-                    item_names.SCOURGE,
-                    item_names.INFESTOR,
-                    item_names.INFESTED_MARINE,
-                    item_names.INFESTED_LIBERATOR,
-                    item_names.SPORE_CRAWLER,
-                    item_names.INFESTED_MISSILE_TURRET,
-                    item_names.INFESTED_BUNKER,
-                    item_names.HUNTER_KILLERS,
-                    item_names.CAUSTIC_HORRORS,
-                ),
-                self.player,
-            )
-            or state.has_all((item_names.SWARM_HOST, item_names.SWARM_HOST_PRESSURIZED_GLANDS), self.player)
-            or state.has_all((item_names.ABERRATION, item_names.ABERRATION_PROGRESSIVE_BANELING_LAUNCH), self.player)
-            or state.has_all((item_names.INFESTED_DIAMONDBACK, item_names.INFESTED_DIAMONDBACK_PROGRESSIVE_FUNGAL_SNARE), self.player)
-            or self.morph_ravager(state)
-            or self.morph_viper(state)
-            or self.morph_devourer(state)
-            or (self.morph_guardian(state) and state.has(item_names.GUARDIAN_PRIMAL_ADAPTATION, self.player))
-        )
-
-    def zerg_basic_anti_air(self, state: CollectionState) -> bool:
-        return self.zerg_basic_kerriganless_anti_air(state) or not self.kerrigan_items_granted
-
-    def zerg_basic_kerriganless_anti_air(self, state: CollectionState) -> bool:
-        return (
-            self.zerg_moderate_anti_air(state)
-            or state.has_any((item_names.HUNTER_KILLERS, item_names.CAUSTIC_HORRORS), self.player)
-            or (self.advanced_tactics and state.has_any({item_names.SPORE_CRAWLER, item_names.INFESTED_MISSILE_TURRET}, self.player))
-        )
-
-    def zerg_basic_air_to_air(self, state: CollectionState) -> bool:
-        return (
-            state.has_any((
-                item_names.MUTALISK,
-                item_names.CORRUPTOR,
-                item_names.BROOD_QUEEN,
-                item_names.SCOURGE,
-                item_names.INFESTED_LIBERATOR,
-            ), self.player)
-            or self.morph_devourer(state)
-            or self.morph_viper(state)
-            or (self.morph_guardian(state) and state.has(item_names.GUARDIAN_PRIMAL_ADAPTATION, self.player))
-        )
-
-    def zerg_basic_air_to_ground(self, state: CollectionState) -> bool:
-        return (
-            state.has_any({item_names.MUTALISK, item_names.INFESTED_BANSHEE}, self.player)
-            or self.morph_guardian(state)
-            or self.morph_brood_lord(state)
-            or (self.morph_devourer(state) and state.has(item_names.DEVOURER_PRESCIENT_SPORES, self.player))
+            self.zerg_army_weapon_armor_upgrade_min_level(state)
+            >= self.get_very_hard_required_upgrade_level()
         )
 
     def zerg_versatile_air(self, state: CollectionState) -> bool:
-        return self.zerg_basic_air_to_air(state) and self.zerg_basic_air_to_ground(state)
+        if state.has(item_names.MUTALISK, self.player):
+            return True
+        if self.morph_guardian(state) and state.has(item_names.GUARDIAN_PRIMAL_ADAPTATION, self.player):
+            return True
+        return (
+            # Air-to-air
+            (
+                state.has_any((
+                    item_names.CORRUPTOR,
+                    item_names.BROOD_QUEEN,
+                    item_names.SCOURGE,
+                    item_names.INFESTED_LIBERATOR,
+                ), self.player)
+                or self.morph_devourer(state)
+                or self.morph_viper(state)
+            )
+            # Air-to-ground
+            and (
+                state.has(item_names.INFESTED_BANSHEE, self.player)
+                or self.morph_guardian(state)
+                or self.morph_brood_lord(state)
+                or (self.morph_devourer(state)
+                    and state.has(item_names.DEVOURER_PRESCIENT_SPORES, self.player)
+                )
+            )
+        )
 
     def zerg_infested_tank_with_ammo(self, state: CollectionState) -> bool:
         return state.has(item_names.INFESTED_SIEGE_TANK, self.player) and (
@@ -1348,8 +1456,16 @@ class SC2Logic:
         return self.zerg_competent_comp(state) and self.zerg_competent_anti_air(state)
 
     def spread_creep(self, state: CollectionState, free_creep_tumor: bool = True) -> bool:
-        return (self.advanced_tactics and free_creep_tumor) or state.has_any(
-            {item_names.SWARM_QUEEN, item_names.OVERSEER}, self.player
+        return (
+            state.has_any((
+                item_names.SWARM_QUEEN, item_names.OVERSEER, item_names.HIVE_QUEEN,
+            ), self.player)
+            or (self.advanced_tactics
+                and (
+                    free_creep_tumor
+                    or state.has(item_names.ECHIDNA_WORM, self.player)
+                )
+            )
         )
 
     def zerg_mineral_dump(self, state: CollectionState) -> bool:
@@ -3898,13 +4014,13 @@ class SC2Logic:
                 item_names.BULLFROG,
             ), self.player)
             or (self.morph_devourer(state) and state.has(item_names.DEVOURER_PRESCIENT_SPORES, self.player))
-            or (self.morph_guardian(state) and state.has(item_names.GUARDIAN_PRIMAL_ADAPTATION, self.player))
-            or ((self.morph_guardian(state) or self.morph_brood_lord(state)) and self.zerg_basic_air_to_air(state))
+            or self.morph_guardian(state)
+            or self.morph_brood_lord(state)
             or (
                 self.advanced_tactics
                 and (
                     state.has_any((item_names.INFESTED_SIEGE_BREAKERS, item_names.INFESTED_DUSK_WINGS), self.player)
-                    or (state.has(item_names.HUNTERLING, self.player) and self.zerg_basic_air_to_air(state))
+                    or state.has(item_names.HUNTERLING, self.player)
                     or state.has_all((item_names.INFESTOR, item_names.INFESTOR_INFESTED_TERRAN), self.player)
                 )
             )
