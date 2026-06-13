@@ -418,7 +418,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.terran_common_unit(state)
-                and logic.terran_base_trasher(state)
+                and logic.terran_ultimate_comp(state)
                 and logic.terran_competent_anti_air(state)
             ),
             flags=LocationFlag.BASEBUST,
@@ -430,7 +430,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.terran_common_unit(state)
-                and logic.terran_base_trasher(state)
+                and logic.terran_ultimate_comp(state)
                 and logic.terran_competent_anti_air(state)
             ),
             flags=LocationFlag.BASEBUST,
@@ -725,7 +725,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2WOL_LOC_ID_OFFSET + 807,
             LocationType.MASTERY,
             lambda state: (
-                logic.terran_common_unit(state) and logic.terran_base_trasher(state)
+                logic.terran_common_unit(state) and logic.terran_ultimate_comp(state)
             ),
             flags=LocationFlag.BASEBUST,
         ),
@@ -1209,7 +1209,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             lambda state: (
                 logic.terran_welcome_to_the_jungle_requirement(state)
                 and logic.terran_beats_protoss_deathball(state)
-                and logic.terran_base_trasher(state)
+                and logic.terran_ultimate_comp(state)
             ),
             flags=LocationFlag.BASEBUST,
         ),
@@ -11133,7 +11133,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             "Victory",
             SC2_RACESWAP_LOC_ID_OFFSET + 9500,
             LocationType.VICTORY,
-            logic.terran_base_trasher,
+            logic.terran_ultimate_comp,
         ),
         make_location_data(
             SC2Mission.DEATH_FROM_ABOVE_T.mission_name,
@@ -11167,7 +11167,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             "Main Path Command Center",
             SC2_RACESWAP_LOC_ID_OFFSET + 9505,
             LocationType.EXTRA,
-            logic.terran_base_trasher,
+            logic.terran_ultimate_comp,
         ),
         make_location_data(
             SC2Mission.DEATH_FROM_ABOVE_P.mission_name,
@@ -12416,7 +12416,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.terran_temple_of_unification_requirement(state)
-                and logic.terran_base_trasher(state)
+                and logic.terran_ultimate_comp(state)
             ),
             flags=LocationFlag.BASEBUST,
         ),
@@ -12427,7 +12427,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.terran_temple_of_unification_requirement(state)
-                and logic.terran_base_trasher(state)
+                and logic.terran_ultimate_comp(state)
             ),
             flags=LocationFlag.BASEBUST,
         ),

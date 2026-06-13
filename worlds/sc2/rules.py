@@ -358,20 +358,81 @@ class SC2Logic:
             ), self.player)
         )
 
+    @series(LogicSeries.PowerComp, SC2Race.TERRAN, 3)
+    def terran_ultimate_comp(self, state: CollectionState, upgrade: int = 2) -> bool:
+        """
+        Can attack heavily defended bases
+        """
+        if not self.terran_competent_comp(state, upgrade):
+            return False
+        has_infantry_upgrades = (
+            self.wa_upgrade_count(VirtualItem.TERRAN_INFANTRY_WEAPON, state) >= upgrade
+            and self.wa_upgrade_count(VirtualItem.TERRAN_INFANTRY_ARMOR, state) >= upgrade
+        )
+        has_vehicle_upgrades = (
+            self.wa_upgrade_count(VirtualItem.TERRAN_VEHICLE_WEAPON, state) >= upgrade
+            and self.wa_upgrade_count(VirtualItem.TERRAN_VEHICLE_ARMOR, state) >= upgrade
+        )
+        has_ship_upgrades = (
+            self.wa_upgrade_count(VirtualItem.TERRAN_SHIP_WEAPON, state) >= upgrade
+            and self.wa_upgrade_count(VirtualItem.TERRAN_SHIP_ARMOR, state) >= upgrade
+        )
+        return (
+            (
+                has_vehicle_upgrades
+                and state.has_all(item_names.SIEGE_TANK, self.player)
+                and state.has_any((
+                    item_names.SIEGE_TANK_JUMP_JETS,
+                    item_names.SIEGE_TANK_SMART_SERVOS,
+                    item_names.SIEGE_TANK_MAELSTROM_ROUNDS,
+                ), self.player)
+            )
+            or (
+                has_ship_upgrades
+                and (
+                    state.has_all((item_names.BATTLECRUISER, item_names.BATTLECRUISER_ATX_LASER_BATTERY), self.player)
+                    or state.has_all((item_names.LIBERATOR, item_names.LIBERATOR_RAID_ARTILLERY), self.player)
+                    or state.has_all((item_names.RAVEN, item_names.RAVEN_HUNTER_SEEKER_WEAPON), self.player)
+                )
+            )
+            or (
+                self.advanced_tactics
+                and (
+                    state.has_all((item_names.VIKING, item_names.VIKING_SHREDDER_ROUNDS), self.player)
+                    or state.has_all((item_names.BANSHEE, item_names.BANSHEE_SHOCKWAVE_MISSILE_BATTERY), self.player)
+                    or (
+                        has_infantry_upgrades
+                        and state.has_all((
+                            item_names.GHOST,
+                            item_names.GHOST_RESOURCE_EFFICIENCY,
+                            # Note(mm): To account for snipe being weaker vs protoss
+                            item_names.GHOST_EMP_ROUNDS
+                        ), self.player)
+                    )
+                )
+            )
+        )
+
+    @series(LogicSeries.Detection, SC2Race.TERRAN, 0)
+    def terran_anti_cloak_self_splash(self, state: CollectionState) -> bool:
+        return (
+            self.terran_anti_cloak_tech(state)
+            or state.has_any((
+                item_names.PREDATOR,
+                item_names.SIEGE_TANK,  # barely works
+            ), self.player)
+            or state.has_all((item_names.REAPER, item_names.REAPER_G4_CLUSTERBOMB), self.player)
+            or state.has_all((item_names.VIKING, item_names.VIKING_SHREDDER_ROUNDS), self.player)
+            # Note(mm): Banshee Shockwave Missile Battery doesn't damage invisible
+        )
+
     @series(LogicSeries.Detection, SC2Race.TERRAN, 1)
     def terran_anti_cloak_tech(self, state: CollectionState) -> bool:
         return (
             self.terran_basic_detection(state)
-            or state.has_any((
-                item_names.PREDATOR,
-                item_names.EMPERORS_SHADOW,
-            ), self.player)
+            or state.has(item_names.EMPERORS_SHADOW, self.player)
             or state.has_all((item_names.GHOST, item_names.GHOST_EMP_ROUNDS), self.player)
-            or state.has_all((item_names.REAPER, item_names.REAPER_G4_CLUSTERBOMB), self.player)
-            or state.has_all((item_names.VIKING, item_names.VIKING_SHREDDER_ROUNDS), self.player)
-            # or state.has(item_names.SIEGE_TANK, self.player)  # This barely works
             # Note(mm): I can't believe sc2 spider mines don't trigger on cloaked units
-            # Note(mm): Banshee Shockwave Missile Battery doesn't damage invisible
         )
 
     @series(LogicSeries.Detection, SC2Race.TERRAN, 2)
@@ -424,12 +485,6 @@ class SC2Logic:
                 self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_TERRAN_SHIP_ARMOR, state),
             )
         return count
-
-    def terran_very_hard_mission_weapon_armor_level(self, state: CollectionState) -> bool:
-        return self.terran_army_weapon_armor_upgrade_min_level(state) >= self.get_very_hard_required_upgrade_level()
-
-    def terran_common_unit(self, state: CollectionState) -> bool:
-        return state.has_any(self.basic_terran_units, self.player)
 
     def terran_common_unit_or_advanced_tactics(self, state: CollectionState) -> bool:
         return self.advanced_tactics or self.terran_common_unit(state)
@@ -758,28 +813,6 @@ class SC2Logic:
             state.has_any((item_names.MEDIC, item_names.MEDIVAC, item_names.FIELD_RESPONSE_THETA), self.player)
             or (self.advanced_tactics
                 and state.has_all((item_names.RAVEN, item_names.RAVEN_BIO_MECHANICAL_REPAIR_DRONE), self.player)
-            )
-        )
-
-    def terran_base_trasher(self, state: CollectionState) -> bool:
-        """
-        Can attack heavily defended bases
-        """
-        if not self.terran_competent_comp(state):
-            return False
-        if not self.terran_very_hard_mission_weapon_armor_level(state):
-            return False
-        return (
-            state.has_all((item_names.SIEGE_TANK, item_names.SIEGE_TANK_JUMP_JETS), self.player)
-            or state.has_all({item_names.BATTLECRUISER, item_names.BATTLECRUISER_ATX_LASER_BATTERY}, self.player)
-            or state.has_all({item_names.LIBERATOR, item_names.LIBERATOR_RAID_ARTILLERY}, self.player)
-            or (
-                self.advanced_tactics
-                and (state.has_all({item_names.RAVEN, item_names.RAVEN_HUNTER_SEEKER_WEAPON}, self.player))
-                and (
-                    state.has_all({item_names.VIKING, item_names.VIKING_SHREDDER_ROUNDS}, self.player)
-                    or state.has_all({item_names.BANSHEE, item_names.BANSHEE_SHOCKWAVE_MISSILE_BATTERY}, self.player)
-                )
             )
         )
 
@@ -1537,6 +1570,17 @@ class SC2Logic:
             )
         )
 
+    @series(LogicSeries.Detection, SC2Race.PROTOSS, 0)
+    def protoss_anti_cloak_self_splash(self, state: CollectionState) -> bool:
+        return (
+            self.protoss_anti_cloak_tech(state)
+            or self.protoss_can_merge_archon(state)
+            or state.has_any((
+                item_names.COLOSSUS,
+                item_names.VANGUARD,
+            ), self.player)
+        )
+
     @series(LogicSeries.Detection, SC2Race.PROTOSS, 1)
     def protoss_anti_cloak_tech(self, state: CollectionState) -> bool:
         return (
@@ -1546,9 +1590,6 @@ class SC2Logic:
                 item_names.SIGNIFIER,  # Storm
                 item_names.ASCENDANT,  # Psi Orb
                 item_names.DISRUPTOR,
-                # item_names.ARCHON,  # Target self
-                # item_names.COLOSSUS,  # Target self
-                # item_names.VANGUARD,  # Target self
             ), self.player)
         )
 
@@ -2710,7 +2751,7 @@ class SC2Logic:
         return (
             self.terran_the_dig_requirement(state)
             and self.terran_beats_protoss_deathball(state)
-            and self.terran_base_trasher(state)
+            and self.terran_ultimate_comp(state)
         )
 
     def zerg_the_dig_start_requirement(self, state: CollectionState) -> bool:
@@ -3601,7 +3642,7 @@ class SC2Logic:
         )
 
     def terran_the_reckoning_requirement(self, state: CollectionState) -> bool:
-        return self.terran_base_trasher(state)
+        return self.terran_ultimate_comp(state)
 
     def terran_the_reckoning_odin_speedrun(self, state: CollectionState) -> bool:
         return self.terran_the_reckoning_requirement(state) and self.terran_power_rating(state) >= 10
@@ -3693,7 +3734,7 @@ class SC2Logic:
     def terran_dark_whispers_zerg_base(self, state: CollectionState) -> bool:
         return (
             self.terran_competent_comp(state)
-            and self.terran_base_trasher(state)
+            and self.terran_ultimate_comp(state)
             and self.terran_power_rating(state) >= 6
         )
 
@@ -3926,7 +3967,7 @@ class SC2Logic:
 
     def terran_brothers_in_arms_speedrun(self, state: CollectionState) -> bool:
         return (
-            self.terran_base_trasher(state)
+            self.terran_ultimate_comp(state)
             and self.terran_power_rating(state) >= 8
         )
 
@@ -4822,7 +4863,7 @@ class SC2Logic:
         return (
             self.terran_sudden_strike_requirement(state)
             and self.terran_competent_comp(state)
-            and self.terran_base_trasher(state)
+            and self.terran_ultimate_comp(state)
             and self.terran_power_rating(state) >= 8
         )
 
