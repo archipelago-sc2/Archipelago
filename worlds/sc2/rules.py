@@ -1587,8 +1587,6 @@ class SC2Logic:
     def protoss_competent_comp(self, state: CollectionState, upgrade: int = 1) -> bool:
         if self.protoss_fleet(state, upgrade) and self.protoss_mineral_dump(state):
             return True
-        if self.protoss_deathball(state):
-            return True
         has_ground_upgrades = (
             self.wa_upgrade_count(VirtualItem.PROTOSS_GROUND_WEAPON, state) >= upgrade
             and self.wa_upgrade_count(VirtualItem.PROTOSS_GROUND_ARMOR, state) >= upgrade
@@ -1649,6 +1647,14 @@ class SC2Logic:
         if core_unit and support_unit:
             return True
         return False
+
+    @series(LogicSeries.PowerComp, SC2Race.PROTOSS, 3)
+    def protoss_ultimate_comp(self, state: CollectionState, upgrade: int = 2) -> bool:
+        return (
+            self.protoss_competent_comp(state, upgrade)
+            and self.protoss_hybrid_counter(state, upgrade)
+            and self.protoss_basic_splash(state)
+        )
 
     @series(LogicSeries.Detection, SC2Race.PROTOSS, 0)
     def protoss_anti_cloak_self_splash(self, state: CollectionState) -> bool:
@@ -1757,9 +1763,6 @@ class SC2Logic:
         if self.advanced_tactics:
             defense_score += 2
         return defense_score
-
-    def protoss_common_unit(self, state: CollectionState) -> bool:
-        return state.has_any(self.basic_protoss_units, self.player)
 
     def protoss_common_unit_or_advanced_tactics(self, state: CollectionState) -> bool:
         return self.advanced_tactics or self.protoss_common_unit(state)
@@ -1955,7 +1958,7 @@ class SC2Logic:
 
     def protoss_deathball_or_advanced_competent_comp(self, state: CollectionState) -> bool:
         return (
-            self.protoss_deathball(state)
+            self.protoss_ultimate_comp(state)
             or (self.advanced_tactics and self.protoss_competent_comp(state))
         )
 
@@ -2020,32 +2023,92 @@ class SC2Logic:
             and self.wa_upgrade_count(VirtualItem.PROTOSS_AIR_WEAPON, state) >= upgrade
         )
 
-    def protoss_hybrid_counter(self, state: CollectionState) -> bool:
+    def protoss_hybrid_counter(self, state: CollectionState, upgrade: int = 0) -> bool:
         """
         Ground Hybrids
         """
-        return (
-            state.has_any(
-                {
-                    item_names.ANNIHILATOR,
-                    item_names.ASCENDANT,
+        has_air_upgrades = (
+            self.wa_upgrade_count(VirtualItem.PROTOSS_AIR_ARMOR, state) >= upgrade
+            and self.wa_upgrade_count(VirtualItem.PROTOSS_AIR_WEAPON, state) >= upgrade
+        )
+        air_comp = (
+            has_air_upgrades
+            and (
+                state.has_any((
                     item_names.TEMPEST,
                     item_names.CARRIER,
                     item_names.TRIREME,
                     item_names.VOID_RAY,
-                    item_names.WRATHWALKER,
-                },
-                self.player,
+                ), self.player)
+                or (
+                    self.advanced_tactics
+                    and state.has_all((
+                        item_names.OPPRESSOR,
+                        item_names.OPPRESSOR_VULCAN_BLASTER
+                    ), self.player)
+                    and has_air_upgrades
+                )
             )
+        )
+        if air_comp:
+            return True
+        has_ground_upgrades = (
+            self.wa_upgrade_count(VirtualItem.PROTOSS_GROUND_ARMOR, state) >= upgrade
+            and self.wa_upgrade_count(VirtualItem.PROTOSS_GROUND_WEAPON, state) >= upgrade
+        )
+        if not has_ground_upgrades:
+            return False
+        return (
+            state.has_any((
+                item_names.ANNIHILATOR,
+                item_names.ASCENDANT,
+                item_names.WRATHWALKER,
+            ), self.player)
             or state.has_all((item_names.VANGUARD, item_names.VANGUARD_FUSION_MORTARS), self.player)
             or (
                 (state.has(item_names.IMMORTAL, self.player) or self.advanced_tactics)
-                and (state.has_any({item_names.STALKER, item_names.DRAGOON, item_names.ADEPT, item_names.INSTIGATOR, item_names.SLAYER}, self.player))
+                and (
+                    state.has_any((
+                        item_names.STALKER,
+                        item_names.DRAGOON,
+                        item_names.INSTIGATOR,
+                        item_names.SLAYER,
+                    ), self.player)
+                    or state.has_all((item_names.ADEPT, item_names.ADEPT_DISRUPTIVE_TRANSFER), self.player)
+                )
             )
-            or (self.advanced_tactics and state.has_all((item_names.OPPRESSOR, item_names.OPPRESSOR_VULCAN_BLASTER), self.player))
         )
 
-    def protoss_basic_splash(self, state: CollectionState) -> bool:
+    def protoss_basic_splash(self, state: CollectionState, upgrade: int = 0) -> bool:
+        has_air_upgrades = (
+            self.wa_upgrade_count(VirtualItem.PROTOSS_AIR_ARMOR, state) >= upgrade
+            and self.wa_upgrade_count(VirtualItem.PROTOSS_AIR_WEAPON, state) >= upgrade
+        )
+        has_ground_upgrades = (
+            self.wa_upgrade_count(VirtualItem.PROTOSS_GROUND_ARMOR, state) >= upgrade
+            and self.wa_upgrade_count(VirtualItem.PROTOSS_GROUND_WEAPON, state) >= upgrade
+        )
+        air_comp = (
+            has_air_upgrades
+            and (
+                state.has_any((
+                    item_names.DAWNBRINGER,
+                ), self.player)
+                or (
+                    state.has(item_names.DESTROYER, self.player)
+                    and (
+                        state.has_any((
+                            item_names.DESTROYER_REFORGED_BLOODSHARD_CORE,
+                            item_names.DESTROYER_RESOURCE_EFFICIENCY,
+                        ), self.player)
+                    )
+                )
+            )
+        )
+        if air_comp:
+            return True
+        if not has_ground_upgrades:
+            return False
         return (
             state.has_any((
                 item_names.COLOSSUS,
@@ -2054,22 +2117,14 @@ class SC2Logic:
                 item_names.SIGNIFIER,
                 item_names.REAVER,
                 item_names.ASCENDANT,
-                item_names.DAWNBRINGER,
             ), self.player)
             or state.has_all((item_names.ZEALOT, item_names.ZEALOT_WHIRLWIND), self.player)
             or (
-                state.has_all(
-                    (item_names.DARK_TEMPLAR, item_names.DARK_TEMPLAR_LESSER_SHADOW_FURY, item_names.DARK_TEMPLAR_GREATER_SHADOW_FURY), self.player
-                )
-            )
-            or (
-                state.has(item_names.DESTROYER, self.player)
-                and (
-                    state.has_any((
-                        item_names.DESTROYER_REFORGED_BLOODSHARD_CORE,
-                        item_names.DESTROYER_RESOURCE_EFFICIENCY,
-                    ), self.player)
-                )
+                state.has_all((
+                    item_names.DARK_TEMPLAR,
+                    item_names.DARK_TEMPLAR_LESSER_SHADOW_FURY,
+                    item_names.DARK_TEMPLAR_GREATER_SHADOW_FURY,
+                ), self.player)
             )
         )
 
@@ -2096,15 +2151,6 @@ class SC2Logic:
         return (
             self.protoss_competent_comp(state)
             # todo(mm): Make this unit-specific within the competent comp function tree
-            and self.protoss_army_weapon_armor_upgrade_min_level(state) >= 2
-        )
-
-    def protoss_deathball(self, state: CollectionState) -> bool:
-        return (
-            self.protoss_common_unit(state)
-            and self.protoss_competent_anti_air(state)
-            and self.protoss_hybrid_counter(state)
-            and self.protoss_basic_splash(state)
             and self.protoss_army_weapon_armor_upgrade_min_level(state) >= 2
         )
 
@@ -2823,7 +2869,7 @@ class SC2Logic:
             and self.protoss_defense_rating(state, False) >= 6
             and self.protoss_common_unit(state)
             and self.protoss_anti_armor_anti_air(state)
-            and self.protoss_deathball(state)
+            and self.protoss_ultimate_comp(state)
         )
 
     def terran_moebius_factor_can_rescue(self, state: CollectionState) -> bool:
@@ -3061,7 +3107,7 @@ class SC2Logic:
         return (
             self.zealot_sentry_slayer_start(state)
             and self.protoss_repair_odin(state)
-            and (self.protoss_deathball(state) or self.protoss_fleet(state))
+            and (self.protoss_ultimate_comp(state) or self.protoss_fleet(state))
         )
 
     def zerg_repair_odin(self, state: CollectionState) -> bool:
@@ -3625,7 +3671,7 @@ class SC2Logic:
         return self.zerg_competent_comp(state) and self.zerg_competent_anti_air(state) and self.zerg_power_rating(state) >= 8
 
     def protoss_planetfall_requirement(self, state: CollectionState) -> bool:
-        return self.protoss_deathball(state) and self.protoss_power_rating(state) >= 8
+        return self.protoss_ultimate_comp(state) and self.protoss_power_rating(state) >= 8
 
     def zerg_the_reckoning_requirement(self, state: CollectionState) -> bool:
         if not (self.zerg_power_rating(state) >= 6 or self.basic_kerrigan(state, False)):
@@ -3663,7 +3709,7 @@ class SC2Logic:
     def protoss_the_reckoning_requirement(self, state: CollectionState) -> bool:
         return (
             self.protoss_very_hard_mission_weapon_armor_level(state)
-            and self.protoss_deathball(state)
+            and self.protoss_ultimate_comp(state)
             and (not self.take_over_ai_allies or (self.terran_competent_comp(state) and self.terran_very_hard_mission_weapon_armor_level(state)))
         )
 
@@ -3742,7 +3788,7 @@ class SC2Logic:
         )
 
     def protoss_dark_whispers_zerg_base(self, state: CollectionState) -> bool:
-        return self.protoss_deathball(state) and (self.protoss_power_rating(state) >= 6)
+        return self.protoss_ultimate_comp(state) and (self.protoss_power_rating(state) >= 6)
 
     def terran_dark_whispers_zerg_base(self, state: CollectionState) -> bool:
         return (
@@ -3974,7 +4020,7 @@ class SC2Logic:
     def protoss_brothers_in_arms_speedrun(self, state: CollectionState) -> bool:
         return (
             self.protoss_brothers_in_arms_requirement(state)
-            and self.protoss_deathball(state)
+            and self.protoss_ultimate_comp(state)
             and self.protoss_power_rating(state) >= 8
         )
 
@@ -4110,7 +4156,7 @@ class SC2Logic:
         return self.protoss_competent_comp(state) and self.protoss_power_rating(state) >= 10
 
     def protoss_temple_of_unification_bases(self, state: CollectionState) -> bool:
-        return self.protoss_temple_of_unification_requirement(state) and self.protoss_deathball(state)
+        return self.protoss_temple_of_unification_requirement(state) and self.protoss_ultimate_comp(state)
 
     def protoss_harbinger_of_oblivion_requirement(self, state: CollectionState) -> bool:
         return (
@@ -4155,7 +4201,7 @@ class SC2Logic:
 
     def protoss_unsealing_the_past_requirement(self, state: CollectionState) -> bool:
         return (
-            self.protoss_deathball(state)
+            self.protoss_ultimate_comp(state)
             and self.protoss_power_rating(state) >= 6
         )
 
@@ -4249,7 +4295,7 @@ class SC2Logic:
         )
 
     def protoss_steps_of_the_rite_requirement(self, state: CollectionState) -> bool:
-        return self.protoss_deathball(state) or self.protoss_fleet(state)
+        return self.protoss_ultimate_comp(state) or self.protoss_fleet(state)
 
     def terran_steps_of_the_rite_requirement(self, state: CollectionState) -> bool:
         return (
@@ -4310,7 +4356,7 @@ class SC2Logic:
         )
 
     def protoss_rak_shir_requirement(self, state: CollectionState) -> bool:
-        return (self.protoss_deathball(state) or self.protoss_fleet(state)) and self.protoss_power_rating(state) >= 10
+        return (self.protoss_ultimate_comp(state) or self.protoss_fleet(state)) and self.protoss_power_rating(state) >= 10
 
     def protoss_templars_charge_requirement(self, state: CollectionState) -> bool:
         return (
@@ -4386,7 +4432,7 @@ class SC2Logic:
                 and self.protoss_army_weapon_armor_upgrade_min_level(state) >= 2
             )
             or (
-                self.protoss_deathball(state)
+                self.protoss_ultimate_comp(state)
                 and (
                     state.has(item_names.SOA_TIME_STOP, self.player)
                     or (self.advanced_tactics
@@ -4667,7 +4713,7 @@ class SC2Logic:
                     )
                 )
                 and self.terran_competent_anti_air(state)
-                and self.protoss_deathball(state)
+                and self.protoss_ultimate_comp(state)
                 and self.zerg_competent_comp(state)
             )
         else:
@@ -4706,7 +4752,7 @@ class SC2Logic:
         if self.take_over_ai_allies:
             return (
                 self.terran_beats_protoss_deathball(state) and self.zerg_competent_comp(state)
-                and (self.protoss_deathball(state) or self.protoss_fleet(state))
+                and (self.protoss_ultimate_comp(state) or self.protoss_fleet(state))
             )
         else:
             return self.terran_beats_protoss_deathball(state)
@@ -4727,10 +4773,10 @@ class SC2Logic:
         if self.take_over_ai_allies:
             return (
                 self.terran_beats_protoss_deathball(state) and self.zerg_competent_comp(state)
-                and (self.protoss_deathball(state) or self.protoss_fleet(state))
+                and (self.protoss_ultimate_comp(state) or self.protoss_fleet(state))
             )
         else:
-            return self.protoss_deathball(state) or self.protoss_fleet(state)
+            return self.protoss_ultimate_comp(state) or self.protoss_fleet(state)
 
     # endregion LotV Missions
 
@@ -4922,7 +4968,7 @@ class SC2Logic:
     def protoss_sudden_strike_zerg_base(self, state: CollectionState) -> bool:
         return (
             self.protoss_sudden_strike_requirement(state)
-            and self.protoss_deathball(state)
+            and self.protoss_ultimate_comp(state)
             and self.protoss_power_rating(state) >= 6
         )
 
@@ -5215,7 +5261,7 @@ class SC2Logic:
             )
         else:
             return (
-                self.protoss_deathball(state)
+                self.protoss_ultimate_comp(state)
                 and self.protoss_defense_rating(state, True) >= 5
                 and self.protoss_power_rating(state) >= 5
             )
@@ -5547,7 +5593,7 @@ class SC2Logic:
 
     def protoss_end_game_requirement(self, state: CollectionState) -> bool:
         return (
-            (self.protoss_deathball(state) or self.protoss_fleet(state))
+            (self.protoss_ultimate_comp(state) or self.protoss_fleet(state))
             and self.protoss_competent_anti_air(state)
             and self.protoss_very_hard_mission_weapon_armor_level(state)
             and self.protoss_mobile_detector(state)
