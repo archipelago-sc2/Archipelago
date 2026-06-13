@@ -413,6 +413,153 @@ class SC2Logic:
             )
         )
 
+    @series(LogicSeries.AntiAir, SC2Race.TERRAN, 1)
+    def terran_any_anti_air(self, state: CollectionState) -> bool:
+        return (
+            state.has_any(
+                (
+                    # Barracks
+                    item_names.MARINE,
+                    item_names.WAR_PIGS,
+                    item_names.SON_OF_KORHAL,
+                    item_names.DOMINION_TROOPER,
+                    item_names.GHOST,
+                    item_names.SPECTRE,
+                    item_names.EMPERORS_SHADOW,
+                    # Factory
+                    item_names.GOLIATH,
+                    item_names.SPARTAN_COMPANY,
+                    item_names.BULWARK_COMPANY,
+                    item_names.CYCLONE,
+                    item_names.WIDOW_MINE,
+                    item_names.THOR,
+                    item_names.JOTUN,
+                    item_names.BLACKHAMMER,
+                    # Ships
+                    item_names.WRAITH,
+                    item_names.WINGED_NIGHTMARES,
+                    item_names.NIGHT_HAWK,
+                    item_names.VIKING,
+                    item_names.HELS_ANGELS,
+                    item_names.SKY_FURY,
+                    item_names.LIBERATOR,
+                    item_names.MIDNIGHT_RIDERS,
+                    item_names.EMPERORS_GUARDIAN,
+                    item_names.VALKYRIE,
+                    item_names.BRYNHILDS,
+                    item_names.BATTLECRUISER,
+                    item_names.JACKSONS_REVENGE,
+                    item_names.PRIDE_OF_AUGUSTGRAD,
+                    item_names.RAVEN,
+                    # Buildings
+                    item_names.MISSILE_TURRET,
+                ),
+                self.player,
+            )
+            or state.has_all((item_names.REAPER, item_names.REAPER_JET_PACK_OVERDRIVE), self.player)
+            or state.has_all((item_names.PLANETARY_FORTRESS, item_names.PLANETARY_FORTRESS_IBIKS_TRACKING_SCANNERS), self.player)
+            or (
+                state.has(item_names.MEDIVAC, self.player)
+                and state.has_any((item_names.SIEGE_TANK, item_names.SIEGE_BREAKERS, item_names.SHOCK_DIVISION), self.player)
+                and state.count(item_names.SIEGE_TANK_PROGRESSIVE_TRANSPORT_HOOK, self.player) >= 2
+            )
+        )
+
+    def terran_moderate_anti_air(self, state: CollectionState) -> bool:
+        return self.terran_competent_anti_air(state) or (
+            state.has_any(
+                (
+                    item_names.MARINE,
+                    item_names.DOMINION_TROOPER,
+                    item_names.THOR,
+                    item_names.CYCLONE,
+                    item_names.BATTLECRUISER,
+                    item_names.WRAITH,
+                    item_names.VALKYRIE,
+                ),
+                self.player,
+            )
+            or (
+                state.has_all((item_names.MEDIVAC, item_names.SIEGE_TANK), self.player)
+                and state.count(item_names.SIEGE_TANK_PROGRESSIVE_TRANSPORT_HOOK, self.player) >= 2
+            )
+            or (self.advanced_tactics and state.has_any((item_names.GHOST, item_names.SPECTRE, item_names.LIBERATOR), self.player))
+        )
+
+    @series(LogicSeries.AntiAir, SC2Race.TERRAN, 2)
+    def terran_basic_anti_air(self, state: CollectionState) -> bool:
+        """
+        Basic AA to deal with few air units
+        """
+        return (
+            state.has_any((
+                item_names.MISSILE_TURRET,
+                item_names.WAR_PIGS,
+                item_names.SPARTAN_COMPANY,
+                item_names.HELS_ANGELS,
+                item_names.WINGED_NIGHTMARES,
+                item_names.BRYNHILDS,
+                item_names.SKY_FURY,
+                item_names.SON_OF_KORHAL,
+                item_names.BULWARK_COMPANY,
+            ), self.player)
+            or self.terran_moderate_anti_air(state)
+            or (self.advanced_tactics
+                and (
+                    state.has_any((
+                        item_names.WIDOW_MINE,
+                        item_names.PRIDE_OF_AUGUSTGRAD,
+                        item_names.BLACKHAMMER,
+                        item_names.EMPERORS_SHADOW,
+                        item_names.EMPERORS_GUARDIAN,
+                        item_names.NIGHT_HAWK,
+                    ), self.player)
+                )
+            )
+        )
+
+    def terran_air_anti_air(self, state: CollectionState) -> bool:
+        """
+        Air-to-air
+        """
+        return (
+            state.has(item_names.VIKING, self.player)
+            or state.has_all({item_names.WRAITH, item_names.WRAITH_ADVANCED_LASER_TECHNOLOGY}, self.player)
+            or state.has_all({item_names.BATTLECRUISER, item_names.BATTLECRUISER_ATX_LASER_BATTERY}, self.player)
+            or (
+                self.advanced_tactics
+                and state.has_any({item_names.WRAITH, item_names.VALKYRIE, item_names.BATTLECRUISER}, self.player)
+                and self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_TERRAN_SHIP_WEAPON, state) >= 2
+            )
+        )
+
+    def terran_competent_ground_to_air(self, state: CollectionState) -> bool:
+        """
+        Ground-to-air
+        """
+        return (
+            state.has(item_names.GOLIATH, self.player)
+            or (
+                state.has_any({item_names.MARINE, item_names.DOMINION_TROOPER}, self.player)
+                and self.terran_bio_heal(state)
+                and self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_TERRAN_INFANTRY_WEAPON, state) >= 2
+            )
+            or (
+                self.advanced_tactics
+                and (
+                    state.has(item_names.CYCLONE, self.player)
+                    or state.has_all((item_names.THOR, item_names.THOR_PROGRESSIVE_HIGH_IMPACT_PAYLOAD), self.player)
+                )
+            )
+        )
+
+    @series(LogicSeries.AntiAir, SC2Race.TERRAN, 3)
+    def terran_competent_anti_air(self, state: CollectionState) -> bool:
+        """
+        Good AA unit
+        """
+        return self.terran_competent_ground_to_air(state) or self.terran_air_anti_air(state)
+
     @series(LogicSeries.Detection, SC2Race.TERRAN, 0)
     def terran_anti_cloak_self_splash(self, state: CollectionState) -> bool:
         return (
@@ -528,173 +675,8 @@ class SC2Logic:
             )
         )
 
-    def terran_air_anti_air(self, state: CollectionState) -> bool:
-        """
-        Air-to-air
-        """
-        return (
-            state.has(item_names.VIKING, self.player)
-            or state.has_all({item_names.WRAITH, item_names.WRAITH_ADVANCED_LASER_TECHNOLOGY}, self.player)
-            or state.has_all({item_names.BATTLECRUISER, item_names.BATTLECRUISER_ATX_LASER_BATTERY}, self.player)
-            or (
-                self.advanced_tactics
-                and state.has_any({item_names.WRAITH, item_names.VALKYRIE, item_names.BATTLECRUISER}, self.player)
-                and self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_TERRAN_SHIP_WEAPON, state) >= 2
-            )
-        )
-
-    def terran_any_air_unit(self, state: CollectionState) -> bool:
-        return state.has_any((
-            item_names.VIKING,
-            item_names.MEDIVAC,
-            item_names.RAVEN,
-            item_names.BANSHEE,
-            item_names.SCIENCE_VESSEL,
-            item_names.BATTLECRUISER,
-            item_names.WRAITH,
-            item_names.HERCULES,
-            item_names.LIBERATOR,
-            item_names.VALKYRIE,
-            item_names.SKY_FURY,
-            item_names.NIGHT_HAWK,
-            item_names.EMPERORS_GUARDIAN,
-            item_names.NIGHT_WOLF,
-            item_names.PRIDE_OF_AUGUSTGRAD,
-        ), self.player)
-
-    def terran_competent_ground_to_air(self, state: CollectionState) -> bool:
-        """
-        Ground-to-air
-        """
-        return (
-            state.has(item_names.GOLIATH, self.player)
-            or (
-                state.has_any({item_names.MARINE, item_names.DOMINION_TROOPER}, self.player)
-                and self.terran_bio_heal(state)
-                and self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_TERRAN_INFANTRY_WEAPON, state) >= 2
-            )
-            or (
-                self.advanced_tactics
-                and (
-                    state.has(item_names.CYCLONE, self.player)
-                    or state.has_all((item_names.THOR, item_names.THOR_PROGRESSIVE_HIGH_IMPACT_PAYLOAD), self.player)
-                )
-            )
-        )
-
-    @series(LogicSeries.AntiAir, SC2Race.TERRAN, 3)
-    def terran_competent_anti_air(self, state: CollectionState) -> bool:
-        """
-        Good AA unit
-        """
-        return self.terran_competent_ground_to_air(state) or self.terran_air_anti_air(state)
-
-    @series(LogicSeries.AntiAir, SC2Race.TERRAN, 1)
-    def terran_any_anti_air(self, state: CollectionState) -> bool:
-        return (
-            state.has_any(
-                (
-                    # Barracks
-                    item_names.MARINE,
-                    item_names.WAR_PIGS,
-                    item_names.SON_OF_KORHAL,
-                    item_names.DOMINION_TROOPER,
-                    item_names.GHOST,
-                    item_names.SPECTRE,
-                    item_names.EMPERORS_SHADOW,
-                    # Factory
-                    item_names.GOLIATH,
-                    item_names.SPARTAN_COMPANY,
-                    item_names.BULWARK_COMPANY,
-                    item_names.CYCLONE,
-                    item_names.WIDOW_MINE,
-                    item_names.THOR,
-                    item_names.JOTUN,
-                    item_names.BLACKHAMMER,
-                    # Ships
-                    item_names.WRAITH,
-                    item_names.WINGED_NIGHTMARES,
-                    item_names.NIGHT_HAWK,
-                    item_names.VIKING,
-                    item_names.HELS_ANGELS,
-                    item_names.SKY_FURY,
-                    item_names.LIBERATOR,
-                    item_names.MIDNIGHT_RIDERS,
-                    item_names.EMPERORS_GUARDIAN,
-                    item_names.VALKYRIE,
-                    item_names.BRYNHILDS,
-                    item_names.BATTLECRUISER,
-                    item_names.JACKSONS_REVENGE,
-                    item_names.PRIDE_OF_AUGUSTGRAD,
-                    item_names.RAVEN,
-                    # Buildings
-                    item_names.MISSILE_TURRET,
-                ),
-                self.player,
-            )
-            or state.has_all((item_names.REAPER, item_names.REAPER_JET_PACK_OVERDRIVE), self.player)
-            or state.has_all((item_names.PLANETARY_FORTRESS, item_names.PLANETARY_FORTRESS_IBIKS_TRACKING_SCANNERS), self.player)
-            or (
-                state.has(item_names.MEDIVAC, self.player)
-                and state.has_any((item_names.SIEGE_TANK, item_names.SIEGE_BREAKERS, item_names.SHOCK_DIVISION), self.player)
-                and state.count(item_names.SIEGE_TANK_PROGRESSIVE_TRANSPORT_HOOK, self.player) >= 2
-            )
-        )
-
     def terran_any_anti_air_or_science_vessels(self, state: CollectionState) -> bool:
         return self.terran_any_anti_air(state) or state.has(item_names.SCIENCE_VESSEL, self.player)
-
-    def terran_moderate_anti_air(self, state: CollectionState) -> bool:
-        return self.terran_competent_anti_air(state) or (
-            state.has_any(
-                (
-                    item_names.MARINE,
-                    item_names.DOMINION_TROOPER,
-                    item_names.THOR,
-                    item_names.CYCLONE,
-                    item_names.BATTLECRUISER,
-                    item_names.WRAITH,
-                    item_names.VALKYRIE,
-                ),
-                self.player,
-            )
-            or (
-                state.has_all((item_names.MEDIVAC, item_names.SIEGE_TANK), self.player)
-                and state.count(item_names.SIEGE_TANK_PROGRESSIVE_TRANSPORT_HOOK, self.player) >= 2
-            )
-            or (self.advanced_tactics and state.has_any((item_names.GHOST, item_names.SPECTRE, item_names.LIBERATOR), self.player))
-        )
-
-    def terran_basic_anti_air(self, state: CollectionState) -> bool:
-        """
-        Basic AA to deal with few air units
-        """
-        return (
-            state.has_any((
-                item_names.MISSILE_TURRET,
-                item_names.WAR_PIGS,
-                item_names.SPARTAN_COMPANY,
-                item_names.HELS_ANGELS,
-                item_names.WINGED_NIGHTMARES,
-                item_names.BRYNHILDS,
-                item_names.SKY_FURY,
-                item_names.SON_OF_KORHAL,
-                item_names.BULWARK_COMPANY,
-            ), self.player)
-            or self.terran_moderate_anti_air(state)
-            or (self.advanced_tactics
-                and (
-                    state.has_any((
-                        item_names.WIDOW_MINE,
-                        item_names.PRIDE_OF_AUGUSTGRAD,
-                        item_names.BLACKHAMMER,
-                        item_names.EMPERORS_SHADOW,
-                        item_names.EMPERORS_GUARDIAN,
-                        item_names.NIGHT_HAWK,
-                    ), self.player)
-                )
-            )
-        )
 
     def terran_defense_rating(self, state: CollectionState, zerg_enemy: bool, air_enemy: bool = True) -> int:
         """
@@ -1008,36 +990,6 @@ class SC2Logic:
             )
         )
 
-    @series(LogicSeries.Detection, SC2Race.ZERG, 1)
-    def zerg_anti_cloak_tech(self, state: CollectionState) -> bool:
-        return (
-            self.zerg_basic_detection(state)
-            or self.morph_ravager(state)
-            or self.morph_baneling(state)
-            or state.has_any((
-                item_names.DEFILER,  # Plague
-                item_names.INFESTOR,  # Fungal Growth
-                item_names.BULLFROG,
-            ), self.player)
-        )
-
-    @series(LogicSeries.Detection, SC2Race.ZERG, 2)
-    def zerg_basic_detection(self, state: CollectionState) -> bool:
-        return (
-            self.zerg_mobile_detector(state)
-            or state.has_any((
-                item_names.SPORE_CRAWLER,
-                item_names.INFESTED_MISSILE_TURRET,
-            ), self.player)
-        )
-
-    @series(LogicSeries.Detection, SC2Race.ZERG, 3)
-    def zerg_mobile_detector(self, state: CollectionState) -> bool:
-        return (
-            state.has_any((item_names.OVERSEER, item_names.BROOD_QUEEN), self.player)
-            or (self.morph_lurker(state) and state.has(item_names.LURKER_SONAR_GLANDS, self.player))
-        )
-
     @series(LogicSeries.AntiAir, SC2Race.ZERG, 1)
     def zerg_any_anti_air(self, state: CollectionState) -> bool:
         return (
@@ -1179,7 +1131,9 @@ class SC2Logic:
                         item_names.BROOD_QUEEN,
                     ), self.player)
                     or (state.has_all((
-                            item_names.INFESTED_MARINE, item_names.INFESTED_MARINE_ENDURING_STRAIN,
+                            item_names.INFESTED_MARINE,
+                            item_names.INFESTED_MARINE_ENDURING_STRAIN,
+                            item_names.INFESTED_MARINE_LEG_ENHANCEMENTS,
                         ), self.player)
                         and ranged_attack_upgrades >= 1
                         and self.spread_creep(state)
@@ -1202,6 +1156,36 @@ class SC2Logic:
                     ), self.player)
                 )
             )
+        )
+
+    @series(LogicSeries.Detection, SC2Race.ZERG, 1)
+    def zerg_anti_cloak_tech(self, state: CollectionState) -> bool:
+        return (
+            self.zerg_basic_detection(state)
+            or self.morph_ravager(state)
+            or self.morph_baneling(state)
+            or state.has_any((
+                item_names.DEFILER,  # Plague
+                item_names.INFESTOR,  # Fungal Growth
+                item_names.BULLFROG,
+            ), self.player)
+        )
+
+    @series(LogicSeries.Detection, SC2Race.ZERG, 2)
+    def zerg_basic_detection(self, state: CollectionState) -> bool:
+        return (
+            self.zerg_mobile_detector(state)
+            or state.has_any((
+                item_names.SPORE_CRAWLER,
+                item_names.INFESTED_MISSILE_TURRET,
+            ), self.player)
+        )
+
+    @series(LogicSeries.Detection, SC2Race.ZERG, 3)
+    def zerg_mobile_detector(self, state: CollectionState) -> bool:
+        return (
+            state.has_any((item_names.OVERSEER, item_names.BROOD_QUEEN), self.player)
+            or (self.morph_lurker(state) and state.has(item_names.LURKER_SONAR_GLANDS, self.player))
         )
 
     def zerg_power_rating(self, state: CollectionState) -> int:
@@ -1772,6 +1756,170 @@ class SC2Logic:
             and self.protoss_basic_splash(state)
         )
 
+    @series(LogicSeries.AntiAir, SC2Race.PROTOSS, 1)
+    def protoss_any_anti_air_unit(self, state: CollectionState) -> bool:
+        return (
+            state.has_any(
+                (
+                    # Gateway
+                    item_names.STALKER,
+                    item_names.SLAYER,
+                    item_names.INSTIGATOR,
+                    item_names.DRAGOON,
+                    item_names.ADEPT,
+                    item_names.SENTRY,
+                    item_names.ENERGIZER,
+                    item_names.HIGH_TEMPLAR,
+                    item_names.SIGNIFIER,
+                    item_names.ASCENDANT,
+                    item_names.DARK_ARCHON,
+                    # Robo
+                    item_names.ANNIHILATOR,
+                    # Stargate
+                    item_names.PHOENIX,
+                    item_names.MIRAGE,
+                    item_names.CORSAIR,
+                    item_names.SCOUT,
+                    item_names.MISTWING,
+                    item_names.CALADRIUS,
+                    item_names.OPPRESSOR,
+                    item_names.ARBITER,
+                    item_names.VOID_RAY,
+                    item_names.DESTROYER,
+                    item_names.PULSAR,
+                    item_names.CARRIER,
+                    item_names.TRIREME,
+                    item_names.SKYLORD,
+                    item_names.TEMPEST,
+                    item_names.MOTHERSHIP_TALDARIM,
+                    # Nexus
+                    item_names.MOTHERSHIP_AIUR,
+                    item_names.MOTHERSHIP_PURIFIER,
+                    # Buildings
+                    item_names.NEXUS_OVERCHARGE,
+                    item_names.PHOTON_CANNON,
+                    item_names.KHAYDARIN_MONOLITH,
+                ),
+                self.player,
+            )
+            or state.has_all((item_names.SUPPLICANT, item_names.SUPPLICANT_ZENITH_PITCH), self.player)
+            or state.has_all((item_names.WARP_PRISM, item_names.WARP_PRISM_PHASE_BLASTER), self.player)
+            or state.has_all((item_names.WRATHWALKER, item_names.WRATHWALKER_AERIAL_TRACKING), self.player)
+            or state.has_all((item_names.DISRUPTOR, item_names.DISRUPTOR_PERFECTED_POWER), self.player)
+            or state.has_all((item_names.IMMORTAL, item_names.IMMORTAL_ADVANCED_TARGETING), self.player)
+            or state.has_all((item_names.SKIRMISHER, item_names.SKIRMISHER_PEER_CONTEMPT), self.player)
+            or (
+                state.has(item_names.DARK_TEMPLAR, self.player)
+                and state.has_any((item_names.DARK_TEMPLAR_DARK_ARCHON_MELD, item_names.DARK_TEMPLAR_ARCHON_MERGE), self.player)
+            )
+        )
+
+    @series(LogicSeries.AntiAir, SC2Race.PROTOSS, 2)
+    def protoss_basic_anti_air(self, state: CollectionState) -> bool:
+        return (
+            self.protoss_competent_anti_air(state)
+            or state.has_any(
+                {
+                    item_names.PHOENIX,
+                    item_names.MIRAGE,
+                    item_names.CORSAIR,
+                    item_names.CARRIER,
+                    item_names.TRIREME,
+                    item_names.SKYLORD,
+                    item_names.SCOUT,
+                    item_names.DARK_ARCHON,
+                    item_names.MOTHERSHIP_TALDARIM,
+                    item_names.MOTHERSHIP_PURIFIER,
+                    item_names.MISTWING,
+                    item_names.CALADRIUS,
+                    item_names.OPPRESSOR,
+                    item_names.DRAGOON,
+                },
+                self.player,
+            )
+            or state.has_all({item_names.WRATHWALKER, item_names.WRATHWALKER_AERIAL_TRACKING}, self.player)
+            or state.has_all({item_names.WARP_PRISM, item_names.WARP_PRISM_PHASE_BLASTER}, self.player)
+            or (self.advanced_tactics
+                and state.has_any((
+                    item_names.HIGH_TEMPLAR,
+                    item_names.SIGNIFIER,
+                    item_names.SENTRY,
+                    item_names.ENERGIZER,
+                    item_names.MOTHERSHIP_AIUR,
+                ), self.player)
+            )
+            or self.protoss_can_merge_archon(state)
+            or self.protoss_can_merge_dark_archon(state)
+        )
+
+    def protoss_anti_armor_anti_air(self, state: CollectionState) -> bool:
+        return (
+            self.protoss_competent_anti_air(state)
+            or state.has_any((item_names.SCOUT, item_names.MISTWING, item_names.DRAGOON), self.player)
+            or (
+                state.has(item_names.IMMORTAL, self.player)
+                and state.has(item_names.IMMORTAL_ADVANCED_TARGETING, self.player)
+            )
+            or (
+                state.has(item_names.ANNIHILATOR, self.player)
+                and state.has(item_names.ANNIHILATOR_ADVANCED_TARGETING, self.player)
+            )
+            or state.has_all({item_names.WRATHWALKER, item_names.WRATHWALKER_AERIAL_TRACKING}, self.player)
+        )
+
+    def protoss_anti_light_anti_air(self, state: CollectionState) -> bool:
+        return (
+            self.protoss_competent_anti_air(state)
+            or state.has_any(
+                {
+                    item_names.PHOENIX,
+                    item_names.MIRAGE,
+                    item_names.CORSAIR,
+                    item_names.CARRIER,
+                },
+                self.player,
+            )
+            or state.has_all((item_names.SKIRMISHER, item_names.SKIRMISHER_PEER_CONTEMPT), self.player)
+        )
+
+    def protoss_moderate_anti_air(self, state: CollectionState) -> bool:
+        return (
+            self.protoss_competent_anti_air(state)
+            or self.protoss_anti_light_anti_air(state)
+            or self.protoss_anti_armor_anti_air(state)
+            or state.has(item_names.SKYLORD, self.player)
+        )
+
+    @series(LogicSeries.AntiAir, SC2Race.PROTOSS, 3)
+    def protoss_competent_anti_air(self, state: CollectionState) -> bool:
+        return (
+            state.has_any((
+                item_names.STALKER,
+                item_names.SLAYER,
+                item_names.INSTIGATOR,
+                item_names.ADEPT,
+                item_names.VOID_RAY,
+                item_names.DESTROYER,
+                item_names.TEMPEST,
+                item_names.CALADRIUS,
+            ), self.player)
+            or (
+                (
+                    state.has_any((
+                        item_names.PHOENIX,
+                        item_names.MIRAGE,
+                        item_names.CORSAIR,
+                        item_names.CARRIER,
+                    ), self.player)
+                    or state.has_all((item_names.SKIRMISHER, item_names.SKIRMISHER_PEER_CONTEMPT), self.player)
+                )
+                and (
+                    state.has_any((item_names.SCOUT, item_names.MISTWING, item_names.DRAGOON), self.player)
+                    or state.has_all((item_names.WRATHWALKER, item_names.WRATHWALKER_AERIAL_TRACKING), self.player)
+                )
+            )
+        )
+
     @series(LogicSeries.Detection, SC2Race.PROTOSS, 0)
     def protoss_anti_cloak_self_splash(self, state: CollectionState) -> bool:
         return (
@@ -1928,138 +2076,6 @@ class SC2Logic:
             or state.has(item_names.SOA_PROGRESSIVE_PROXY_PYLON, self.player, 2)  # Warp-In Reinforcements
         )
 
-    def protoss_any_anti_air_unit(self, state: CollectionState) -> bool:
-        return (
-            state.has_any(
-                (
-                    # Gateway
-                    item_names.STALKER,
-                    item_names.SLAYER,
-                    item_names.INSTIGATOR,
-                    item_names.DRAGOON,
-                    item_names.ADEPT,
-                    item_names.SENTRY,
-                    item_names.ENERGIZER,
-                    item_names.HIGH_TEMPLAR,
-                    item_names.SIGNIFIER,
-                    item_names.ASCENDANT,
-                    item_names.DARK_ARCHON,
-                    # Robo
-                    item_names.ANNIHILATOR,
-                    # Stargate
-                    item_names.PHOENIX,
-                    item_names.MIRAGE,
-                    item_names.CORSAIR,
-                    item_names.SCOUT,
-                    item_names.MISTWING,
-                    item_names.CALADRIUS,
-                    item_names.OPPRESSOR,
-                    item_names.ARBITER,
-                    item_names.VOID_RAY,
-                    item_names.DESTROYER,
-                    item_names.PULSAR,
-                    item_names.CARRIER,
-                    item_names.TRIREME,
-                    item_names.SKYLORD,
-                    item_names.TEMPEST,
-                    item_names.MOTHERSHIP_TALDARIM,
-                    # Nexus
-                    item_names.MOTHERSHIP_AIUR,
-                    item_names.MOTHERSHIP_PURIFIER,
-                    # Buildings
-                    item_names.NEXUS_OVERCHARGE,
-                    item_names.PHOTON_CANNON,
-                    item_names.KHAYDARIN_MONOLITH,
-                ),
-                self.player,
-            )
-            or state.has_all((item_names.SUPPLICANT, item_names.SUPPLICANT_ZENITH_PITCH), self.player)
-            or state.has_all((item_names.WARP_PRISM, item_names.WARP_PRISM_PHASE_BLASTER), self.player)
-            or state.has_all((item_names.WRATHWALKER, item_names.WRATHWALKER_AERIAL_TRACKING), self.player)
-            or state.has_all((item_names.DISRUPTOR, item_names.DISRUPTOR_PERFECTED_POWER), self.player)
-            or state.has_all((item_names.IMMORTAL, item_names.IMMORTAL_ADVANCED_TARGETING), self.player)
-            or state.has_all((item_names.SKIRMISHER, item_names.SKIRMISHER_PEER_CONTEMPT), self.player)
-            or (
-                state.has(item_names.DARK_TEMPLAR, self.player)
-                and state.has_any((item_names.DARK_TEMPLAR_DARK_ARCHON_MELD, item_names.DARK_TEMPLAR_ARCHON_MERGE), self.player)
-            )
-        )
-
-    def protoss_basic_anti_air(self, state: CollectionState) -> bool:
-        return (
-            self.protoss_competent_anti_air(state)
-            or state.has_any(
-                {
-                    item_names.PHOENIX,
-                    item_names.MIRAGE,
-                    item_names.CORSAIR,
-                    item_names.CARRIER,
-                    item_names.TRIREME,
-                    item_names.SKYLORD,
-                    item_names.SCOUT,
-                    item_names.DARK_ARCHON,
-                    item_names.MOTHERSHIP_TALDARIM,
-                    item_names.MOTHERSHIP_PURIFIER,
-                    item_names.MISTWING,
-                    item_names.CALADRIUS,
-                    item_names.OPPRESSOR,
-                    item_names.DRAGOON,
-                },
-                self.player,
-            )
-            or state.has_all({item_names.WRATHWALKER, item_names.WRATHWALKER_AERIAL_TRACKING}, self.player)
-            or state.has_all({item_names.WARP_PRISM, item_names.WARP_PRISM_PHASE_BLASTER}, self.player)
-            or (self.advanced_tactics
-                and state.has_any((
-                    item_names.HIGH_TEMPLAR,
-                    item_names.SIGNIFIER,
-                    item_names.SENTRY,
-                    item_names.ENERGIZER,
-                    item_names.MOTHERSHIP_AIUR,
-                ), self.player)
-            )
-            or self.protoss_can_merge_archon(state)
-            or self.protoss_can_merge_dark_archon(state)
-        )
-
-    def protoss_anti_armor_anti_air(self, state: CollectionState) -> bool:
-        return (
-            self.protoss_competent_anti_air(state)
-            or state.has_any((item_names.SCOUT, item_names.MISTWING, item_names.DRAGOON), self.player)
-            or (
-                state.has(item_names.IMMORTAL, self.player)
-                and state.has(item_names.IMMORTAL_ADVANCED_TARGETING, self.player)
-            )
-            or (
-                state.has(item_names.ANNIHILATOR, self.player)
-                and state.has(item_names.ANNIHILATOR_ADVANCED_TARGETING, self.player)
-            )
-            or state.has_all({item_names.WRATHWALKER, item_names.WRATHWALKER_AERIAL_TRACKING}, self.player)
-        )
-
-    def protoss_anti_light_anti_air(self, state: CollectionState) -> bool:
-        return (
-            self.protoss_competent_anti_air(state)
-            or state.has_any(
-                {
-                    item_names.PHOENIX,
-                    item_names.MIRAGE,
-                    item_names.CORSAIR,
-                    item_names.CARRIER,
-                },
-                self.player,
-            )
-            or state.has_all((item_names.SKIRMISHER, item_names.SKIRMISHER_PEER_CONTEMPT), self.player)
-        )
-
-    def protoss_moderate_anti_air(self, state: CollectionState) -> bool:
-        return (
-            self.protoss_competent_anti_air(state)
-            or self.protoss_anti_light_anti_air(state)
-            or self.protoss_anti_armor_anti_air(state)
-            or state.has(item_names.SKYLORD, self.player)
-        )
-
     def protoss_common_unit_basic_aa(self, state: CollectionState) -> bool:
         return self.protoss_common_unit(state) and self.protoss_basic_anti_air(state)
 
@@ -2076,35 +2092,6 @@ class SC2Logic:
         return (
             self.protoss_ultimate_comp(state)
             or (self.advanced_tactics and self.protoss_competent_comp(state))
-        )
-
-    def protoss_competent_anti_air(self, state: CollectionState) -> bool:
-        return (
-            state.has_any((
-                item_names.STALKER,
-                item_names.SLAYER,
-                item_names.INSTIGATOR,
-                item_names.ADEPT,
-                item_names.VOID_RAY,
-                item_names.DESTROYER,
-                item_names.TEMPEST,
-                item_names.CALADRIUS,
-            ), self.player)
-            or (
-                (
-                    state.has_any((
-                        item_names.PHOENIX,
-                        item_names.MIRAGE,
-                        item_names.CORSAIR,
-                        item_names.CARRIER,
-                    ), self.player)
-                    or state.has_all((item_names.SKIRMISHER, item_names.SKIRMISHER_PEER_CONTEMPT), self.player)
-                )
-                and (
-                    state.has_any((item_names.SCOUT, item_names.MISTWING, item_names.DRAGOON), self.player)
-                    or state.has_all((item_names.WRATHWALKER, item_names.WRATHWALKER_AERIAL_TRACKING), self.player)
-                )
-            )
         )
 
     def protoss_has_blink(self, state: CollectionState) -> bool:
