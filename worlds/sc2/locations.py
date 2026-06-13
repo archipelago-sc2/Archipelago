@@ -3356,7 +3356,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2HOTS_LOC_ID_OFFSET + 1900,
             LocationType.VICTORY,
             lambda state: logic.zerg_competent_comp_competent_aa(state)
-            and (adv_tactics or logic.zerg_base_buster(state)),
+            and (adv_tactics or logic.zerg_ultimate_comp(state)),
         ),
         make_location_data(
             SC2Mission.DEATH_FROM_ABOVE.mission_name,
@@ -3391,7 +3391,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2HOTS_LOC_ID_OFFSET + 1905,
             LocationType.EXTRA,
             lambda state: logic.zerg_competent_comp_competent_aa(state)
-            and (adv_tactics or logic.zerg_base_buster(state)),
+            and (adv_tactics or logic.zerg_ultimate_comp(state)),
         ),
         make_location_data(
             SC2Mission.THE_RECKONING.mission_name,
@@ -5890,7 +5890,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.zerg_common_unit_competent_aa(state)
-                and logic.zerg_base_buster(state)
+                and logic.zerg_ultimate_comp(state)
             ),
             flags=LocationFlag.BASEBUST,
         ),
@@ -5901,7 +5901,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.zerg_common_unit_competent_aa(state)
-                and logic.zerg_base_buster(state)
+                and logic.zerg_ultimate_comp(state)
             ),
             flags=LocationFlag.BASEBUST,
         ),
@@ -6533,7 +6533,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.zerg_common_unit_competent_aa(state)
-                and logic.zerg_base_buster(state)
+                and logic.zerg_ultimate_comp(state)
             ),
             flags=LocationFlag.BASEBUST,
         ),
@@ -7512,7 +7512,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             lambda state: (
                 logic.zerg_welcome_to_the_jungle_requirement(state)
                 and logic.zerg_competent_anti_air(state)
-                and logic.zerg_base_buster(state)
+                and logic.zerg_ultimate_comp(state)
             ),
             flags=LocationFlag.BASEBUST,
         ),
@@ -12488,7 +12488,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.zerg_temple_of_unification_requirement(state)
-                and logic.zerg_base_buster(state)
+                and logic.zerg_ultimate_comp(state)
             ),
             flags=LocationFlag.BASEBUST,
         ),
@@ -12499,7 +12499,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             LocationType.MASTERY,
             lambda state: (
                 logic.zerg_temple_of_unification_requirement(state)
-                and logic.zerg_base_buster(state)
+                and logic.zerg_ultimate_comp(state)
             ),
             flags=LocationFlag.BASEBUST,
         ),

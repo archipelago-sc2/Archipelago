@@ -864,6 +864,73 @@ class SC2Logic:
             )
         )
 
+    @series(LogicSeries.PowerComp, SC2Race.ZERG, 3)
+    def zerg_ultimate_comp(self, state: CollectionState, upgrade: int = 2) -> bool:
+        """Powerful and sustainable zerg anti-ground for busting big bases; anti-air not included"""
+        if not self.zerg_competent_comp(state, upgrade):
+            return False
+        has_ground_carapace = self.wa_upgrade_count(VirtualItem.ZERG_GROUND_ARMOR, state) >= upgrade
+        has_melee_upgrades = (
+            self.wa_upgrade_count(VirtualItem.ZERG_MELEE_ATTACK, state) >= upgrade
+            and has_ground_carapace
+        )
+        has_ranged_upgrades = (
+            self.wa_upgrade_count(VirtualItem.ZERG_RANGED_ATTACK, state) >= upgrade
+            and has_ground_carapace
+        )
+        has_air_upgrades = (
+            self.wa_upgrade_count(VirtualItem.ZERG_AIR_ATTACK, state) >= upgrade
+            and self.wa_upgrade_count(VirtualItem.ZERG_AIR_ARMOR, state) >= upgrade
+        )
+        return (
+            (
+                has_melee_upgrades
+                and (
+                    self.morph_tyrannozor(state)
+                    or (
+                        state.has(item_names.ULTRALISK, self.player)
+                        and state.has_any((item_names.ULTRALISK_TORRASQUE_STRAIN, item_names.ULTRALISK_CHITINOUS_PLATING), self.player)
+                    )
+                )
+                and state.has(item_names.SWARM_QUEEN, self.player)  # Healing to sustain the frontline
+            )
+            or (
+                has_ranged_upgrades
+                and (
+                    self.morph_impaler(state)
+                    or (self.morph_lurker(state)
+                        and state.has_all((item_names.LURKER_SEISMIC_SPINES, item_names.LURKER_ADAPTED_SPINES), self.player)
+                    )
+                    or state.has_all((
+                        item_names.ROACH,
+                        item_names.ROACH_CORPSER_STRAIN,
+                        item_names.ROACH_ADAPTIVE_PLATING,
+                        item_names.ROACH_GLIAL_RECONSTITUTION,
+                    ), self.player)
+                    or (self.morph_igniter(state)
+                        and state.has(item_names.PRIMAL_IGNITER_PRIMAL_TENACITY, self.player)
+                    )
+                    or state.has_all((item_names.INFESTOR, item_names.INFESTOR_INFESTED_TERRAN), self.player)
+                    or (self.spread_creep(state, False)
+                        and state.has(item_names.INFESTED_BUNKER, self.player)
+                    )
+                    or self.zerg_infested_tank_with_ammo(state)
+                    # Highly-upgraded swarm hosts may also work, but that would require promoting many upgrades to progression
+                )
+            )
+            or (
+                has_air_upgrades
+                and (
+                    self.morph_brood_lord(state)
+                    or (self.morph_guardian(state)
+                        and state.has_all((item_names.GUARDIAN_PROPELLANT_SACS, item_names.GUARDIAN_SORONAN_ACID), self.player)
+                    )
+                    or state.has_all((item_names.INFESTED_BANSHEE, item_names.INFESTED_BANSHEE_FLESHFUSED_TARGETING_OPTICS), self.player)
+                    # Highly-upgraded anti-ground devourers would also be good
+                )
+            )
+        )
+
     @series(LogicSeries.Detection, SC2Race.ZERG, 1)
     def zerg_anti_cloak_tech(self, state: CollectionState) -> bool:
         return (
@@ -1304,60 +1371,6 @@ class SC2Logic:
             self.morph_tyrannozor(state)
             or state.has_any((item_names.ABERRATION, item_names.ULTRALISK), self.player)
             or (self.spread_creep(state, False) and state.has(item_names.INFESTED_BUNKER, self.player))
-        )
-
-    def zerg_base_buster(self, state: CollectionState) -> bool:
-        """Powerful and sustainable zerg anti-ground for busting big bases; anti-air not included"""
-        if not self.zerg_competent_comp(state):
-            return False
-        return (
-            (
-                self.zerg_melee_weapon_armor_upgrade_min_level(state) >= self.get_very_hard_required_upgrade_level()
-                and (
-                    self.morph_tyrannozor(state)
-                    or (
-                        state.has(item_names.ULTRALISK, self.player)
-                        and state.has_any((item_names.ULTRALISK_TORRASQUE_STRAIN, item_names.ULTRALISK_CHITINOUS_PLATING), self.player)
-                    )
-                    or (self.morph_baneling(state) and state.has(item_names.BANELING_SPLITTER_STRAIN, self.player))
-                )
-                and state.has(item_names.SWARM_QUEEN, self.player)  # Healing to sustain the frontline
-            )
-            or (
-                self.zerg_ranged_weapon_armor_upgrade_min_level(state) >= self.get_very_hard_required_upgrade_level()
-                and (
-                    self.morph_impaler(state)
-                    or (self.morph_lurker(state)
-                        and state.has_all((item_names.LURKER_SEISMIC_SPINES, item_names.LURKER_ADAPTED_SPINES), self.player)
-                    )
-                    or state.has_all((
-                        item_names.ROACH,
-                        item_names.ROACH_CORPSER_STRAIN,
-                        item_names.ROACH_ADAPTIVE_PLATING,
-                        item_names.ROACH_GLIAL_RECONSTITUTION,
-                    ), self.player)
-                    or (self.morph_igniter(state)
-                        and state.has(item_names.PRIMAL_IGNITER_PRIMAL_TENACITY, self.player)
-                    )
-                    or state.has_all((item_names.INFESTOR, item_names.INFESTOR_INFESTED_TERRAN), self.player)
-                    or (self.spread_creep(state, False)
-                        and state.has(item_names.INFESTED_BUNKER, self.player)
-                    )
-                    or self.zerg_infested_tank_with_ammo(state)
-                    # Highly-upgraded swarm hosts may also work, but that would require promoting many upgrades to progression
-                )
-            )
-            or (
-                self.zerg_flyer_weapon_armor_upgrade_min_level(state) >= self.get_very_hard_required_upgrade_level()
-                and (
-                    self.morph_brood_lord(state)
-                    or (self.morph_guardian(state)
-                        and state.has_all((item_names.GUARDIAN_PROPELLANT_SACS, item_names.GUARDIAN_SORONAN_ACID), self.player)
-                    )
-                    or state.has_all((item_names.INFESTED_BANSHEE, item_names.INFESTED_BANSHEE_FLESHFUSED_TARGETING_OPTICS), self.player)
-                    # Highly-upgraded anti-ground devourers would also be good
-                )
-            )
         )
 
     def zergling_hydra_roach_start(self, state: CollectionState) -> bool:
@@ -2780,7 +2793,7 @@ class SC2Logic:
             self.basic_or_no_hero(state, SC2Mission.THE_DIG_Z, False)
             and self.zerg_defense_rating(state, False, False) >= 8
             and self.zerg_competent_anti_air(state)
-            and self.zerg_base_buster(state)
+            and self.zerg_ultimate_comp(state)
         )
 
     def protoss_the_dig_start_requirement(self, state: CollectionState) -> bool:
@@ -3031,7 +3044,7 @@ class SC2Logic:
         if power_rating >= 7 and self.zerg_competent_comp(state):
             return True
         else:
-            return self.zerg_base_buster(state)
+            return self.zerg_ultimate_comp(state)
 
     def protoss_engine_of_destruction_start_requirement(self, state: CollectionState) -> bool:
         return (
@@ -3742,7 +3755,7 @@ class SC2Logic:
         return (
             self.zerg_competent_comp(state)
             and self.zerg_moderate_anti_air(state)
-            and self.zerg_base_buster(state)
+            and self.zerg_ultimate_comp(state)
             and self.zerg_power_rating(state) >= 6
         )
 
@@ -3993,7 +4006,7 @@ class SC2Logic:
     def zerg_brothers_in_arms_speedrun(self, state: CollectionState) -> bool:
         return (
             self.zerg_brothers_in_arms_requirement(state)
-            and self.zerg_base_buster(state)
+            and self.zerg_ultimate_comp(state)
             and self.zerg_power_rating(state) >= 8
         )
 
@@ -4258,7 +4271,7 @@ class SC2Logic:
         return (
             self.zerg_competent_comp(state)
             and self.zerg_competent_anti_air(state)
-            and self.zerg_base_buster(state)
+            and self.zerg_ultimate_comp(state)
             and (
                 self.morph_lurker(state)
                 or self.zerg_infested_tank_with_ammo(state)
@@ -4425,7 +4438,7 @@ class SC2Logic:
             self.zerg_competent_comp(state)
             and self.zerg_competent_anti_air(state)
             and self.zerg_very_hard_mission_weapon_armor_level(state)
-            and self.zerg_base_buster(state)
+            and self.zerg_ultimate_comp(state)
             and self.zerg_big_monsters(state)
             and (
                 (
@@ -4886,7 +4899,7 @@ class SC2Logic:
     def zerg_sudden_strike_zerg_base(self, state: CollectionState) -> bool:
         return (
             self.zerg_sudden_strike_requirement(state)
-            and self.zerg_base_buster(state)
+            and self.zerg_ultimate_comp(state)
             and self.zerg_power_rating(state) >= 8
         )
 
@@ -5186,7 +5199,7 @@ class SC2Logic:
             )
         else:
             return (
-                self.zerg_base_buster(state)
+                self.zerg_ultimate_comp(state)
                 and self.zerg_defense_rating(state, True, True) >= 5
                 and self.zerg_power_rating(state) >= 5
             )
@@ -5524,7 +5537,7 @@ class SC2Logic:
 
     def zerg_end_game_requirement(self, state: CollectionState) -> bool:
         return (
-            self.zerg_base_buster(state)
+            self.zerg_ultimate_comp(state)
             and self.zerg_competent_anti_air(state)
             and self.zerg_very_hard_mission_weapon_armor_level(state)
             and self.zerg_mobile_detector(state)
