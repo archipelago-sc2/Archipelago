@@ -924,7 +924,7 @@ def calculate_kerrigan_options(ctx: 'SC2Context') -> int:
     return result
 
 
-def calculate_story_tech(ctx: 'SC2Context', mission: SC2Mission) -> bool:
+def calculate_story_tech(ctx: 'SC2Context', mission: SC2Mission) -> int:
     if (
         MissionFlag.Nova in mission.flags
         and MissionFlag.NoBuild in mission.flags
