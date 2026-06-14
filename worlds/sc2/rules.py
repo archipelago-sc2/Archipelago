@@ -1164,6 +1164,13 @@ class SC2Logic:
                     or state.has_all((
                         item_names.INFESTED_LIBERATOR, item_names.INFESTED_LIBERATOR_CLOUD_DISPERSAL,
                     ), self.player)
+                    or (
+                        self.morph_ravager(state)
+                        and state.has_any((
+                            item_names.RAVAGER_AERIAL_CORROSIVE_BILE,
+                            item_names.RAVAGER_BURROWED_BOMBARDMENT,
+                        ), self.player)
+                    )
                 )
             )
             or (
@@ -1233,6 +1240,13 @@ class SC2Logic:
                     or state.has_all((
                         item_names.INFESTED_LIBERATOR, item_names.INFESTED_LIBERATOR_CLOUD_DISPERSAL,
                     ), self.player)
+                    or (
+                        self.morph_ravager(state)
+                        and state.has_all((
+                            item_names.RAVAGER_AERIAL_CORROSIVE_BILE,
+                            item_names.RAVAGER_BURROWED_BOMBARDMENT,
+                        ), self.player)
+                    )
                 )
             )
         )

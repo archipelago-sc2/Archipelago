@@ -1596,9 +1596,9 @@ item_table = {
     item_names.RAVAGER_DISINTEGRATING_ACID:
         ItemData(458 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_6, 4, SC2Race.ZERG, parent=item_names.RAVAGER),
     item_names.RAVAGER_AERIAL_CORROSIVE_BILE:
-        ItemData(459 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_6, 5, SC2Race.ZERG, parent=item_names.RAVAGER),
+        ItemData(459 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_6, 5, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.RAVAGER),
     item_names.RAVAGER_BURROWED_BOMBARDMENT:
-        ItemData(460 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_6, 6, SC2Race.ZERG, parent=item_names.RAVAGER),
+        ItemData(460 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_6, 6, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.RAVAGER),
     item_names.RAVAGER_BONE_PLATING:
         ItemData(461 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_6, 7, SC2Race.ZERG, parent=item_names.RAVAGER),
     item_names.RAVAGER_WRITHING_ABOMINATION:
