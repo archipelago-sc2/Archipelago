@@ -6546,7 +6546,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
                 logic.protoss_common_unit(state)
                 and (
                     (adv_tactics and logic.protoss_basic_anti_air(state))
-                    or logic.protoss_anti_light_anti_air(state)
+                    or logic.protoss_competent_anti_air(state)
                 )
             ),
         ),
@@ -6572,7 +6572,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
                 logic.protoss_common_unit(state)
                 and (
                     (adv_tactics and logic.protoss_basic_anti_air(state))
-                    or logic.protoss_anti_light_anti_air(state)
+                    or logic.protoss_competent_anti_air(state)
                 )
             ),
         ),
@@ -6585,7 +6585,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
                 logic.protoss_common_unit(state)
                 and (
                     (adv_tactics and logic.protoss_basic_anti_air(state))
-                    or logic.protoss_anti_light_anti_air(state)
+                    or logic.protoss_competent_anti_air(state)
                 )
             ),
         ),
@@ -6598,7 +6598,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
                 logic.protoss_common_unit(state)
                 and (
                     (adv_tactics and logic.protoss_basic_anti_air(state))
-                    or logic.protoss_anti_light_anti_air(state)
+                    or logic.protoss_competent_anti_air(state)
                 )
             ),
         ),
@@ -6611,7 +6611,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
                 logic.protoss_common_unit(state)
                 and (
                     (adv_tactics and logic.protoss_basic_anti_air(state))
-                    or logic.protoss_anti_light_anti_air(state)
+                    or logic.protoss_competent_anti_air(state)
                 )
             ),
         ),
@@ -6929,7 +6929,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 2000,
             LocationType.VICTORY,
             lambda state: (
-                logic.protoss_moderate_anti_air(state)
+                logic.protoss_competent_anti_air(state)
                 and (
                     logic.protoss_fleet(state)
                     or state.has(item_names.WARP_PRISM, player)
@@ -6997,7 +6997,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 2008,
             LocationType.VANILLA,
             lambda state: (
-                logic.protoss_moderate_anti_air(state)
+                logic.protoss_competent_anti_air(state)
                 and (
                     logic.protoss_fleet(state)
                     or state.has(item_names.WARP_PRISM, player)
@@ -7011,7 +7011,7 @@ def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
             SC2_RACESWAP_LOC_ID_OFFSET + 2009,
             LocationType.VANILLA,
             lambda state: (
-                logic.protoss_moderate_anti_air(state)
+                logic.protoss_competent_anti_air(state)
                 and (
                     logic.protoss_fleet(state)
                     or state.has(item_names.WARP_PRISM, player)

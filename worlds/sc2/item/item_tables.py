@@ -570,10 +570,10 @@ item_table = {
                  classification=ItemClassification.progression, parent=item_names.BANSHEE),
     item_names.GHOST_RESOURCE_EFFICIENCY:
         ItemData(340 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_4, 21, SC2Race.TERRAN,
-                 parent=item_names.GHOST),
+                 classification=ItemClassification.progression, parent=item_names.GHOST),
     item_names.SPECTRE_RESOURCE_EFFICIENCY:
         ItemData(341 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_4, 22, SC2Race.TERRAN,
-                 parent=item_names.SPECTRE),
+                 classification=ItemClassification.progression, parent=item_names.SPECTRE),
     item_names.THOR_BUTTON_WITH_A_SKULL_ON_IT:
         ItemData(342 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_4, 23, SC2Race.TERRAN,
                  classification=ItemClassification.progression, parent=item_names.THOR),
