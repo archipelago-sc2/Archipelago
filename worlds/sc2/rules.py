@@ -2226,24 +2226,34 @@ class SC2Logic:
 
     def protoss_fleet(self, state: CollectionState, upgrade: int = 2) -> bool:
         return (
-            (
-                state.has_any((
-                    item_names.CARRIER,
-                    item_names.SKYLORD,
-                    item_names.TEMPEST,
-                    item_names.VOID_RAY,
-                    item_names.DESTROYER,
-                ), self.player)
-            )
-            or (
-                state.has(item_names.TRIREME, self.player)
-                and (
-                    state.has_any((item_names.PHOENIX, item_names.MIRAGE, item_names.CORSAIR), self.player)
-                    or state.has_all((item_names.SKIRMISHER, item_names.SKIRMISHER_PEER_CONTEMPT), self.player)
+            self.wa_upgrade_count(VirtualItem.PROTOSS_AIR_ARMOR, state) >= upgrade
+            and self.wa_upgrade_count(VirtualItem.PROTOSS_AIR_WEAPON, state) >= upgrade
+            and (
+                (
+                    state.has_any((
+                        item_names.CARRIER,
+                        item_names.SKYLORD,
+                        item_names.TEMPEST,
+                        item_names.VOID_RAY,
+                        item_names.DESTROYER,
+                    ), self.player)
+                )
+                or (
+                    state.has(item_names.TRIREME, self.player)
+                    and (
+                        state.has_any((item_names.PHOENIX, item_names.MIRAGE, item_names.CORSAIR), self.player)
+                        or state.has_all((item_names.SKIRMISHER, item_names.SKIRMISHER_PEER_CONTEMPT), self.player)
+                        or state.has_all((
+                            item_names.SCOUT,
+                            item_names.SCOUT_RESOURCE_EFFICIENCY,
+                            item_names.SCOUT_ADVANCED_PHOTON_BLASTERS,
+                        ), self.player)
+                        or (self.advanced_tactics
+                            and state.has_any((item_names.SCOUT, item_names.MISTWING, item_names.OPPRESSOR), self.player)
+                        )
+                    )
                 )
             )
-            and self.wa_upgrade_count(VirtualItem.PROTOSS_AIR_ARMOR, state) >= upgrade
-            and self.wa_upgrade_count(VirtualItem.PROTOSS_AIR_WEAPON, state) >= upgrade
         )
 
     def protoss_hybrid_counter(self, state: CollectionState, upgrade: int = 0) -> bool:
