@@ -2083,9 +2083,9 @@ item_table = {
     item_names.SUPERIOR_WARP_GATES:
         ItemData(808 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Solarite_Core, 8, SC2Race.PROTOSS),
     item_names.ENHANCED_TARGETING:
-        ItemData(809 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Solarite_Core, 9, SC2Race.PROTOSS, parent=parent_names.PROTOSS_STATIC_DEFENSE),
+        ItemData(809 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Solarite_Core, 9, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=parent_names.PROTOSS_STATIC_DEFENSE),
     item_names.OPTIMIZED_ORDNANCE:
-        ItemData(810 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Solarite_Core, 10, SC2Race.PROTOSS, parent=parent_names.PROTOSS_ATTACKING_BUILDING),
+        ItemData(810 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Solarite_Core, 10, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=parent_names.PROTOSS_ATTACKING_BUILDING),
     item_names.KHALAI_INGENUITY:
         ItemData(811 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Solarite_Core, 11, SC2Race.PROTOSS, classification=ItemClassification.progression),
     item_names.AMPLIFIED_ASSIMILATORS:
@@ -2114,7 +2114,7 @@ item_table = {
     item_names.NEXUS_CHRONO_EFFICIENCY:
         ItemData(824 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Solarite_Core, 23, SC2Race.PROTOSS),
     item_names.PROTOSS_BUILDING_SHIELDS:
-        ItemData(825 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Solarite_Core, 24, SC2Race.PROTOSS),
+        ItemData(825 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Solarite_Core, 24, SC2Race.PROTOSS, classification=ItemClassification.progression),
 
 
     # Artanis hero items
