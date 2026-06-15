@@ -706,18 +706,18 @@ class SC2Logic:
         ):
             if state.has(item, self.player):
                 rating += 3
+        if state.has_all((
+            item_names.PSI_DISRUPTER,
+            item_names.PSI_SCREEN,
+            item_names.SONIC_DISRUPTER,
+        ), self.player):
+            rating += 3
         # Medium
         if state.has(item_names.WIDOW_MINE, self.player):
             rating += 2
         # Situational
-        for item in (
-            item_names.MISSILE_TURRET,
-            item_names.PSI_DISRUPTER,
-            item_names.PSI_SCREEN,
-            item_names.SONIC_DISRUPTER,
-        ):
-            if state.has(item, self.player):
-                rating += 1
+        if state.has(item_names.MISSILE_TURRET, self.player):
+            rating += 1
         # Manned Bunker
         if state.has(item_names.BUNKER, self.player):
             if (state.has_any((
