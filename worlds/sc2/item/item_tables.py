@@ -1280,7 +1280,7 @@ item_table = {
         ItemData(244 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_2, 14, SC2Race.ZERG,
                  parent=item_names.DEVOURER),
     item_names.DEVOURER_GAPING_MAW:
-        ItemData(245 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_2, 15, SC2Race.ZERG,
+        ItemData(245 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_2, 15, SC2Race.ZERG, classification=ItemClassification.progression,
                  parent=item_names.DEVOURER),
     item_names.DEVOURER_IMPROVED_OSMOSIS:
         ItemData(246 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_2, 16, SC2Race.ZERG,
@@ -1290,7 +1290,7 @@ item_table = {
                  parent=item_names.DEVOURER,
                  classification=ItemClassification.progression),
     item_names.GUARDIAN_PROLONGED_DISPERSION:
-        ItemData(248 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_2, 18, SC2Race.ZERG,
+        ItemData(248 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_2, 18, SC2Race.ZERG, classification=ItemClassification.progression,
                  parent=item_names.GUARDIAN),
     item_names.GUARDIAN_PRIMAL_ADAPTATION:
         ItemData(249 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_2, 19, SC2Race.ZERG,
@@ -1380,11 +1380,11 @@ item_table = {
     item_names.ABERRATION_CONSTRUCT_REGENERATION:
         ItemData(282 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 22, SC2Race.ZERG, parent=item_names.ABERRATION),
     item_names.ABERRATION_BANELING_INCUBATION:
-        ItemData(283 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 23, SC2Race.ZERG, parent=item_names.ABERRATION),
+        ItemData(283 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 23, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.ABERRATION),
     item_names.ABERRATION_PROTECTIVE_COVER:
         ItemData(284 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 24, SC2Race.ZERG, parent=item_names.ABERRATION),
     item_names.ABERRATION_RESOURCE_EFFICIENCY:
-        ItemData(285 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 25, SC2Race.ZERG, parent=item_names.ABERRATION),
+        ItemData(285 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 25, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.ABERRATION),
     item_names.CORRUPTOR_MONSTROUS_RESILIENCE:
         ItemData(286 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 26, SC2Race.ZERG, parent=item_names.CORRUPTOR),
     item_names.CORRUPTOR_CONSTRUCT_REGENERATION:
@@ -1392,7 +1392,7 @@ item_table = {
     item_names.CORRUPTOR_SCOURGE_INCUBATION:
         ItemData(288 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 28, SC2Race.ZERG, parent=item_names.CORRUPTOR),
     item_names.CORRUPTOR_RESOURCE_EFFICIENCY:
-        ItemData(289 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 29, SC2Race.ZERG, parent=item_names.CORRUPTOR),
+        ItemData(289 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_3, 29, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.CORRUPTOR),
     item_names.PRIMAL_IGNITER_CONCENTRATED_FIRE:
         ItemData(290 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_4, 0, SC2Race.ZERG, parent=item_names.PRIMAL_IGNITER),
     item_names.PRIMAL_IGNITER_PRIMAL_TENACITY:
@@ -1964,7 +1964,7 @@ item_table = {
     item_names.MOTHERSHIP_TALDARIM_SHADOW_OF_DEATH: ItemData(423 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 3, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_TALDARIM),
     item_names.MOTHERSHIP_TALDARIM_SOUL_FORGED_CONDUITS: ItemData(424 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 4, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_TALDARIM),
     item_names.MOTHERSHIP_TALDARIM_BLOOD_FUSED_PARTICLES: ItemData(425 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 5, SC2Race.PROTOSS, parent=item_names.MOTHERSHIP_TALDARIM),
-    item_names.ORACLE_SURFACE_STABILIZER: ItemData(426 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 6, SC2Race.PROTOSS, parent=item_names.ORACLE),
+    item_names.ORACLE_SURFACE_STABILIZER: ItemData(426 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 6, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.ORACLE),
     item_names.TEMPEST_DISTRIBUTED_ATTACK: ItemData(427 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 7, SC2Race.PROTOSS, parent=item_names.TEMPEST),
     item_names.CENTURION_VORAZUNS_TEACHINGS: ItemData(428 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 8, SC2Race.PROTOSS, parent=item_names.CENTURION),
     item_names.CENTURION_QUANTUM_DODGE: ItemData(429 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Forge_5, 9, SC2Race.PROTOSS, parent=item_names.CENTURION),
