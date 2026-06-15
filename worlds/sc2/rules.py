@@ -77,8 +77,7 @@ class SC2Logic:
         self.generic_upgrade_missions = 0
         self.all_in_map = AllInMap.option_ground
         self.enabled_heroes: frozenset[str] = EnabledHeroes.default
-        self.base_macro_rating = 2
-        self.protoss_base_power_rating = 5
+        self.protoss_base_macro_rating = 3
         self.hero_presence_option: int = HeroPresence.default
 
         self.upgradeable_barracks_units = item_groups.terran_basic_barracks_units
@@ -146,11 +145,7 @@ class SC2Logic:
         self.all_in_map = world.options.all_in_map.value
         self.enabled_heroes = frozenset(world.options.enabled_heroes.value)
         self.war_council_upgrades = not world.options.war_council_nerfs.value
-        self.base_macro_rating = 2 if self.advanced_tactics else 0
-        self.protoss_base_power_rating = (
-            self.base_macro_rating
-            + (3 if not world.options.war_council_nerfs else 0)
-        )
+        self.protoss_base_macro_rating = 3 if not world.options.war_council_nerfs else 0
         self.hero_presence_option = world.options.hero_presence.value
 
         # Logic level-based groups
@@ -672,9 +667,7 @@ class SC2Logic:
 
     @series(LogicSeries.MacroPower, SC2Race.TERRAN, 0)
     def terran_macro_rating(self, state: CollectionState) -> int:
-        """Rating out of 20. Recommend requiring no more than 12."""
-        # max 2
-        power_score = self.base_macro_rating
+        """Rating out of 18. Recommend requiring no more than 12."""
         # Passive Score (Economic upgrades and global army upgrades)
         # max 18
         terran_passive_ratings = {
@@ -1332,9 +1325,7 @@ class SC2Logic:
 
     @series(LogicSeries.MacroPower, SC2Race.ZERG, 0)
     def zerg_macro_rating(self, state: CollectionState) -> int:
-        """Rating out of 22. Recommend requiring no more than 12."""
-        # Max 2
-        power_score = self.base_macro_rating
+        """Rating out of 20. Recommend requiring no more than 12."""
         # Passive Score (Economic upgrades and global army upgrades)
         # Max 20
         zerg_passive_ratings = (
@@ -2073,9 +2064,9 @@ class SC2Logic:
 
     @series(LogicSeries.MacroPower, SC2Race.PROTOSS, 0)
     def protoss_macro_rating(self, state: CollectionState) -> int:
-        """Rating out of 22. Recommend requiring no more than 12."""
-        # Max 5 (advanced + war council)
-        power_score = self.protoss_base_power_rating
+        """Rating out of 20. Recommend requiring no more than 12."""
+        # Max 3 (war council)
+        power_score = self.protoss_base_macro_rating
         # Passive Score (Economic upgrades and global army upgrades)
         # Max 17
         protoss_passive_ratings = (
