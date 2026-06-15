@@ -1866,7 +1866,7 @@ class SC2Logic:
         return (
             self.protoss_competent_comp(state, upgrade)
             and self.protoss_hybrid_counter(state, upgrade)
-            and self.protoss_basic_splash(state)
+            and self.protoss_basic_splash(state, upgrade)
         )
 
     @series(LogicSeries.AntiAir, SC2Race.PROTOSS, 1)
