@@ -1312,7 +1312,8 @@ item_name_groups[ItemGroupNames.LOTV_UNITS] = lotv_units = [
 ]
 item_name_groups[ItemGroupNames.PROPHECY_UNITS] = prophecy_units = [
     item_names.ZEALOT, item_names.STALKER, item_names.HIGH_TEMPLAR, item_names.DARK_TEMPLAR,
-    item_names.OBSERVER, item_names.COLOSSUS,
+    # Note(mm): Technically, LotV immortal is different from Prophecy immortal
+    item_names.OBSERVER, item_names.IMMORTAL, item_names.COLOSSUS,
     item_names.PHOENIX, item_names.VOID_RAY, item_names.CARRIER,
 ]
 item_name_groups[ItemGroupNames.PROPHECY_BUILDINGS] = prophecy_buildings = [
