@@ -1,21 +1,13 @@
 import enum
-from typing import List, Tuple, Optional, Callable, NamedTuple, Set, TYPE_CHECKING
-from .item import item_names
-from .options import (
-    get_option_value,
-    RequiredTactics,
-    LocationInclusion,
-)
-from .mission_tables import SC2Mission, SC2Campaign, MissionPools, lookup_name_to_mission
-from .tables import HeroFlag
+from typing import Callable, NamedTuple, TYPE_CHECKING
+from .options import get_option_value
+from .mission_tables import SC2Mission
 
 from BaseClasses import Location
-from worlds.AutoWorld import World
 
 if TYPE_CHECKING:
     from BaseClasses import CollectionState
     from . import SC2World
-    from .rules import SC2Logic
 
 
 SC2WOL_LOC_ID_OFFSET = 1000
@@ -50,6 +42,7 @@ class LocationFlag(enum.IntFlag):
     """Locations that are about preventing something from happening"""
 
 
+# todo(mm): Maybe remove this
 class LocationData(NamedTuple):
     region: str
     name: str
@@ -57,58 +50,10 @@ class LocationData(NamedTuple):
     type: LocationType
     rule: Callable[["CollectionState"], bool] = Location.access_rule
     flags: LocationFlag = LocationFlag.NONE
-    hard_rule: Optional[Callable[["CollectionState"], bool]] = None
+    hard_rule: Callable[["CollectionState"], bool] | None = None
 
 
-def make_location_data(
-    region: str,
-    name: str,
-    code: int,
-    type: LocationType,
-    rule: Callable[["CollectionState"], bool] = Location.access_rule,
-    flags: LocationFlag = LocationFlag.NONE,
-    hard_rule: Optional[Callable[["CollectionState"], bool]] = None,
-) -> LocationData:
-    return LocationData(region, f"{region}: {name}", code, type, rule, flags, hard_rule)
-
-
-def add_victory_hero_requirement(
-    location_data: LocationData,
-    logic: "SC2Logic",
-    world: "SC2World",
-) -> LocationData:
-    if location_data.type != LocationType.VICTORY:
-        return location_data
-
-    mission = lookup_name_to_mission.get(location_data.region)
-    if mission is None:
-        return location_data
-
-    if not world.options.enabled_heroes.value:
-        return location_data
-    hero_presence = getattr(world, "hero_presence", None)
-    if hero_presence and logic.get_hero_flag(mission) == HeroFlag.NONE:
-        return location_data
-
-    if mission.pool == MissionPools.MEDIUM:
-        hero_rule = lambda state: logic.basic_or_no_hero(state, mission, False)
-    elif mission.pool in (MissionPools.HARD, MissionPools.VERY_HARD):
-        hero_rule = lambda state: logic.competent_or_no_hero(state, mission)
-    else:
-        return location_data
-
-    rule = location_data.rule
-    hard_rule = location_data.hard_rule
-    wrapped_rule = lambda state: rule(state) and hero_rule(state)
-    wrapped_hard_rule = (
-        (lambda state: hard_rule(state) and hero_rule(state))
-        if hard_rule is not None
-        else hero_rule
-    )
-    return location_data._replace(rule=wrapped_rule, hard_rule=wrapped_hard_rule)
-
-
-def get_location_types(world: "SC2World", inclusion_type: int) -> Set[LocationType]:
+def get_location_types(world: "SC2World", inclusion_type: int) -> set[LocationType]:
     """
     :param world: The starcraft 2 world object
     :param inclusion_type: Level of inclusion to check for
@@ -143,10 +88,8 @@ def get_location_flags(world: "SC2World", inclusion_type: int) -> LocationFlag:
     return matching_location_flags
 
 
-def get_plando_locations(world: World) -> List[str]:
+def get_plando_locations(world: "SC2World") -> list[str]:
     """
-    :param multiworld:
-    :param player:
     :return: A list of locations affected by a plando in a world
     """
     if world is None:
@@ -158,14700 +101,2213 @@ def get_plando_locations(world: World) -> List[str]:
     return plando_locations
 
 
-def get_locations(world: Optional["SC2World"]) -> Tuple[LocationData, ...]:
-    # Note: rules which are ended with or True are rules identified as needed later when restricted units is an option
-    if world is None:
-        logic_level = int(RequiredTactics.default)
-    else:
-        logic_level = world.options.required_tactics.value
-    adv_tactics = logic_level != RequiredTactics.option_basic
-    if world is not None and world.logic is not None:
-        logic = world.logic
-    else:
-        from .rules import SC2Logic
+class Sc2Location(enum.IntEnum):
+    def __new__(cls, id: int, *args, **kwargs) -> 'Sc2Location':
+        value = id
+        obj = int.__new__(cls, value)
+        obj._value_ = value
+        return obj
 
-        logic = SC2Logic(world)
-    kerriganless = logic.kerrigan_items_granted
-    player = 1 if world is None else world.player
-    location_table: List[LocationData] = [
-        # WoL
-        make_location_data(
-            SC2Mission.LIBERATION_DAY.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 100,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY.mission_name,
-            "First Statue",
-            SC2WOL_LOC_ID_OFFSET + 101,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY.mission_name,
-            "Second Statue",
-            SC2WOL_LOC_ID_OFFSET + 102,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY.mission_name,
-            "Third Statue",
-            SC2WOL_LOC_ID_OFFSET + 103,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY.mission_name,
-            "Fourth Statue",
-            SC2WOL_LOC_ID_OFFSET + 104,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY.mission_name,
-            "Fifth Statue",
-            SC2WOL_LOC_ID_OFFSET + 105,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY.mission_name,
-            "Sixth Statue",
-            SC2WOL_LOC_ID_OFFSET + 106,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY.mission_name,
-            "Special Delivery",
-            SC2WOL_LOC_ID_OFFSET + 107,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY.mission_name,
-            "Transport",
-            SC2WOL_LOC_ID_OFFSET + 108,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 200,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.terran_common_unit(state)
-                and logic.basic_or_no_hero(state, SC2Mission.THE_OUTLAWS, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS.mission_name,
-            "Rebel Base",
-            SC2WOL_LOC_ID_OFFSET + 201,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_common_unit(state)
-                or logic.basic_hero(state, SC2Mission.THE_OUTLAWS, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS.mission_name,
-            "North Resource Pickups",
-            SC2WOL_LOC_ID_OFFSET + 202,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.terran_common_unit(state)
-                or logic.basic_hero(state, SC2Mission.THE_OUTLAWS, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS.mission_name,
-            "Bunker",
-            SC2WOL_LOC_ID_OFFSET + 203,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_common_unit(state)
-                and logic.basic_or_no_hero(state, SC2Mission.THE_OUTLAWS, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS.mission_name,
-            "Close Resource Pickups",
-            SC2WOL_LOC_ID_OFFSET + 204,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS.mission_name,
-            "Win In Under 10 Minutes",
-            SC2WOL_LOC_ID_OFFSET + 205,
-            LocationType.CHALLENGE,
-            logic.terran_common_unit,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 300,
-            LocationType.VICTORY,
-            logic.terran_zero_hour_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR.mission_name,
-            "First Group Rescued",
-            SC2WOL_LOC_ID_OFFSET + 301,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR.mission_name,
-            "Second Group Rescued",
-            SC2WOL_LOC_ID_OFFSET + 302,
-            LocationType.VANILLA,
-            logic.terran_zero_hour_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR.mission_name,
-            "Third Group Rescued",
-            SC2WOL_LOC_ID_OFFSET + 303,
-            LocationType.VANILLA,
-            logic.terran_zero_hour_stage_2_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR.mission_name,
-            "First Hatchery",
-            SC2WOL_LOC_ID_OFFSET + 304,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR.mission_name,
-            "Second Hatchery",
-            SC2WOL_LOC_ID_OFFSET + 305,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR.mission_name,
-            "Third Hatchery",
-            SC2WOL_LOC_ID_OFFSET + 306,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR.mission_name,
-            "Fourth Hatchery",
-            SC2WOL_LOC_ID_OFFSET + 307,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR.mission_name,
-            "Ride's on its Way",
-            SC2WOL_LOC_ID_OFFSET + 308,
-            LocationType.EXTRA,
-            logic.terran_zero_hour_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR.mission_name,
-            "Hold Just a Little Longer",
-            SC2WOL_LOC_ID_OFFSET + 309,
-            LocationType.EXTRA,
-            logic.terran_zero_hour_stage_2_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR.mission_name,
-            "Cavalry's on the Way",
-            SC2WOL_LOC_ID_OFFSET + 310,
-            LocationType.EXTRA,
-            logic.terran_zero_hour_stage_2_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 400,
-            LocationType.VICTORY,
-            logic.terran_evacuation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION.mission_name,
-            "North Chrysalis",
-            SC2WOL_LOC_ID_OFFSET + 401,
-            LocationType.VANILLA,
-            logic.terran_evacuation_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION.mission_name,
-            "West Chrysalis",
-            SC2WOL_LOC_ID_OFFSET + 402,
-            LocationType.VANILLA,
-            logic.terran_evacuation_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION.mission_name,
-            "East Chrysalis",
-            SC2WOL_LOC_ID_OFFSET + 403,
-            LocationType.VANILLA,
-            logic.terran_evacuation_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION.mission_name,
-            "Reach Hanson",
-            SC2WOL_LOC_ID_OFFSET + 404,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION.mission_name,
-            "Secret Resource Stash",
-            SC2WOL_LOC_ID_OFFSET + 405,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION.mission_name,
-            "Flawless",
-            SC2WOL_LOC_ID_OFFSET + 406,
-            LocationType.CHALLENGE,
-            logic.terran_evacuation_flawless_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION.mission_name,
-            "Western Zerg Base",
-            SC2WOL_LOC_ID_OFFSET + 407,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.terran_common_unit(state)
-                and logic.terran_ultimate_comp(state)
-                and logic.terran_competent_anti_air(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION.mission_name,
-            "Eastern Zerg Base",
-            SC2WOL_LOC_ID_OFFSET + 408,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.terran_common_unit(state)
-                and logic.terran_ultimate_comp(state)
-                and logic.terran_competent_anti_air(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 500,
-            LocationType.VICTORY,
-            logic.terran_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK.mission_name,
-            "Left Infestor",
-            SC2WOL_LOC_ID_OFFSET + 501,
-            LocationType.VANILLA,
-            logic.terran_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK.mission_name,
-            "Right Infestor",
-            SC2WOL_LOC_ID_OFFSET + 502,
-            LocationType.VANILLA,
-            logic.terran_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK.mission_name,
-            "North Infested Command Center",
-            SC2WOL_LOC_ID_OFFSET + 503,
-            LocationType.EXTRA,
-            logic.terran_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK.mission_name,
-            "South Infested Command Center",
-            SC2WOL_LOC_ID_OFFSET + 504,
-            LocationType.EXTRA,
-            logic.terran_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK.mission_name,
-            "Northwest Bar",
-            SC2WOL_LOC_ID_OFFSET + 505,
-            LocationType.EXTRA,
-            logic.terran_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK.mission_name,
-            "North Bar",
-            SC2WOL_LOC_ID_OFFSET + 506,
-            LocationType.EXTRA,
-            logic.terran_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK.mission_name,
-            "South Bar",
-            SC2WOL_LOC_ID_OFFSET + 507,
-            LocationType.EXTRA,
-            logic.terran_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 600,
-            LocationType.VICTORY,
-            logic.terran_safe_haven_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN.mission_name,
-            "North Nexus",
-            SC2WOL_LOC_ID_OFFSET + 601,
-            LocationType.EXTRA,
-            logic.terran_safe_haven_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN.mission_name,
-            "East Nexus",
-            SC2WOL_LOC_ID_OFFSET + 602,
-            LocationType.EXTRA,
-            logic.terran_safe_haven_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN.mission_name,
-            "South Nexus",
-            SC2WOL_LOC_ID_OFFSET + 603,
-            LocationType.EXTRA,
-            logic.terran_safe_haven_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN.mission_name,
-            "First Terror Fleet",
-            SC2WOL_LOC_ID_OFFSET + 604,
-            LocationType.VANILLA,
-            logic.terran_safe_haven_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN.mission_name,
-            "Second Terror Fleet",
-            SC2WOL_LOC_ID_OFFSET + 605,
-            LocationType.VANILLA,
-            logic.terran_safe_haven_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN.mission_name,
-            "Third Terror Fleet",
-            SC2WOL_LOC_ID_OFFSET + 606,
-            LocationType.VANILLA,
-            logic.terran_safe_haven_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 700,
-            LocationType.VICTORY,
-            logic.terran_havens_fall_requirement,
-            hard_rule=logic.terran_any_anti_air_or_science_vessels,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "North Hive",
-            SC2WOL_LOC_ID_OFFSET + 701,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_common_unit(state)
-                and logic.terran_competent_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "East Hive",
-            SC2WOL_LOC_ID_OFFSET + 702,
-            LocationType.VANILLA,
-            logic.terran_havens_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "South Hive",
-            SC2WOL_LOC_ID_OFFSET + 703,
-            LocationType.VANILLA,
-            logic.terran_havens_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "Northeast Colony Base",
-            SC2WOL_LOC_ID_OFFSET + 704,
-            LocationType.CHALLENGE,
-            logic.terran_havens_fall_respond_to_colony_infestations,
-            hard_rule=logic.terran_any_anti_air_or_science_vessels,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "East Colony Base",
-            SC2WOL_LOC_ID_OFFSET + 705,
-            LocationType.CHALLENGE,
-            logic.terran_havens_fall_respond_to_colony_infestations,
-            hard_rule=logic.terran_any_anti_air_or_science_vessels,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "Middle Colony Base",
-            SC2WOL_LOC_ID_OFFSET + 706,
-            LocationType.CHALLENGE,
-            logic.terran_havens_fall_respond_to_colony_infestations,
-            hard_rule=logic.terran_any_anti_air_or_science_vessels,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "Southeast Colony Base",
-            SC2WOL_LOC_ID_OFFSET + 707,
-            LocationType.CHALLENGE,
-            logic.terran_havens_fall_respond_to_colony_infestations,
-            hard_rule=logic.terran_any_anti_air_or_science_vessels,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "Southwest Colony Base",
-            SC2WOL_LOC_ID_OFFSET + 708,
-            LocationType.CHALLENGE,
-            logic.terran_havens_fall_respond_to_colony_infestations,
-            hard_rule=logic.terran_any_anti_air_or_science_vessels,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "Southwest Gas Pickups",
-            SC2WOL_LOC_ID_OFFSET + 709,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "East Gas Pickups",
-            SC2WOL_LOC_ID_OFFSET + 710,
-            LocationType.EXTRA,
-            logic.terran_havens_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL.mission_name,
-            "Southeast Gas Pickups",
-            SC2WOL_LOC_ID_OFFSET + 711,
-            LocationType.EXTRA,
-            logic.terran_havens_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 800,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.terran_common_unit(state)
-                and (
-                    adv_tactics
-                    and logic.terran_moderate_anti_air(state)
-                    or logic.terran_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB.mission_name,
-            "First Relic",
-            SC2WOL_LOC_ID_OFFSET + 801,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB.mission_name,
-            "Second Relic",
-            SC2WOL_LOC_ID_OFFSET + 802,
-            LocationType.VANILLA,
-            lambda state: (adv_tactics or logic.terran_common_unit(state)),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB.mission_name,
-            "Third Relic",
-            SC2WOL_LOC_ID_OFFSET + 803,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_common_unit(state)
-                and (
-                    adv_tactics
-                    and logic.terran_moderate_anti_air(state)
-                    or logic.terran_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB.mission_name,
-            "Fourth Relic",
-            SC2WOL_LOC_ID_OFFSET + 804,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_common_unit(state)
-                and (
-                    adv_tactics
-                    and logic.terran_moderate_anti_air(state)
-                    or logic.terran_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB.mission_name,
-            "First Forcefield Area Busted",
-            SC2WOL_LOC_ID_OFFSET + 805,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.terran_common_unit(state)
-                and (
-                    adv_tactics
-                    and logic.terran_moderate_anti_air(state)
-                    or logic.terran_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB.mission_name,
-            "Second Forcefield Area Busted",
-            SC2WOL_LOC_ID_OFFSET + 806,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.terran_common_unit(state)
-                and (
-                    adv_tactics
-                    and logic.terran_moderate_anti_air(state)
-                    or logic.terran_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB.mission_name,
-            "Defeat Kerrigan",
-            SC2WOL_LOC_ID_OFFSET + 807,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.terran_common_unit(state) and logic.terran_ultimate_comp(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 900,
-            LocationType.VICTORY,
-            logic.terran_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Left Relic",
-            SC2WOL_LOC_ID_OFFSET + 901,
-            LocationType.VANILLA,
-            logic.terran_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Right Ground Relic",
-            SC2WOL_LOC_ID_OFFSET + 902,
-            LocationType.VANILLA,
-            logic.terran_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Right Cliff Relic",
-            SC2WOL_LOC_ID_OFFSET + 903,
-            LocationType.VANILLA,
-            logic.terran_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Moebius Base",
-            SC2WOL_LOC_ID_OFFSET + 904,
-            LocationType.EXTRA,
-            logic.terran_the_dig_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Door Outer Layer",
-            SC2WOL_LOC_ID_OFFSET + 905,
-            LocationType.EXTRA,
-            logic.terran_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Door Thermal Barrier",
-            SC2WOL_LOC_ID_OFFSET + 906,
-            LocationType.EXTRA,
-            logic.terran_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Cutting Through the Core",
-            SC2WOL_LOC_ID_OFFSET + 907,
-            LocationType.EXTRA,
-            logic.terran_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Structure Access Imminent",
-            SC2WOL_LOC_ID_OFFSET + 908,
-            LocationType.EXTRA,
-            logic.terran_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Northwestern Protoss Base",
-            SC2WOL_LOC_ID_OFFSET + 909,
-            LocationType.MASTERY,
-            logic.terran_the_dig_bases_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Northeastern Protoss Base",
-            SC2WOL_LOC_ID_OFFSET + 910,
-            LocationType.MASTERY,
-            logic.terran_the_dig_bases_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG.mission_name,
-            "Eastern Protoss Base",
-            SC2WOL_LOC_ID_OFFSET + 911,
-            LocationType.MASTERY,
-            logic.terran_the_dig_bases_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 1000,
-            LocationType.VICTORY,
-            lambda state: (
-                (
-                    logic.terran_moderate_anti_air(state)
-                    and state.has_any({item_names.MEDIVAC, item_names.HERCULES}, player)
-                    or logic.terran_air_anti_air(state)
-                )
-                and (
-                    logic.terran_air(state)
-                    or state.has_any({item_names.MEDIVAC, item_names.HERCULES}, player)
-                    and logic.terran_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR.mission_name,
-            "1st Data Core",
-            SC2WOL_LOC_ID_OFFSET + 1001,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR.mission_name,
-            "2nd Data Core",
-            SC2WOL_LOC_ID_OFFSET + 1002,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_air(state)
-                or (
-                    state.has_any({item_names.MEDIVAC, item_names.HERCULES}, player)
-                    and logic.terran_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR.mission_name,
-            "South Rescue",
-            SC2WOL_LOC_ID_OFFSET + 1003,
-            LocationType.EXTRA,
-            logic.terran_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR.mission_name,
-            "Wall Rescue",
-            SC2WOL_LOC_ID_OFFSET + 1004,
-            LocationType.EXTRA,
-            logic.terran_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR.mission_name,
-            "Mid Rescue",
-            SC2WOL_LOC_ID_OFFSET + 1005,
-            LocationType.EXTRA,
-            logic.terran_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR.mission_name,
-            "Nydus Roof Rescue",
-            SC2WOL_LOC_ID_OFFSET + 1006,
-            LocationType.EXTRA,
-            logic.terran_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR.mission_name,
-            "Alive Inside Rescue",
-            SC2WOL_LOC_ID_OFFSET + 1007,
-            LocationType.EXTRA,
-            logic.terran_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR.mission_name,
-            "Brutalisk",
-            SC2WOL_LOC_ID_OFFSET + 1008,
-            LocationType.VANILLA,
-            lambda state: (
-                (
-                    logic.terran_moderate_anti_air(state)
-                    and state.has_any({item_names.MEDIVAC, item_names.HERCULES}, player)
-                    or logic.terran_air_anti_air(state)
-                )
-                and (
-                    logic.terran_air(state)
-                    or state.has_any({item_names.MEDIVAC, item_names.HERCULES}, player)
-                    and logic.terran_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR.mission_name,
-            "3rd Data Core",
-            SC2WOL_LOC_ID_OFFSET + 1009,
-            LocationType.VANILLA,
-            lambda state: (
-                (
-                    logic.terran_moderate_anti_air(state)
-                    and state.has_any({item_names.MEDIVAC, item_names.HERCULES}, player)
-                    or logic.terran_air_anti_air(state)
-                )
-                and (
-                    logic.terran_air(state)
-                    or state.has_any({item_names.MEDIVAC, item_names.HERCULES}, player)
-                    and logic.terran_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 1100,
-            LocationType.VICTORY,
-            logic.terran_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA.mission_name,
-            "West Relic",
-            SC2WOL_LOC_ID_OFFSET + 1101,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA.mission_name,
-            "North Relic",
-            SC2WOL_LOC_ID_OFFSET + 1102,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA.mission_name,
-            "South Relic",
-            SC2WOL_LOC_ID_OFFSET + 1103,
-            LocationType.VANILLA,
-            logic.terran_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA.mission_name,
-            "East Relic",
-            SC2WOL_LOC_ID_OFFSET + 1104,
-            LocationType.VANILLA,
-            logic.terran_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA.mission_name,
-            "Landing Zone Cleared",
-            SC2WOL_LOC_ID_OFFSET + 1105,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA.mission_name,
-            "Middle Base",
-            SC2WOL_LOC_ID_OFFSET + 1106,
-            LocationType.EXTRA,
-            logic.terran_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA.mission_name,
-            "Southeast Base",
-            SC2WOL_LOC_ID_OFFSET + 1107,
-            LocationType.EXTRA,
-            logic.terran_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 1200,
-            LocationType.VICTORY,
-            logic.terran_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "Landing Zone Cleared",
-            SC2WOL_LOC_ID_OFFSET + 1201,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "Expansion Prisoners",
-            SC2WOL_LOC_ID_OFFSET + 1202,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.terran_maw_requirement(state),
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "South Close Prisoners",
-            SC2WOL_LOC_ID_OFFSET + 1203,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.terran_maw_requirement(state),
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "South Far Prisoners",
-            SC2WOL_LOC_ID_OFFSET + 1204,
-            LocationType.VANILLA,
-            logic.terran_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "North Prisoners",
-            SC2WOL_LOC_ID_OFFSET + 1205,
-            LocationType.VANILLA,
-            logic.terran_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "Mothership",
-            SC2WOL_LOC_ID_OFFSET + 1206,
-            LocationType.EXTRA,
-            logic.terran_maw_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "Expansion Rip Field Generator",
-            SC2WOL_LOC_ID_OFFSET + 1207,
-            LocationType.EXTRA,
-            lambda state: adv_tactics or logic.terran_maw_requirement(state),
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "Middle Rip Field Generator",
-            SC2WOL_LOC_ID_OFFSET + 1208,
-            LocationType.EXTRA,
-            logic.terran_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "Southeast Rip Field Generator",
-            SC2WOL_LOC_ID_OFFSET + 1209,
-            LocationType.EXTRA,
-            logic.terran_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "Stargate Rip Field Generator",
-            SC2WOL_LOC_ID_OFFSET + 1210,
-            LocationType.EXTRA,
-            logic.terran_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "Northwest Rip Field Generator",
-            SC2WOL_LOC_ID_OFFSET + 1211,
-            LocationType.CHALLENGE,
-            logic.terran_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "West Rip Field Generator",
-            SC2WOL_LOC_ID_OFFSET + 1212,
-            LocationType.CHALLENGE,
-            logic.terran_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID.mission_name,
-            "Southwest Rip Field Generator",
-            SC2WOL_LOC_ID_OFFSET + 1213,
-            LocationType.CHALLENGE,
-            logic.terran_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 1300,
-            LocationType.VICTORY,
-            lambda state: (
-                adv_tactics
-                or logic.terran_moderate_anti_air(state)
-                and (
-                    logic.terran_common_unit(state)
-                    or state.has(item_names.REAPER, player)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND.mission_name,
-            "Tosh's Miners",
-            SC2WOL_LOC_ID_OFFSET + 1301,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND.mission_name,
-            "Brutalisk",
-            SC2WOL_LOC_ID_OFFSET + 1302,
-            LocationType.VANILLA,
-            lambda state: adv_tactics
-            or logic.terran_common_unit(state)
-            or state.has(item_names.REAPER, player),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND.mission_name,
-            "North Reapers",
-            SC2WOL_LOC_ID_OFFSET + 1303,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND.mission_name,
-            "Middle Reapers",
-            SC2WOL_LOC_ID_OFFSET + 1304,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND.mission_name,
-            "Southwest Reapers",
-            SC2WOL_LOC_ID_OFFSET + 1305,
-            LocationType.EXTRA,
-            lambda state: adv_tactics
-            or logic.terran_common_unit(state)
-            or state.has(item_names.REAPER, player),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND.mission_name,
-            "Southeast Reapers",
-            SC2WOL_LOC_ID_OFFSET + 1306,
-            LocationType.EXTRA,
-            lambda state: (
-                adv_tactics
-                or logic.terran_moderate_anti_air(state)
-                and (
-                    logic.terran_common_unit(state)
-                    or state.has(item_names.REAPER, player)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND.mission_name,
-            "East Reapers",
-            SC2WOL_LOC_ID_OFFSET + 1307,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.terran_moderate_anti_air(state)
-                and (
-                    adv_tactics
-                    or logic.terran_common_unit(state)
-                    or state.has(item_names.REAPER, player)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND.mission_name,
-            "Zerg Cleared",
-            SC2WOL_LOC_ID_OFFSET + 1308,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.terran_competent_anti_air(state)
-                and (
-                    logic.terran_common_unit(state)
-                    or state.has(item_names.REAPER, player)
-                )
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 1400,
-            LocationType.VICTORY,
-            logic.terran_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "Close Relic",
-            SC2WOL_LOC_ID_OFFSET + 1401,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "West Relic",
-            SC2WOL_LOC_ID_OFFSET + 1402,
-            LocationType.VANILLA,
-            logic.terran_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "North-East Relic",
-            SC2WOL_LOC_ID_OFFSET + 1403,
-            LocationType.VANILLA,
-            logic.terran_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "Middle Base",
-            SC2WOL_LOC_ID_OFFSET + 1404,
-            LocationType.EXTRA,
-            logic.terran_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "Protoss Cleared",
-            SC2WOL_LOC_ID_OFFSET + 1405,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.terran_welcome_to_the_jungle_requirement(state)
-                and logic.terran_beats_protoss_deathball(state)
-                and logic.terran_ultimate_comp(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "No Terrazine Nodes Sealed",
-            SC2WOL_LOC_ID_OFFSET + 1406,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.terran_welcome_to_the_jungle_requirement(state)
-                and logic.terran_competent_ground_to_air(state)
-                and logic.terran_beats_protoss_deathball(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "Up to 1 Terrazine Node Sealed",
-            SC2WOL_LOC_ID_OFFSET + 1407,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.terran_welcome_to_the_jungle_requirement(state)
-                and logic.terran_competent_ground_to_air(state)
-                and logic.terran_beats_protoss_deathball(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "Up to 2 Terrazine Nodes Sealed",
-            SC2WOL_LOC_ID_OFFSET + 1408,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.terran_welcome_to_the_jungle_requirement(state)
-                and logic.terran_beats_protoss_deathball(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "Up to 3 Terrazine Nodes Sealed",
-            SC2WOL_LOC_ID_OFFSET + 1409,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.terran_welcome_to_the_jungle_requirement(state)
-                and logic.terran_competent_comp(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "Up to 4 Terrazine Nodes Sealed",
-            SC2WOL_LOC_ID_OFFSET + 1410,
-            LocationType.EXTRA,
-            logic.terran_welcome_to_the_jungle_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE.mission_name,
-            "Up to 5 Terrazine Nodes Sealed",
-            SC2WOL_LOC_ID_OFFSET + 1411,
-            LocationType.EXTRA,
-            logic.terran_welcome_to_the_jungle_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 1500,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT.mission_name,
-            "Diamondback Prison",
-            SC2WOL_LOC_ID_OFFSET + 1501,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT.mission_name,
-            "Siege Tank Prison",
-            SC2WOL_LOC_ID_OFFSET + 1502,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT.mission_name,
-            "First Checkpoint",
-            SC2WOL_LOC_ID_OFFSET + 1503,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT.mission_name,
-            "Second Checkpoint",
-            SC2WOL_LOC_ID_OFFSET + 1504,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.GHOST_OF_A_CHANCE.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 1600,
-            LocationType.VICTORY,
-            logic.ghost_of_a_chance_requirement,
-            hard_rule=logic.ghost_of_a_chance_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GHOST_OF_A_CHANCE.mission_name,
-            "Terrazine Tank",
-            SC2WOL_LOC_ID_OFFSET + 1601,
-            LocationType.EXTRA,
-            logic.ghost_of_a_chance_requirement,
-            hard_rule=logic.ghost_of_a_chance_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GHOST_OF_A_CHANCE.mission_name,
-            "Jorium Stockpile",
-            SC2WOL_LOC_ID_OFFSET + 1602,
-            LocationType.EXTRA,
-            logic.ghost_of_a_chance_requirement,
-            hard_rule=logic.ghost_of_a_chance_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GHOST_OF_A_CHANCE.mission_name,
-            "First Island Spectres",
-            SC2WOL_LOC_ID_OFFSET + 1603,
-            LocationType.VANILLA,
-            logic.ghost_of_a_chance_requirement,
-            hard_rule=logic.ghost_of_a_chance_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GHOST_OF_A_CHANCE.mission_name,
-            "Second Island Spectres",
-            SC2WOL_LOC_ID_OFFSET + 1604,
-            LocationType.VANILLA,
-            logic.ghost_of_a_chance_requirement,
-            hard_rule=logic.ghost_of_a_chance_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GHOST_OF_A_CHANCE.mission_name,
-            "Third Island Spectres",
-            SC2WOL_LOC_ID_OFFSET + 1605,
-            LocationType.VANILLA,
-            logic.ghost_of_a_chance_requirement,
-            hard_rule=logic.ghost_of_a_chance_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 1700,
-            LocationType.VICTORY,
-            logic.terran_great_train_robbery_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "North Defiler",
-            SC2WOL_LOC_ID_OFFSET + 1701,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "Mid Defiler",
-            SC2WOL_LOC_ID_OFFSET + 1702,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "South Defiler",
-            SC2WOL_LOC_ID_OFFSET + 1703,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "Close Diamondback",
-            SC2WOL_LOC_ID_OFFSET + 1704,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "Northwest Diamondback",
-            SC2WOL_LOC_ID_OFFSET + 1705,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "North Diamondback",
-            SC2WOL_LOC_ID_OFFSET + 1706,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "Northeast Diamondback",
-            SC2WOL_LOC_ID_OFFSET + 1707,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "Southwest Diamondback",
-            SC2WOL_LOC_ID_OFFSET + 1708,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "Southeast Diamondback",
-            SC2WOL_LOC_ID_OFFSET + 1709,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "Kill Team",
-            SC2WOL_LOC_ID_OFFSET + 1710,
-            LocationType.CHALLENGE,
-            logic.terran_great_train_robbery_kill_team,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "Flawless",
-            SC2WOL_LOC_ID_OFFSET + 1711,
-            LocationType.CHALLENGE,
-            logic.terran_great_train_robbery_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "2 Trains Destroyed",
-            SC2WOL_LOC_ID_OFFSET + 1712,
-            LocationType.EXTRA,
-            logic.terran_great_train_robbery_train_stopper,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "4 Trains Destroyed",
-            SC2WOL_LOC_ID_OFFSET + 1713,
-            LocationType.EXTRA,
-            logic.terran_great_train_robbery_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
-            "6 Trains Destroyed",
-            SC2WOL_LOC_ID_OFFSET + 1714,
-            LocationType.EXTRA,
-            logic.terran_great_train_robbery_requirement,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 1800,
-            LocationType.VICTORY,
-            logic.terran_cutthroat_victory,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT.mission_name,
-            "Mira Han",
-            SC2WOL_LOC_ID_OFFSET + 1801,
-            LocationType.EXTRA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT.mission_name,
-            "North Relic",
-            SC2WOL_LOC_ID_OFFSET + 1802,
-            LocationType.VANILLA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT.mission_name,
-            "Mid Relic",
-            SC2WOL_LOC_ID_OFFSET + 1803,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT.mission_name,
-            "Southwest Relic",
-            SC2WOL_LOC_ID_OFFSET + 1804,
-            LocationType.VANILLA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT.mission_name,
-            "North Command Center",
-            SC2WOL_LOC_ID_OFFSET + 1805,
-            LocationType.EXTRA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT.mission_name,
-            "South Command Center",
-            SC2WOL_LOC_ID_OFFSET + 1806,
-            LocationType.EXTRA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT.mission_name,
-            "West Command Center",
-            SC2WOL_LOC_ID_OFFSET + 1807,
-            LocationType.EXTRA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 1900,
-            LocationType.VICTORY,
-            logic.terran_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION.mission_name,
-            "Odin",
-            SC2WOL_LOC_ID_OFFSET + 1901,
-            LocationType.EXTRA,
-            logic.marine_medic_upgrade,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION.mission_name,
-            "Loki",
-            SC2WOL_LOC_ID_OFFSET + 1902,
-            LocationType.CHALLENGE,
-            logic.terran_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION.mission_name,
-            "Lab Devourer",
-            SC2WOL_LOC_ID_OFFSET + 1903,
-            LocationType.VANILLA,
-            logic.marine_medic_upgrade,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION.mission_name,
-            "North Devourer",
-            SC2WOL_LOC_ID_OFFSET + 1904,
-            LocationType.VANILLA,
-            logic.terran_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION.mission_name,
-            "Southeast Devourer",
-            SC2WOL_LOC_ID_OFFSET + 1905,
-            LocationType.VANILLA,
-            logic.terran_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION.mission_name,
-            "West Base",
-            SC2WOL_LOC_ID_OFFSET + 1906,
-            LocationType.EXTRA,
-            logic.terran_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION.mission_name,
-            "Northwest Base",
-            SC2WOL_LOC_ID_OFFSET + 1907,
-            LocationType.EXTRA,
-            logic.terran_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION.mission_name,
-            "Northeast Base",
-            SC2WOL_LOC_ID_OFFSET + 1908,
-            LocationType.EXTRA,
-            logic.terran_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION.mission_name,
-            "Southeast Base",
-            SC2WOL_LOC_ID_OFFSET + 1909,
-            LocationType.EXTRA,
-            logic.terran_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 2000,
-            LocationType.VICTORY,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ.mission_name,
-            "Tower 1",
-            SC2WOL_LOC_ID_OFFSET + 2001,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ.mission_name,
-            "Tower 2",
-            SC2WOL_LOC_ID_OFFSET + 2002,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ.mission_name,
-            "Tower 3",
-            SC2WOL_LOC_ID_OFFSET + 2003,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ.mission_name,
-            "Science Facility",
-            SC2WOL_LOC_ID_OFFSET + 2004,
-            LocationType.VANILLA,
-            logic.terran_competent_comp_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ.mission_name,
-            "All Barracks",
-            SC2WOL_LOC_ID_OFFSET + 2005,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ.mission_name,
-            "All Factories",
-            SC2WOL_LOC_ID_OFFSET + 2006,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ.mission_name,
-            "All Starports",
-            SC2WOL_LOC_ID_OFFSET + 2007,
-            LocationType.EXTRA,
-            logic.terran_competent_comp_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ.mission_name,
-            "Odin Not Trashed",
-            SC2WOL_LOC_ID_OFFSET + 2008,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ.mission_name,
-            "Surprise Attack Ends",
-            SC2WOL_LOC_ID_OFFSET + 2009,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.PIERCING_OF_THE_SHROUD.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 2100,
-            LocationType.VICTORY,
-            logic.marine_medic_upgrade,
-        ),
-        make_location_data(
-            SC2Mission.PIERCING_OF_THE_SHROUD.mission_name,
-            "Holding Cell Relic",
-            SC2WOL_LOC_ID_OFFSET + 2101,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.PIERCING_OF_THE_SHROUD.mission_name,
-            "Brutalisk Relic",
-            SC2WOL_LOC_ID_OFFSET + 2102,
-            LocationType.VANILLA,
-            logic.marine_medic_upgrade,
-        ),
-        make_location_data(
-            SC2Mission.PIERCING_OF_THE_SHROUD.mission_name,
-            "First Escape Relic",
-            SC2WOL_LOC_ID_OFFSET + 2103,
-            LocationType.VANILLA,
-            logic.marine_medic_upgrade,
-        ),
-        make_location_data(
-            SC2Mission.PIERCING_OF_THE_SHROUD.mission_name,
-            "Second Escape Relic",
-            SC2WOL_LOC_ID_OFFSET + 2104,
-            LocationType.VANILLA,
-            logic.marine_medic_upgrade,
-        ),
-        make_location_data(
-            SC2Mission.PIERCING_OF_THE_SHROUD.mission_name,
-            "Brutalisk",
-            SC2WOL_LOC_ID_OFFSET + 2105,
-            LocationType.VANILLA,
-            logic.marine_medic_upgrade,
-        ),
-        make_location_data(
-            SC2Mission.PIERCING_OF_THE_SHROUD.mission_name,
-            "Fusion Reactor",
-            SC2WOL_LOC_ID_OFFSET + 2106,
-            LocationType.EXTRA,
-            logic.marine_medic_upgrade,
-        ),
-        make_location_data(
-            SC2Mission.PIERCING_OF_THE_SHROUD.mission_name,
-            "Entrance Holding Pen",
-            SC2WOL_LOC_ID_OFFSET + 2107,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.PIERCING_OF_THE_SHROUD.mission_name,
-            "Cargo Bay Warbot",
-            SC2WOL_LOC_ID_OFFSET + 2108,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.PIERCING_OF_THE_SHROUD.mission_name,
-            "Escape Warbot",
-            SC2WOL_LOC_ID_OFFSET + 2109,
-            LocationType.EXTRA,
-            logic.marine_medic_upgrade,
-        ),
-        make_location_data(
-            SC2Mission.WHISPERS_OF_DOOM.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 2200,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.WHISPERS_OF_DOOM.mission_name,
-            "First Hatchery",
-            SC2WOL_LOC_ID_OFFSET + 2201,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WHISPERS_OF_DOOM.mission_name,
-            "Second Hatchery",
-            SC2WOL_LOC_ID_OFFSET + 2202,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WHISPERS_OF_DOOM.mission_name,
-            "Third Hatchery",
-            SC2WOL_LOC_ID_OFFSET + 2203,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WHISPERS_OF_DOOM.mission_name,
-            "First Prophecy Fragment",
-            SC2WOL_LOC_ID_OFFSET + 2204,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.WHISPERS_OF_DOOM.mission_name,
-            "Second Prophecy Fragment",
-            SC2WOL_LOC_ID_OFFSET + 2205,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.WHISPERS_OF_DOOM.mission_name,
-            "Third Prophecy Fragment",
-            SC2WOL_LOC_ID_OFFSET + 2206,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 2300,
-            LocationType.VICTORY,
-            logic.protoss_common_unit_competent_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN.mission_name,
-            "Robotics Facility",
-            SC2WOL_LOC_ID_OFFSET + 2301,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN.mission_name,
-            "Dark Shrine",
-            SC2WOL_LOC_ID_OFFSET + 2302,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN.mission_name,
-            "Templar Archives",
-            SC2WOL_LOC_ID_OFFSET + 2303,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_competent_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN.mission_name,
-            "Northeast Base",
-            SC2WOL_LOC_ID_OFFSET + 2304,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_competent_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN.mission_name,
-            "Southwest Base",
-            SC2WOL_LOC_ID_OFFSET + 2305,
-            LocationType.CHALLENGE,
-            logic.protoss_common_unit_competent_anti_air,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN.mission_name,
-            "Maar",
-            SC2WOL_LOC_ID_OFFSET + 2306,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN.mission_name,
-            "Northwest Preserver",
-            SC2WOL_LOC_ID_OFFSET + 2307,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_competent_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN.mission_name,
-            "Southwest Preserver",
-            SC2WOL_LOC_ID_OFFSET + 2308,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_competent_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN.mission_name,
-            "East Preserver",
-            SC2WOL_LOC_ID_OFFSET + 2309,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_competent_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 2400,
-            LocationType.VICTORY,
-            logic.protoss_common_unit_competent_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE.mission_name,
-            "Close Obelisk",
-            SC2WOL_LOC_ID_OFFSET + 2401,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE.mission_name,
-            "West Obelisk",
-            SC2WOL_LOC_ID_OFFSET + 2402,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE.mission_name,
-            "Base",
-            SC2WOL_LOC_ID_OFFSET + 2403,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE.mission_name,
-            "Southwest Tendril",
-            SC2WOL_LOC_ID_OFFSET + 2404,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE.mission_name,
-            "Southeast Tendril",
-            SC2WOL_LOC_ID_OFFSET + 2405,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE.mission_name,
-            "Northeast Tendril",
-            SC2WOL_LOC_ID_OFFSET + 2406,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE.mission_name,
-            "Northwest Tendril",
-            SC2WOL_LOC_ID_OFFSET + 2407,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS.mission_name,
-            "Defeat",
-            SC2WOL_LOC_ID_OFFSET + 2500,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS.mission_name,
-            "Protoss Archive",
-            SC2WOL_LOC_ID_OFFSET + 2501,
-            LocationType.VANILLA,
-            logic.protoss_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS.mission_name,
-            "Kills",
-            SC2WOL_LOC_ID_OFFSET + 2502,
-            LocationType.VANILLA,
-            logic.protoss_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS.mission_name,
-            "Urun",
-            SC2WOL_LOC_ID_OFFSET + 2503,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS.mission_name,
-            "Mohandar",
-            SC2WOL_LOC_ID_OFFSET + 2504,
-            LocationType.EXTRA,
-            logic.protoss_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS.mission_name,
-            "Selendis",
-            SC2WOL_LOC_ID_OFFSET + 2505,
-            LocationType.EXTRA,
-            logic.protoss_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS.mission_name,
-            "Artanis",
-            SC2WOL_LOC_ID_OFFSET + 2506,
-            LocationType.EXTRA,
-            logic.protoss_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 2600,
-            LocationType.VICTORY,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "Large Army",
-            SC2WOL_LOC_ID_OFFSET + 2601,
-            LocationType.VANILLA,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "2 Drop Pods",
-            SC2WOL_LOC_ID_OFFSET + 2602,
-            LocationType.VANILLA,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "4 Drop Pods",
-            SC2WOL_LOC_ID_OFFSET + 2603,
-            LocationType.VANILLA,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "6 Drop Pods",
-            SC2WOL_LOC_ID_OFFSET + 2604,
-            LocationType.EXTRA,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "8 Drop Pods",
-            SC2WOL_LOC_ID_OFFSET + 2605,
-            LocationType.CHALLENGE,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "Southwest Spore Cannon",
-            SC2WOL_LOC_ID_OFFSET + 2606,
-            LocationType.EXTRA,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "Northwest Spore Cannon",
-            SC2WOL_LOC_ID_OFFSET + 2607,
-            LocationType.EXTRA,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "Northeast Spore Cannon",
-            SC2WOL_LOC_ID_OFFSET + 2608,
-            LocationType.EXTRA,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "East Spore Cannon",
-            SC2WOL_LOC_ID_OFFSET + 2609,
-            LocationType.EXTRA,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "Southeast Spore Cannon",
-            SC2WOL_LOC_ID_OFFSET + 2610,
-            LocationType.EXTRA,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL.mission_name,
-            "Expansion Spore Cannon",
-            SC2WOL_LOC_ID_OFFSET + 2611,
-            LocationType.EXTRA,
-            logic.terran_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BELLY_OF_THE_BEAST.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 2700,
-            LocationType.VICTORY,
-            logic.terran_belly_of_the_beast_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BELLY_OF_THE_BEAST.mission_name,
-            "First Charge",
-            SC2WOL_LOC_ID_OFFSET + 2701,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.BELLY_OF_THE_BEAST.mission_name,
-            "Second Charge",
-            SC2WOL_LOC_ID_OFFSET + 2702,
-            LocationType.EXTRA,
-            logic.terran_belly_of_the_beast_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BELLY_OF_THE_BEAST.mission_name,
-            "Third Charge",
-            SC2WOL_LOC_ID_OFFSET + 2703,
-            LocationType.EXTRA,
-            logic.terran_belly_of_the_beast_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BELLY_OF_THE_BEAST.mission_name,
-            "First Group Rescued",
-            SC2WOL_LOC_ID_OFFSET + 2704,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BELLY_OF_THE_BEAST.mission_name,
-            "Second Group Rescued",
-            SC2WOL_LOC_ID_OFFSET + 2705,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BELLY_OF_THE_BEAST.mission_name,
-            "Third Group Rescued",
-            SC2WOL_LOC_ID_OFFSET + 2706,
-            LocationType.VANILLA,
-            logic.terran_belly_of_the_beast_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 2800,
-            LocationType.VICTORY,
-            logic.terran_competent_comp_wa2,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY.mission_name,
-            "Close Coolant Tower",
-            SC2WOL_LOC_ID_OFFSET + 2801,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY.mission_name,
-            "Northwest Coolant Tower",
-            SC2WOL_LOC_ID_OFFSET + 2802,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY.mission_name,
-            "Southeast Coolant Tower",
-            SC2WOL_LOC_ID_OFFSET + 2803,
-            LocationType.VANILLA,
-            logic.terran_competent_comp_wa2,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY.mission_name,
-            "Southwest Coolant Tower",
-            SC2WOL_LOC_ID_OFFSET + 2804,
-            LocationType.VANILLA,
-            logic.terran_competent_comp_wa2,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY.mission_name,
-            "Leviathan",
-            SC2WOL_LOC_ID_OFFSET + 2805,
-            LocationType.VANILLA,
-            logic.terran_competent_comp_wa2,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY.mission_name,
-            "East Hatchery",
-            SC2WOL_LOC_ID_OFFSET + 2806,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY.mission_name,
-            "North Hatchery",
-            SC2WOL_LOC_ID_OFFSET + 2807,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY.mission_name,
-            "Mid Hatchery",
-            SC2WOL_LOC_ID_OFFSET + 2808,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN.mission_name,
-            "Victory",
-            SC2WOL_LOC_ID_OFFSET + 2900,
-            LocationType.VICTORY,
-            logic.terran_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN.mission_name,
-            "First Kerrigan Attack",
-            SC2WOL_LOC_ID_OFFSET + 2901,
-            LocationType.EXTRA,
-            logic.terran_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN.mission_name,
-            "Second Kerrigan Attack",
-            SC2WOL_LOC_ID_OFFSET + 2902,
-            LocationType.EXTRA,
-            logic.terran_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN.mission_name,
-            "Third Kerrigan Attack",
-            SC2WOL_LOC_ID_OFFSET + 2903,
-            LocationType.EXTRA,
-            logic.terran_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN.mission_name,
-            "Fourth Kerrigan Attack",
-            SC2WOL_LOC_ID_OFFSET + 2904,
-            LocationType.EXTRA,
-            logic.terran_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN.mission_name,
-            "Fifth Kerrigan Attack",
-            SC2WOL_LOC_ID_OFFSET + 2905,
-            LocationType.EXTRA,
-            logic.terran_all_in_requirement,
-        ),
-        # HotS
-        make_location_data(
-            SC2Mission.LAB_RAT.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 100,
-            LocationType.VICTORY,
-            logic.zerg_lab_rat_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT.mission_name,
-            "Gather Minerals",
-            SC2HOTS_LOC_ID_OFFSET + 101,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT.mission_name,
-            "South Zergling Group",
-            SC2HOTS_LOC_ID_OFFSET + 102,
-            LocationType.VANILLA,
-            logic.zerg_lab_rat_progress,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT.mission_name,
-            "East Zergling Group",
-            SC2HOTS_LOC_ID_OFFSET + 103,
-            LocationType.VANILLA,
-            logic.zerg_lab_rat_progress,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT.mission_name,
-            "West Zergling Group",
-            SC2HOTS_LOC_ID_OFFSET + 104,
-            LocationType.VANILLA,
-            logic.zerg_lab_rat_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT.mission_name,
-            "Hatchery",
-            SC2HOTS_LOC_ID_OFFSET + 105,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT.mission_name,
-            "Overlord",
-            SC2HOTS_LOC_ID_OFFSET + 106,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT.mission_name,
-            "Gas Turrets",
-            SC2HOTS_LOC_ID_OFFSET + 107,
-            LocationType.EXTRA,
-            logic.zerg_lab_rat_progress,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT.mission_name,
-            "Win In Under 10 Minutes",
-            SC2HOTS_LOC_ID_OFFSET + 108,
-            LocationType.CHALLENGE,
-            logic.zerg_lab_rat_requirement,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.BACK_IN_THE_SADDLE.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 200,
-            LocationType.VICTORY,
-            logic.basic_kerrigan,
-            hard_rule=logic.zerg_any_units_back_in_the_saddle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BACK_IN_THE_SADDLE.mission_name,
-            "Defend the Tram",
-            SC2HOTS_LOC_ID_OFFSET + 201,
-            LocationType.EXTRA,
-            logic.basic_kerrigan,
-            hard_rule=logic.zerg_any_units_back_in_the_saddle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BACK_IN_THE_SADDLE.mission_name,
-            "Kinetic Blast",
-            SC2HOTS_LOC_ID_OFFSET + 202,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BACK_IN_THE_SADDLE.mission_name,
-            "Crushing Grip",
-            SC2HOTS_LOC_ID_OFFSET + 203,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BACK_IN_THE_SADDLE.mission_name,
-            "Reach the Sublevel",
-            SC2HOTS_LOC_ID_OFFSET + 204,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.BACK_IN_THE_SADDLE.mission_name,
-            "Door Section Cleared",
-            SC2HOTS_LOC_ID_OFFSET + 205,
-            LocationType.EXTRA,
-            logic.basic_kerrigan,
-            hard_rule=logic.zerg_any_units_back_in_the_saddle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 300,
-            LocationType.VICTORY,
-            logic.zerg_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS.mission_name,
-            "Right Queen",
-            SC2HOTS_LOC_ID_OFFSET + 301,
-            LocationType.VANILLA,
-            logic.zerg_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS.mission_name,
-            "Center Queen",
-            SC2HOTS_LOC_ID_OFFSET + 302,
-            LocationType.VANILLA,
-            logic.zerg_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS.mission_name,
-            "Left Queen",
-            SC2HOTS_LOC_ID_OFFSET + 303,
-            LocationType.VANILLA,
-            logic.zerg_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS.mission_name,
-            "Hold Out Finished",
-            SC2HOTS_LOC_ID_OFFSET + 304,
-            LocationType.EXTRA,
-            logic.zerg_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS.mission_name,
-            "Kill All Buildings Before Reinforcements",
-            SC2HOTS_LOC_ID_OFFSET + 305,
-            LocationType.MASTERY,
-            logic.zerg_rendezvous_speedrun_requirement,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 400,
-            LocationType.VICTORY,
-            logic.zerg_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS.mission_name,
-            "First Ursadon Matriarch",
-            SC2HOTS_LOC_ID_OFFSET + 401,
-            LocationType.VANILLA,
-            logic.zerg_harvest_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS.mission_name,
-            "North Ursadon Matriarch",
-            SC2HOTS_LOC_ID_OFFSET + 402,
-            LocationType.VANILLA,
-            logic.zerg_harvest_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS.mission_name,
-            "West Ursadon Matriarch",
-            SC2HOTS_LOC_ID_OFFSET + 403,
-            LocationType.VANILLA,
-            logic.zerg_harvest_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS.mission_name,
-            "Lost Brood",
-            SC2HOTS_LOC_ID_OFFSET + 404,
-            LocationType.EXTRA,
-            logic.zerg_harvest_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS.mission_name,
-            "Northeast Psi-link Spire",
-            SC2HOTS_LOC_ID_OFFSET + 405,
-            LocationType.EXTRA,
-            logic.zerg_harvest_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS.mission_name,
-            "Northwest Psi-link Spire",
-            SC2HOTS_LOC_ID_OFFSET + 406,
-            LocationType.EXTRA,
-            logic.zerg_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS.mission_name,
-            "Southwest Psi-link Spire",
-            SC2HOTS_LOC_ID_OFFSET + 407,
-            LocationType.EXTRA,
-            logic.zerg_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS.mission_name,
-            "Nafash",
-            SC2HOTS_LOC_ID_OFFSET + 408,
-            LocationType.EXTRA,
-            logic.zerg_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS.mission_name,
-            "20 Unfrozen Structures",
-            SC2HOTS_LOC_ID_OFFSET + 409,
-            LocationType.CHALLENGE,
-            logic.zerg_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 500,
-            LocationType.VICTORY,
-            logic.zerg_common_unit_competent_aa,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "East Stasis Chamber",
-            SC2HOTS_LOC_ID_OFFSET + 501,
-            LocationType.VANILLA,
-            logic.zerg_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "Center Stasis Chamber",
-            SC2HOTS_LOC_ID_OFFSET + 502,
-            LocationType.VANILLA,
-            logic.zerg_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "West Stasis Chamber",
-            SC2HOTS_LOC_ID_OFFSET + 503,
-            LocationType.VANILLA,
-            logic.zerg_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "Destroy 4 Shuttles",
-            SC2HOTS_LOC_ID_OFFSET + 504,
-            LocationType.EXTRA,
-            logic.zerg_common_unit_competent_aa,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "Frozen Expansion",
-            SC2HOTS_LOC_ID_OFFSET + 505,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "Southwest Frozen Zerg",
-            SC2HOTS_LOC_ID_OFFSET + 506,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "Southeast Frozen Zerg",
-            SC2HOTS_LOC_ID_OFFSET + 507,
-            LocationType.EXTRA,
-            logic.zerg_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "West Frozen Zerg",
-            SC2HOTS_LOC_ID_OFFSET + 508,
-            LocationType.EXTRA,
-            logic.zerg_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "East Frozen Zerg",
-            SC2HOTS_LOC_ID_OFFSET + 509,
-            LocationType.EXTRA,
-            logic.zerg_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "West Launch Bay",
-            SC2HOTS_LOC_ID_OFFSET + 510,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-            hard_rule=logic.zerg_any_anti_air,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "Center Launch Bay",
-            SC2HOTS_LOC_ID_OFFSET + 511,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-            hard_rule=logic.zerg_any_anti_air,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER.mission_name,
-            "East Launch Bay",
-            SC2HOTS_LOC_ID_OFFSET + 512,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-            hard_rule=logic.zerg_any_anti_air,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 600,
-            LocationType.VICTORY,
-            logic.zerg_enemy_within_victory_requirement,
-            hard_rule=logic.zerg_enemy_within_pass_vents,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN.mission_name,
-            "Infest Giant Ursadon",
-            SC2HOTS_LOC_ID_OFFSET + 601,
-            LocationType.VANILLA,
-            logic.zerg_enemy_within_pass_vents,
-            hard_rule=logic.zerg_enemy_within_pass_vents,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN.mission_name,
-            "First Niadra Evolution",
-            SC2HOTS_LOC_ID_OFFSET + 602,
-            LocationType.VANILLA,
-            logic.zerg_enemy_within_pass_vents,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN.mission_name,
-            "Second Niadra Evolution",
-            SC2HOTS_LOC_ID_OFFSET + 603,
-            LocationType.VANILLA,
-            logic.zerg_enemy_within_pass_vents,
-            hard_rule=logic.zerg_enemy_within_pass_vents,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN.mission_name,
-            "Third Niadra Evolution",
-            SC2HOTS_LOC_ID_OFFSET + 604,
-            LocationType.VANILLA,
-            logic.zerg_enemy_within_pass_vents,
-            hard_rule=logic.zerg_enemy_within_pass_vents,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN.mission_name,
-            "Warp Drive",
-            SC2HOTS_LOC_ID_OFFSET + 605,
-            LocationType.EXTRA,
-            logic.zerg_enemy_within_pass_vents,
-            hard_rule=logic.zerg_enemy_within_pass_vents,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN.mission_name,
-            "Stasis Quadrant",
-            SC2HOTS_LOC_ID_OFFSET + 606,
-            LocationType.EXTRA,
-            logic.zerg_enemy_within_pass_vents,
-            hard_rule=logic.zerg_enemy_within_pass_vents,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 700,
-            LocationType.VICTORY,
-            logic.zerg_common_unit_basic_aa,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION.mission_name,
-            "Center Infested Command Center",
-            SC2HOTS_LOC_ID_OFFSET + 701,
-            LocationType.VANILLA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION.mission_name,
-            "North Infested Command Center",
-            SC2HOTS_LOC_ID_OFFSET + 702,
-            LocationType.VANILLA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION.mission_name,
-            "Repel Zagara",
-            SC2HOTS_LOC_ID_OFFSET + 703,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION.mission_name,
-            "Close Baneling Nest",
-            SC2HOTS_LOC_ID_OFFSET + 704,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION.mission_name,
-            "South Baneling Nest",
-            SC2HOTS_LOC_ID_OFFSET + 705,
-            LocationType.EXTRA,
-            logic.zerg_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION.mission_name,
-            "Southwest Baneling Nest",
-            SC2HOTS_LOC_ID_OFFSET + 706,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION.mission_name,
-            "Southeast Baneling Nest",
-            SC2HOTS_LOC_ID_OFFSET + 707,
-            LocationType.EXTRA,
-            logic.zerg_common_unit_basic_aa,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION.mission_name,
-            "North Baneling Nest",
-            SC2HOTS_LOC_ID_OFFSET + 708,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION.mission_name,
-            "Northeast Baneling Nest",
-            SC2HOTS_LOC_ID_OFFSET + 709,
-            LocationType.EXTRA,
-            logic.zerg_common_unit_basic_aa,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION.mission_name,
-            "Win Without 100 Eggs",
-            SC2HOTS_LOC_ID_OFFSET + 710,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 800,
-            LocationType.VICTORY,
-            logic.zerg_fire_in_the_sky_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "West Biomass",
-            SC2HOTS_LOC_ID_OFFSET + 801,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "North Biomass",
-            SC2HOTS_LOC_ID_OFFSET + 802,
-            LocationType.VANILLA,
-            logic.zerg_fire_in_the_sky_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "South Biomass",
-            SC2HOTS_LOC_ID_OFFSET + 803,
-            LocationType.VANILLA,
-            logic.zerg_fire_in_the_sky_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "Destroy 3 Gorgons",
-            SC2HOTS_LOC_ID_OFFSET + 804,
-            LocationType.EXTRA,
-            logic.zerg_fire_in_the_sky_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "Close Zerg Rescue",
-            SC2HOTS_LOC_ID_OFFSET + 805,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "South Zerg Rescue",
-            SC2HOTS_LOC_ID_OFFSET + 806,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "North Zerg Rescue",
-            SC2HOTS_LOC_ID_OFFSET + 807,
-            LocationType.EXTRA,
-            logic.zerg_fire_in_the_sky_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "West Queen Rescue",
-            SC2HOTS_LOC_ID_OFFSET + 808,
-            LocationType.EXTRA,
-            logic.zerg_fire_in_the_sky_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "East Queen Rescue",
-            SC2HOTS_LOC_ID_OFFSET + 809,
-            LocationType.EXTRA,
-            logic.zerg_fire_in_the_sky_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "South Orbital Command Center",
-            SC2HOTS_LOC_ID_OFFSET + 810,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_moderate_aa,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "Northwest Orbital Command Center",
-            SC2HOTS_LOC_ID_OFFSET + 811,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_moderate_aa,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY.mission_name,
-            "Southeast Orbital Command Center",
-            SC2HOTS_LOC_ID_OFFSET + 812,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_moderate_aa,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 900,
-            LocationType.VICTORY,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS.mission_name,
-            "East Science Lab",
-            SC2HOTS_LOC_ID_OFFSET + 901,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS.mission_name,
-            "North Science Lab",
-            SC2HOTS_LOC_ID_OFFSET + 902,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS.mission_name,
-            "Get Nuked",
-            SC2HOTS_LOC_ID_OFFSET + 903,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS.mission_name,
-            "Entrance Gate",
-            SC2HOTS_LOC_ID_OFFSET + 904,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS.mission_name,
-            "Citadel Gate",
-            SC2HOTS_LOC_ID_OFFSET + 905,
-            LocationType.EXTRA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS.mission_name,
-            "South Expansion",
-            SC2HOTS_LOC_ID_OFFSET + 906,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS.mission_name,
-            "Rich Mineral Expansion",
-            SC2HOTS_LOC_ID_OFFSET + 907,
-            LocationType.EXTRA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 1000,
-            LocationType.VICTORY,
-            logic.zerg_competent_comp_competent_aa,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT.mission_name,
-            "Center Essence Pool",
-            SC2HOTS_LOC_ID_OFFSET + 1001,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT.mission_name,
-            "East Essence Pool",
-            SC2HOTS_LOC_ID_OFFSET + 1002,
-            LocationType.VANILLA,
-            logic.zerg_waking_the_ancient_easy_pools,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT.mission_name,
-            "South Essence Pool",
-            SC2HOTS_LOC_ID_OFFSET + 1003,
-            LocationType.VANILLA,
-            logic.zerg_waking_the_ancient_easy_pools,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT.mission_name,
-            "Finish Feeding",
-            SC2HOTS_LOC_ID_OFFSET + 1004,
-            LocationType.EXTRA,
-            logic.zerg_competent_comp_competent_aa,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT.mission_name,
-            "South Proxy Primal Hive",
-            SC2HOTS_LOC_ID_OFFSET + 1005,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT.mission_name,
-            "East Proxy Primal Hive",
-            SC2HOTS_LOC_ID_OFFSET + 1006,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT.mission_name,
-            "South Main Primal Hive",
-            SC2HOTS_LOC_ID_OFFSET + 1007,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-            flags=LocationFlag.BASEBUST,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT.mission_name,
-            "East Main Primal Hive",
-            SC2HOTS_LOC_ID_OFFSET + 1008,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-            flags=LocationFlag.BASEBUST,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT.mission_name,
-            "Flawless",
-            SC2HOTS_LOC_ID_OFFSET + 1009,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-            flags=LocationFlag.PREVENTATIVE,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 1100,
-            LocationType.VICTORY,
-            logic.zerg_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE.mission_name,
-            "Tyrannozor",
-            SC2HOTS_LOC_ID_OFFSET + 1101,
-            LocationType.VANILLA,
-            logic.zerg_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE.mission_name,
-            "Reach the Pool",
-            SC2HOTS_LOC_ID_OFFSET + 1102,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE.mission_name,
-            "15 Minutes Remaining",
-            SC2HOTS_LOC_ID_OFFSET + 1103,
-            LocationType.EXTRA,
-            logic.zerg_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE.mission_name,
-            "5 Minutes Remaining",
-            SC2HOTS_LOC_ID_OFFSET + 1104,
-            LocationType.EXTRA,
-            logic.zerg_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE.mission_name,
-            "Pincer Attack",
-            SC2HOTS_LOC_ID_OFFSET + 1105,
-            LocationType.EXTRA,
-            logic.zerg_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE.mission_name,
-            "Yagdra Claims Brakk's Pack",
-            SC2HOTS_LOC_ID_OFFSET + 1106,
-            LocationType.EXTRA,
-            logic.zerg_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPREME.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 1200,
-            LocationType.VICTORY,
-            logic.supreme_requirement,
-            hard_rule=logic.supreme_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPREME.mission_name,
-            "First Relic",
-            SC2HOTS_LOC_ID_OFFSET + 1201,
-            LocationType.VANILLA,
-            logic.supreme_requirement,
-            hard_rule=logic.supreme_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPREME.mission_name,
-            "Second Relic",
-            SC2HOTS_LOC_ID_OFFSET + 1202,
-            LocationType.VANILLA,
-            logic.supreme_requirement,
-            hard_rule=logic.supreme_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPREME.mission_name,
-            "Third Relic",
-            SC2HOTS_LOC_ID_OFFSET + 1203,
-            LocationType.VANILLA,
-            logic.supreme_requirement,
-            hard_rule=logic.supreme_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPREME.mission_name,
-            "Fourth Relic",
-            SC2HOTS_LOC_ID_OFFSET + 1204,
-            LocationType.VANILLA,
-            logic.supreme_requirement,
-            hard_rule=logic.supreme_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPREME.mission_name,
-            "Yagdra",
-            SC2HOTS_LOC_ID_OFFSET + 1205,
-            LocationType.EXTRA,
-            logic.supreme_requirement,
-            hard_rule=logic.supreme_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPREME.mission_name,
-            "Kraith",
-            SC2HOTS_LOC_ID_OFFSET + 1206,
-            LocationType.EXTRA,
-            logic.supreme_requirement,
-            hard_rule=logic.supreme_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPREME.mission_name,
-            "Slivan",
-            SC2HOTS_LOC_ID_OFFSET + 1207,
-            LocationType.EXTRA,
-            logic.supreme_requirement,
-            hard_rule=logic.supreme_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 1300,
-            LocationType.VICTORY,
-            logic.zerg_infested_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "East Science Facility",
-            SC2HOTS_LOC_ID_OFFSET + 1301,
-            LocationType.VANILLA,
-            logic.zerg_infested_science_facilities,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "Center Science Facility",
-            SC2HOTS_LOC_ID_OFFSET + 1302,
-            LocationType.VANILLA,
-            logic.zerg_infested_science_facilities,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "West Science Facility",
-            SC2HOTS_LOC_ID_OFFSET + 1303,
-            LocationType.VANILLA,
-            logic.zerg_infested_science_facilities,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "First Intro Garrison",
-            SC2HOTS_LOC_ID_OFFSET + 1304,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "Second Intro Garrison",
-            SC2HOTS_LOC_ID_OFFSET + 1305,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "Base Garrison",
-            SC2HOTS_LOC_ID_OFFSET + 1306,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "East Garrison",
-            SC2HOTS_LOC_ID_OFFSET + 1307,
-            LocationType.EXTRA,
-            logic.zerg_infested_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "Mid Garrison",
-            SC2HOTS_LOC_ID_OFFSET + 1308,
-            LocationType.EXTRA,
-            logic.zerg_infested_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "North Garrison",
-            SC2HOTS_LOC_ID_OFFSET + 1309,
-            LocationType.EXTRA,
-            logic.zerg_infested_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "Close Southwest Garrison",
-            SC2HOTS_LOC_ID_OFFSET + 1310,
-            LocationType.EXTRA,
-            logic.zerg_infested_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED.mission_name,
-            "Far Southwest Garrison",
-            SC2HOTS_LOC_ID_OFFSET + 1311,
-            LocationType.EXTRA,
-            logic.zerg_infested_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 1400,
-            LocationType.VICTORY,
-            logic.zerg_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS.mission_name,
-            "North Brutalisk",
-            SC2HOTS_LOC_ID_OFFSET + 1401,
-            LocationType.VANILLA,
-            logic.zerg_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS.mission_name,
-            "South Brutalisk",
-            SC2HOTS_LOC_ID_OFFSET + 1402,
-            LocationType.VANILLA,
-            logic.zerg_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS.mission_name,
-            "Kill 1 Hybrid",
-            SC2HOTS_LOC_ID_OFFSET + 1403,
-            LocationType.EXTRA,
-            logic.zerg_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS.mission_name,
-            "Kill 2 Hybrid",
-            SC2HOTS_LOC_ID_OFFSET + 1404,
-            LocationType.EXTRA,
-            logic.zerg_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS.mission_name,
-            "Kill 3 Hybrid",
-            SC2HOTS_LOC_ID_OFFSET + 1405,
-            LocationType.EXTRA,
-            logic.zerg_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS.mission_name,
-            "Kill 4 Hybrid",
-            SC2HOTS_LOC_ID_OFFSET + 1406,
-            LocationType.EXTRA,
-            logic.zerg_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS.mission_name,
-            "Kill 5 Hybrid",
-            SC2HOTS_LOC_ID_OFFSET + 1407,
-            LocationType.EXTRA,
-            logic.zerg_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS.mission_name,
-            "Kill 6 Hybrid",
-            SC2HOTS_LOC_ID_OFFSET + 1408,
-            LocationType.EXTRA,
-            logic.zerg_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS.mission_name,
-            "Kill 7 Hybrid",
-            SC2HOTS_LOC_ID_OFFSET + 1409,
-            LocationType.EXTRA,
-            logic.zerg_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 1500,
-            LocationType.VICTORY,
-            logic.zerg_phantoms_of_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID.mission_name,
-            "Northwest Crystal",
-            SC2HOTS_LOC_ID_OFFSET + 1501,
-            LocationType.VANILLA,
-            logic.zerg_phantoms_of_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID.mission_name,
-            "Northeast Crystal",
-            SC2HOTS_LOC_ID_OFFSET + 1502,
-            LocationType.VANILLA,
-            logic.zerg_phantoms_of_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID.mission_name,
-            "South Crystal",
-            SC2HOTS_LOC_ID_OFFSET + 1503,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID.mission_name,
-            "Base Established",
-            SC2HOTS_LOC_ID_OFFSET + 1504,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID.mission_name,
-            "Close Temple",
-            SC2HOTS_LOC_ID_OFFSET + 1505,
-            LocationType.EXTRA,
-            logic.zerg_phantoms_of_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID.mission_name,
-            "Mid Temple",
-            SC2HOTS_LOC_ID_OFFSET + 1506,
-            LocationType.EXTRA,
-            logic.zerg_phantoms_of_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID.mission_name,
-            "Southeast Temple",
-            SC2HOTS_LOC_ID_OFFSET + 1507,
-            LocationType.EXTRA,
-            logic.zerg_phantoms_of_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID.mission_name,
-            "Northeast Temple",
-            SC2HOTS_LOC_ID_OFFSET + 1508,
-            LocationType.EXTRA,
-            logic.zerg_phantoms_of_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID.mission_name,
-            "Northwest Temple",
-            SC2HOTS_LOC_ID_OFFSET + 1509,
-            LocationType.EXTRA,
-            logic.zerg_phantoms_of_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WITH_FRIENDS_LIKE_THESE.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 1600,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.WITH_FRIENDS_LIKE_THESE.mission_name,
-            "Pirate Capital Ship",
-            SC2HOTS_LOC_ID_OFFSET + 1601,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WITH_FRIENDS_LIKE_THESE.mission_name,
-            "First Mineral Patch",
-            SC2HOTS_LOC_ID_OFFSET + 1602,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WITH_FRIENDS_LIKE_THESE.mission_name,
-            "Second Mineral Patch",
-            SC2HOTS_LOC_ID_OFFSET + 1603,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WITH_FRIENDS_LIKE_THESE.mission_name,
-            "Third Mineral Patch",
-            SC2HOTS_LOC_ID_OFFSET + 1604,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.CONVICTION.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 1700,
-            LocationType.VICTORY,
-            lambda state: (
-                kerriganless
-                or (
-                    logic.two_kerrigan_actives(state)
-                    and logic.basic_kerrigan(state)
-                    and logic.kerrigan_levels(state, 25)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.CONVICTION.mission_name,
-            "First Secret Documents",
-            SC2HOTS_LOC_ID_OFFSET + 1701,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.two_kerrigan_actives(state) and logic.kerrigan_levels(state, 25)
-            )
-            or kerriganless,
-        ),
-        make_location_data(
-            SC2Mission.CONVICTION.mission_name,
-            "Second Secret Documents",
-            SC2HOTS_LOC_ID_OFFSET + 1702,
-            LocationType.VANILLA,
-            lambda state: (
-                kerriganless
-                or (
-                    logic.two_kerrigan_actives(state)
-                    and logic.basic_kerrigan(state)
-                    and logic.kerrigan_levels(state, 25)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.CONVICTION.mission_name,
-            "Power Coupling",
-            SC2HOTS_LOC_ID_OFFSET + 1703,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.two_kerrigan_actives(state) and logic.kerrigan_levels(state, 25)
-            )
-            or kerriganless,
-        ),
-        make_location_data(
-            SC2Mission.CONVICTION.mission_name,
-            "Door Blasted",
-            SC2HOTS_LOC_ID_OFFSET + 1704,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.two_kerrigan_actives(state) and logic.kerrigan_levels(state, 25)
-            )
-            or kerriganless,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 1800,
-            LocationType.VICTORY,
-            logic.zerg_planetfall_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "East Gate",
-            SC2HOTS_LOC_ID_OFFSET + 1801,
-            LocationType.VANILLA,
-            logic.zerg_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "Northwest Gate",
-            SC2HOTS_LOC_ID_OFFSET + 1802,
-            LocationType.VANILLA,
-            logic.zerg_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "North Gate",
-            SC2HOTS_LOC_ID_OFFSET + 1803,
-            LocationType.VANILLA,
-            logic.zerg_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "1 Bile Launcher Deployed",
-            SC2HOTS_LOC_ID_OFFSET + 1804,
-            LocationType.EXTRA,
-            logic.zerg_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "2 Bile Launchers Deployed",
-            SC2HOTS_LOC_ID_OFFSET + 1805,
-            LocationType.EXTRA,
-            logic.zerg_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "3 Bile Launchers Deployed",
-            SC2HOTS_LOC_ID_OFFSET + 1806,
-            LocationType.EXTRA,
-            logic.zerg_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "4 Bile Launchers Deployed",
-            SC2HOTS_LOC_ID_OFFSET + 1807,
-            LocationType.EXTRA,
-            logic.zerg_planetfall_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "5 Bile Launchers Deployed",
-            SC2HOTS_LOC_ID_OFFSET + 1808,
-            LocationType.EXTRA,
-            logic.zerg_planetfall_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "Sons of Korhal",
-            SC2HOTS_LOC_ID_OFFSET + 1809,
-            LocationType.EXTRA,
-            logic.zerg_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "Night Wolves",
-            SC2HOTS_LOC_ID_OFFSET + 1810,
-            LocationType.EXTRA,
-            logic.zerg_planetfall_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "West Expansion",
-            SC2HOTS_LOC_ID_OFFSET + 1811,
-            LocationType.EXTRA,
-            logic.zerg_planetfall_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL.mission_name,
-            "Mid Expansion",
-            SC2HOTS_LOC_ID_OFFSET + 1812,
-            LocationType.EXTRA,
-            logic.zerg_planetfall_requirement,
-            hard_rule=logic.zerg_kerrigan_or_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 1900,
-            LocationType.VICTORY,
-            lambda state: logic.zerg_competent_comp_competent_aa(state)
-            and (adv_tactics or logic.zerg_ultimate_comp(state)),
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE.mission_name,
-            "First Power Link",
-            SC2HOTS_LOC_ID_OFFSET + 1901,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE.mission_name,
-            "Second Power Link",
-            SC2HOTS_LOC_ID_OFFSET + 1902,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE.mission_name,
-            "Third Power Link",
-            SC2HOTS_LOC_ID_OFFSET + 1903,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE.mission_name,
-            "Expansion Command Center",
-            SC2HOTS_LOC_ID_OFFSET + 1904,
-            LocationType.EXTRA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE.mission_name,
-            "Main Path Command Center",
-            SC2HOTS_LOC_ID_OFFSET + 1905,
-            LocationType.EXTRA,
-            lambda state: logic.zerg_competent_comp_competent_aa(state)
-            and (adv_tactics or logic.zerg_ultimate_comp(state)),
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING.mission_name,
-            "Victory",
-            SC2HOTS_LOC_ID_OFFSET + 2000,
-            LocationType.VICTORY,
-            logic.zerg_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING.mission_name,
-            "South Lane",
-            SC2HOTS_LOC_ID_OFFSET + 2001,
-            LocationType.VANILLA,
-            logic.zerg_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING.mission_name,
-            "North Lane",
-            SC2HOTS_LOC_ID_OFFSET + 2002,
-            LocationType.VANILLA,
-            logic.zerg_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING.mission_name,
-            "East Lane",
-            SC2HOTS_LOC_ID_OFFSET + 2003,
-            LocationType.VANILLA,
-            logic.zerg_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING.mission_name,
-            "Odin",
-            SC2HOTS_LOC_ID_OFFSET + 2004,
-            LocationType.EXTRA,
-            logic.zerg_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING.mission_name,
-            "Trash the Odin Early",
-            SC2HOTS_LOC_ID_OFFSET + 2005,
-            LocationType.MASTERY,
-            logic.zerg_the_reckoning_odin_speedrun,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        # LotV Prologue
-        make_location_data(
-            SC2Mission.DARK_WHISPERS.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 100,
-            LocationType.VICTORY,
-            logic.protoss_dark_whispers_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS.mission_name,
-            "First Prisoner Group",
-            SC2LOTV_LOC_ID_OFFSET + 101,
-            LocationType.VANILLA,
-            logic.protoss_dark_whispers_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS.mission_name,
-            "Second Prisoner Group",
-            SC2LOTV_LOC_ID_OFFSET + 102,
-            LocationType.VANILLA,
-            logic.protoss_dark_whispers_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS.mission_name,
-            "First Pylon",
-            SC2LOTV_LOC_ID_OFFSET + 103,
-            LocationType.VANILLA,
-            logic.protoss_dark_whispers_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS.mission_name,
-            "Second Pylon",
-            SC2LOTV_LOC_ID_OFFSET + 104,
-            LocationType.VANILLA,
-            logic.protoss_dark_whispers_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS.mission_name,
-            "Zerg Base",
-            SC2LOTV_LOC_ID_OFFSET + 105,
-            LocationType.MASTERY,
-            logic.protoss_dark_whispers_zerg_base,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 200,
-            LocationType.VICTORY,
-            logic.protoss_ghosts_in_the_fog_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG.mission_name,
-            "South Rock Formation",
-            SC2LOTV_LOC_ID_OFFSET + 201,
-            LocationType.VANILLA,
-            logic.protoss_ghosts_in_the_fog_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG.mission_name,
-            "West Rock Formation",
-            SC2LOTV_LOC_ID_OFFSET + 202,
-            LocationType.VANILLA,
-            logic.protoss_ghosts_in_the_fog_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG.mission_name,
-            "East Rock Formation",
-            SC2LOTV_LOC_ID_OFFSET + 203,
-            LocationType.VANILLA,
-            logic.protoss_ghosts_in_the_fog_east_rock_formation,
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG.mission_name,
-            "All Rock Formations In Under 10 Minutes",
-            SC2LOTV_LOC_ID_OFFSET + 204,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.protoss_competent_comp(state)
-                and logic.protoss_mineral_dump(state)
-                and logic.protoss_can_attack_behind_chasm(state)
-            ),
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.EVIL_AWOKEN.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 300,
-            LocationType.VICTORY,
-            logic.protoss_evil_awoken_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVIL_AWOKEN.mission_name,
-            "Temple Investigated",
-            SC2LOTV_LOC_ID_OFFSET + 301,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.EVIL_AWOKEN.mission_name,
-            "Void Catalyst",
-            SC2LOTV_LOC_ID_OFFSET + 302,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.EVIL_AWOKEN.mission_name,
-            "First Particle Cannon",
-            SC2LOTV_LOC_ID_OFFSET + 303,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.EVIL_AWOKEN.mission_name,
-            "Second Particle Cannon",
-            SC2LOTV_LOC_ID_OFFSET + 304,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.EVIL_AWOKEN.mission_name,
-            "Third Particle Cannon",
-            SC2LOTV_LOC_ID_OFFSET + 305,
-            LocationType.VANILLA,
-        ),
-        # LotV
-        make_location_data(
-            SC2Mission.FOR_AIUR.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 400,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR.mission_name,
-            "Southwest Hive",
-            SC2LOTV_LOC_ID_OFFSET + 401,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR.mission_name,
-            "Northwest Hive",
-            SC2LOTV_LOC_ID_OFFSET + 402,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR.mission_name,
-            "Northeast Hive",
-            SC2LOTV_LOC_ID_OFFSET + 403,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR.mission_name,
-            "East Hive",
-            SC2LOTV_LOC_ID_OFFSET + 404,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR.mission_name,
-            "West Conduit",
-            SC2LOTV_LOC_ID_OFFSET + 405,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR.mission_name,
-            "Middle Conduit",
-            SC2LOTV_LOC_ID_OFFSET + 406,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR.mission_name,
-            "Northeast Conduit",
-            SC2LOTV_LOC_ID_OFFSET + 407,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 500,
-            LocationType.VICTORY,
-            logic.protoss_growing_shadow_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW.mission_name,
-            "Close Pylon",
-            SC2LOTV_LOC_ID_OFFSET + 501,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW.mission_name,
-            "East Pylon",
-            SC2LOTV_LOC_ID_OFFSET + 502,
-            LocationType.VANILLA,
-            logic.protoss_growing_shadow_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW.mission_name,
-            "West Pylon",
-            SC2LOTV_LOC_ID_OFFSET + 503,
-            LocationType.VANILLA,
-            logic.protoss_growing_shadow_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW.mission_name,
-            "Nexus",
-            SC2LOTV_LOC_ID_OFFSET + 504,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW.mission_name,
-            "Templar Base",
-            SC2LOTV_LOC_ID_OFFSET + 505,
-            LocationType.EXTRA,
-            logic.protoss_growing_shadow_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 600,
-            LocationType.VICTORY,
-            logic.protoss_spear_of_adun_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN.mission_name,
-            "Close Warp Gate",
-            SC2LOTV_LOC_ID_OFFSET + 601,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN.mission_name,
-            "West Warp Gate",
-            SC2LOTV_LOC_ID_OFFSET + 602,
-            LocationType.VANILLA,
-            logic.protoss_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN.mission_name,
-            "North Warp Gate",
-            SC2LOTV_LOC_ID_OFFSET + 603,
-            LocationType.VANILLA,
-            logic.protoss_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN.mission_name,
-            "North Power Cell",
-            SC2LOTV_LOC_ID_OFFSET + 604,
-            LocationType.EXTRA,
-            logic.protoss_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN.mission_name,
-            "East Power Cell",
-            SC2LOTV_LOC_ID_OFFSET + 605,
-            LocationType.EXTRA,
-            logic.protoss_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN.mission_name,
-            "South Power Cell",
-            SC2LOTV_LOC_ID_OFFSET + 606,
-            LocationType.EXTRA,
-            logic.protoss_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN.mission_name,
-            "Southeast Power Cell",
-            SC2LOTV_LOC_ID_OFFSET + 607,
-            LocationType.EXTRA,
-            logic.protoss_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 700,
-            LocationType.VICTORY,
-            logic.protoss_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD.mission_name,
-            "Mid EMP Scrambler",
-            SC2LOTV_LOC_ID_OFFSET + 701,
-            LocationType.VANILLA,
-            logic.protoss_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD.mission_name,
-            "Southeast EMP Scrambler",
-            SC2LOTV_LOC_ID_OFFSET + 702,
-            LocationType.VANILLA,
-            logic.protoss_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD.mission_name,
-            "North EMP Scrambler",
-            SC2LOTV_LOC_ID_OFFSET + 703,
-            LocationType.VANILLA,
-            logic.protoss_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD.mission_name,
-            "Mid Stabilizer",
-            SC2LOTV_LOC_ID_OFFSET + 704,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD.mission_name,
-            "Southwest Stabilizer",
-            SC2LOTV_LOC_ID_OFFSET + 705,
-            LocationType.EXTRA,
-            logic.protoss_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD.mission_name,
-            "Northwest Stabilizer",
-            SC2LOTV_LOC_ID_OFFSET + 706,
-            LocationType.EXTRA,
-            logic.protoss_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD.mission_name,
-            "Northeast Stabilizer",
-            SC2LOTV_LOC_ID_OFFSET + 707,
-            LocationType.EXTRA,
-            logic.protoss_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD.mission_name,
-            "Southeast Stabilizer",
-            SC2LOTV_LOC_ID_OFFSET + 708,
-            LocationType.EXTRA,
-            logic.protoss_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD.mission_name,
-            "West Raynor Base",
-            SC2LOTV_LOC_ID_OFFSET + 709,
-            LocationType.EXTRA,
-            logic.protoss_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD.mission_name,
-            "East Raynor Base",
-            SC2LOTV_LOC_ID_OFFSET + 710,
-            LocationType.EXTRA,
-            logic.protoss_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 800,
-            LocationType.VICTORY,
-            logic.protoss_brothers_in_arms_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS.mission_name,
-            "Mid Science Facility",
-            SC2LOTV_LOC_ID_OFFSET + 801,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS.mission_name,
-            "North Science Facility",
-            SC2LOTV_LOC_ID_OFFSET + 802,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.protoss_brothers_in_arms_requirement(state)
-                or (
-                    logic.take_over_ai_allies
-                    and logic.advanced_tactics
-                    and (
-                        logic.terran_common_unit(state)
-                        or logic.protoss_common_unit(state)
-                    )
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS.mission_name,
-            "South Science Facility",
-            SC2LOTV_LOC_ID_OFFSET + 803,
-            LocationType.VANILLA,
-            logic.protoss_brothers_in_arms_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS.mission_name,
-            "Raynor Forward Positions",
-            SC2LOTV_LOC_ID_OFFSET + 804,
-            LocationType.EXTRA,
-            logic.protoss_brothers_in_arms_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS.mission_name,
-            "Valerian Forward Positions",
-            SC2LOTV_LOC_ID_OFFSET + 805,
-            LocationType.EXTRA,
-            logic.protoss_brothers_in_arms_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS.mission_name,
-            "Win In Under 15 Minutes",
-            SC2LOTV_LOC_ID_OFFSET + 806,
-            LocationType.CHALLENGE,
-            logic.protoss_brothers_in_arms_speedrun,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 900,
-            LocationType.VICTORY,
-            logic.protoss_common_unit_anti_light_air,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH.mission_name,
-            "Close Solarite Reserve",
-            SC2LOTV_LOC_ID_OFFSET + 901,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH.mission_name,
-            "North Solarite Reserve",
-            SC2LOTV_LOC_ID_OFFSET + 902,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_anti_light_air,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH.mission_name,
-            "East Solarite Reserve",
-            SC2LOTV_LOC_ID_OFFSET + 903,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_anti_light_air,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH.mission_name,
-            "West Launch Bay",
-            SC2LOTV_LOC_ID_OFFSET + 904,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_anti_light_air,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH.mission_name,
-            "South Launch Bay",
-            SC2LOTV_LOC_ID_OFFSET + 905,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_anti_light_air,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH.mission_name,
-            "Northwest Launch Bay",
-            SC2LOTV_LOC_ID_OFFSET + 906,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_anti_light_air,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH.mission_name,
-            "East Launch Bay",
-            SC2LOTV_LOC_ID_OFFSET + 907,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_anti_light_air,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 1000,
-            LocationType.VICTORY,
-            logic.protoss_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND.mission_name,
-            "West Zenith Stone",
-            SC2LOTV_LOC_ID_OFFSET + 1001,
-            LocationType.VANILLA,
-            logic.protoss_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND.mission_name,
-            "North Zenith Stone",
-            SC2LOTV_LOC_ID_OFFSET + 1002,
-            LocationType.VANILLA,
-            logic.protoss_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND.mission_name,
-            "East Zenith Stone",
-            SC2LOTV_LOC_ID_OFFSET + 1003,
-            LocationType.VANILLA,
-            logic.protoss_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND.mission_name,
-            "1 Billion Zerg",
-            SC2LOTV_LOC_ID_OFFSET + 1004,
-            LocationType.EXTRA,
-            logic.protoss_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND.mission_name,
-            "1.5 Billion Zerg",
-            SC2LOTV_LOC_ID_OFFSET + 1005,
-            LocationType.VANILLA,
-            logic.protoss_last_stand_1p5_billion,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND.mission_name,
-            "All Zenith Stones In Under 10 Minutes",
-            SC2LOTV_LOC_ID_OFFSET + 1006,
-            LocationType.CHALLENGE,
-            logic.protoss_last_stand_requirement,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 1100,
-            LocationType.VICTORY,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON.mission_name,
-            "South Solarite",
-            SC2LOTV_LOC_ID_OFFSET + 1101,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON.mission_name,
-            "North Solarite",
-            SC2LOTV_LOC_ID_OFFSET + 1102,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON.mission_name,
-            "Northwest Solarite",
-            SC2LOTV_LOC_ID_OFFSET + 1103,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON.mission_name,
-            "Rescue Sentries",
-            SC2LOTV_LOC_ID_OFFSET + 1104,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON.mission_name,
-            "Destroy Gateways",
-            SC2LOTV_LOC_ID_OFFSET + 1105,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 1200,
-            LocationType.VICTORY,
-            logic.protoss_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION.mission_name,
-            "Mid Celestial Lock",
-            SC2LOTV_LOC_ID_OFFSET + 1201,
-            LocationType.EXTRA,
-            logic.protoss_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION.mission_name,
-            "West Celestial Lock",
-            SC2LOTV_LOC_ID_OFFSET + 1202,
-            LocationType.EXTRA,
-            logic.protoss_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION.mission_name,
-            "South Celestial Lock",
-            SC2LOTV_LOC_ID_OFFSET + 1203,
-            LocationType.EXTRA,
-            logic.protoss_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION.mission_name,
-            "East Celestial Lock",
-            SC2LOTV_LOC_ID_OFFSET + 1204,
-            LocationType.EXTRA,
-            logic.protoss_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION.mission_name,
-            "North Celestial Lock",
-            SC2LOTV_LOC_ID_OFFSET + 1205,
-            LocationType.EXTRA,
-            logic.protoss_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION.mission_name,
-            "Titanic Warp Prism",
-            SC2LOTV_LOC_ID_OFFSET + 1206,
-            LocationType.VANILLA,
-            logic.protoss_temple_of_unification_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION.mission_name,
-            "Terran Main Base",
-            SC2LOTV_LOC_ID_OFFSET + 1207,
-            LocationType.MASTERY,
-            logic.protoss_temple_of_unification_bases,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION.mission_name,
-            "Protoss Main Base",
-            SC2LOTV_LOC_ID_OFFSET + 1208,
-            LocationType.MASTERY,
-            logic.protoss_temple_of_unification_bases,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_INFINITE_CYCLE.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 1300,
-            LocationType.VICTORY,
-            logic.the_infinite_cycle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_INFINITE_CYCLE.mission_name,
-            "First Hall of Revelation",
-            SC2LOTV_LOC_ID_OFFSET + 1301,
-            LocationType.EXTRA,
-            logic.the_infinite_cycle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_INFINITE_CYCLE.mission_name,
-            "Second Hall of Revelation",
-            SC2LOTV_LOC_ID_OFFSET + 1302,
-            LocationType.EXTRA,
-            logic.the_infinite_cycle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_INFINITE_CYCLE.mission_name,
-            "First Xel'Naga Device",
-            SC2LOTV_LOC_ID_OFFSET + 1303,
-            LocationType.VANILLA,
-            logic.the_infinite_cycle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_INFINITE_CYCLE.mission_name,
-            "Second Xel'Naga Device",
-            SC2LOTV_LOC_ID_OFFSET + 1304,
-            LocationType.VANILLA,
-            logic.the_infinite_cycle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_INFINITE_CYCLE.mission_name,
-            "Third Xel'Naga Device",
-            SC2LOTV_LOC_ID_OFFSET + 1305,
-            LocationType.VANILLA,
-            logic.the_infinite_cycle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 1400,
-            LocationType.VICTORY,
-            logic.protoss_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION.mission_name,
-            "Artanis",
-            SC2LOTV_LOC_ID_OFFSET + 1401,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION.mission_name,
-            "Northwest Void Crystal",
-            SC2LOTV_LOC_ID_OFFSET + 1402,
-            LocationType.EXTRA,
-            logic.protoss_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION.mission_name,
-            "Northeast Void Crystal",
-            SC2LOTV_LOC_ID_OFFSET + 1403,
-            LocationType.EXTRA,
-            logic.protoss_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION.mission_name,
-            "Southwest Void Crystal",
-            SC2LOTV_LOC_ID_OFFSET + 1404,
-            LocationType.EXTRA,
-            logic.protoss_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION.mission_name,
-            "Southeast Void Crystal",
-            SC2LOTV_LOC_ID_OFFSET + 1405,
-            LocationType.EXTRA,
-            logic.protoss_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION.mission_name,
-            "South Xel'Naga Vessel",
-            SC2LOTV_LOC_ID_OFFSET + 1406,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION.mission_name,
-            "Mid Xel'Naga Vessel",
-            SC2LOTV_LOC_ID_OFFSET + 1407,
-            LocationType.VANILLA,
-            logic.protoss_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION.mission_name,
-            "North Xel'Naga Vessel",
-            SC2LOTV_LOC_ID_OFFSET + 1408,
-            LocationType.VANILLA,
-            logic.protoss_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 1500,
-            LocationType.VICTORY,
-            logic.protoss_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST.mission_name,
-            "Zerg Cleared",
-            SC2LOTV_LOC_ID_OFFSET + 1501,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST.mission_name,
-            "First Stasis Lock",
-            SC2LOTV_LOC_ID_OFFSET + 1502,
-            LocationType.EXTRA,
-            logic.protoss_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST.mission_name,
-            "Second Stasis Lock",
-            SC2LOTV_LOC_ID_OFFSET + 1503,
-            LocationType.EXTRA,
-            logic.protoss_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST.mission_name,
-            "Third Stasis Lock",
-            SC2LOTV_LOC_ID_OFFSET + 1504,
-            LocationType.EXTRA,
-            logic.protoss_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST.mission_name,
-            "Fourth Stasis Lock",
-            SC2LOTV_LOC_ID_OFFSET + 1505,
-            LocationType.EXTRA,
-            logic.protoss_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST.mission_name,
-            "South Power Core",
-            SC2LOTV_LOC_ID_OFFSET + 1506,
-            LocationType.VANILLA,
-            logic.protoss_unsealing_the_past_ledge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST.mission_name,
-            "East Power Core",
-            SC2LOTV_LOC_ID_OFFSET + 1507,
-            LocationType.VANILLA,
-            logic.protoss_unsealing_the_past_ledge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 1600,
-            LocationType.VICTORY,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "North Sector: West Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1601,
-            LocationType.VANILLA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "North Sector: Northeast Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1602,
-            LocationType.EXTRA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "North Sector: Southeast Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1603,
-            LocationType.EXTRA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "South Sector: West Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1604,
-            LocationType.VANILLA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "South Sector: North Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1605,
-            LocationType.EXTRA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "South Sector: East Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1606,
-            LocationType.EXTRA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "West Sector: West Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1607,
-            LocationType.VANILLA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "West Sector: Mid Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1608,
-            LocationType.EXTRA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "West Sector: East Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1609,
-            LocationType.EXTRA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "East Sector: North Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1610,
-            LocationType.VANILLA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "East Sector: West Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1611,
-            LocationType.EXTRA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "East Sector: South Null Circuit",
-            SC2LOTV_LOC_ID_OFFSET + 1612,
-            LocationType.EXTRA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION.mission_name,
-            "Purifier Warden",
-            SC2LOTV_LOC_ID_OFFSET + 1613,
-            LocationType.VANILLA,
-            logic.protoss_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 1700,
-            LocationType.VICTORY,
-            logic.protoss_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE.mission_name,
-            "First Terrazine Fog",
-            SC2LOTV_LOC_ID_OFFSET + 1701,
-            LocationType.EXTRA,
-            logic.protoss_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE.mission_name,
-            "Southwest Guardian",
-            SC2LOTV_LOC_ID_OFFSET + 1702,
-            LocationType.EXTRA,
-            logic.protoss_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE.mission_name,
-            "West Guardian",
-            SC2LOTV_LOC_ID_OFFSET + 1703,
-            LocationType.EXTRA,
-            logic.protoss_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE.mission_name,
-            "Northwest Guardian",
-            SC2LOTV_LOC_ID_OFFSET + 1704,
-            LocationType.EXTRA,
-            logic.protoss_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE.mission_name,
-            "Northeast Guardian",
-            SC2LOTV_LOC_ID_OFFSET + 1705,
-            LocationType.EXTRA,
-            logic.protoss_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE.mission_name,
-            "North Mothership",
-            SC2LOTV_LOC_ID_OFFSET + 1706,
-            LocationType.VANILLA,
-            logic.protoss_steps_of_the_rite_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE.mission_name,
-            "South Mothership",
-            SC2LOTV_LOC_ID_OFFSET + 1707,
-            LocationType.VANILLA,
-            logic.protoss_steps_of_the_rite_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 1800,
-            LocationType.VICTORY,
-            logic.protoss_rak_shir_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR.mission_name,
-            "North Slayn Elemental",
-            SC2LOTV_LOC_ID_OFFSET + 1801,
-            LocationType.VANILLA,
-            logic.protoss_rak_shir_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR.mission_name,
-            "Southwest Slayn Elemental",
-            SC2LOTV_LOC_ID_OFFSET + 1802,
-            LocationType.VANILLA,
-            logic.protoss_rak_shir_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR.mission_name,
-            "East Slayn Elemental",
-            SC2LOTV_LOC_ID_OFFSET + 1803,
-            LocationType.VANILLA,
-            logic.protoss_rak_shir_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR.mission_name,
-            "Resource Pickups",
-            SC2LOTV_LOC_ID_OFFSET + 1804,
-            LocationType.EXTRA,
-            logic.protoss_rak_shir_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR.mission_name,
-            "Destroy Nexuses",
-            SC2LOTV_LOC_ID_OFFSET + 1805,
-            LocationType.CHALLENGE,
-            logic.protoss_rak_shir_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR.mission_name,
-            "Win In Under 15 Minutes",
-            SC2LOTV_LOC_ID_OFFSET + 1806,
-            LocationType.MASTERY,
-            logic.protoss_rak_shir_requirement,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 1900,
-            LocationType.VICTORY,
-            logic.protoss_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE.mission_name,
-            "Northwest Power Core",
-            SC2LOTV_LOC_ID_OFFSET + 1901,
-            LocationType.EXTRA,
-            logic.protoss_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE.mission_name,
-            "Northeast Power Core",
-            SC2LOTV_LOC_ID_OFFSET + 1902,
-            LocationType.EXTRA,
-            logic.protoss_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE.mission_name,
-            "Southeast Power Core",
-            SC2LOTV_LOC_ID_OFFSET + 1903,
-            LocationType.EXTRA,
-            logic.protoss_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE.mission_name,
-            "West Hybrid Stasis Chamber",
-            SC2LOTV_LOC_ID_OFFSET + 1904,
-            LocationType.VANILLA,
-            logic.protoss_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE.mission_name,
-            "Southeast Hybrid Stasis Chamber",
-            SC2LOTV_LOC_ID_OFFSET + 1905,
-            LocationType.VANILLA,
-            logic.protoss_fleet,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_RETURN.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 2000,
-            LocationType.VICTORY,
-            logic.templars_return_phase_3_reach_dts_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_RETURN.mission_name,
-            "Citadel: First Gate",
-            SC2LOTV_LOC_ID_OFFSET + 2001,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_RETURN.mission_name,
-            "Citadel: Second Gate",
-            SC2LOTV_LOC_ID_OFFSET + 2002,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_RETURN.mission_name,
-            "Citadel: Power Structure",
-            SC2LOTV_LOC_ID_OFFSET + 2003,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_RETURN.mission_name,
-            "Temple Grounds: Gather Army",
-            SC2LOTV_LOC_ID_OFFSET + 2004,
-            LocationType.VANILLA,
-            logic.templars_return_phase_2_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_RETURN.mission_name,
-            "Temple Grounds: Power Structure",
-            SC2LOTV_LOC_ID_OFFSET + 2005,
-            LocationType.VANILLA,
-            logic.templars_return_phase_2_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_RETURN.mission_name,
-            "Caverns: Purifier",
-            SC2LOTV_LOC_ID_OFFSET + 2006,
-            LocationType.EXTRA,
-            logic.templars_return_phase_3_reach_colossus_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_RETURN.mission_name,
-            "Caverns: Dark Templar",
-            SC2LOTV_LOC_ID_OFFSET + 2007,
-            LocationType.EXTRA,
-            logic.templars_return_phase_3_reach_dts_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 2100,
-            LocationType.VICTORY,
-            logic.protoss_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST.mission_name,
-            "Southeast Void Shard",
-            SC2LOTV_LOC_ID_OFFSET + 2101,
-            LocationType.EXTRA,
-            logic.protoss_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST.mission_name,
-            "South Void Shard",
-            SC2LOTV_LOC_ID_OFFSET + 2102,
-            LocationType.EXTRA,
-            logic.protoss_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST.mission_name,
-            "Southwest Void Shard",
-            SC2LOTV_LOC_ID_OFFSET + 2103,
-            LocationType.EXTRA,
-            logic.protoss_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST.mission_name,
-            "North Void Shard",
-            SC2LOTV_LOC_ID_OFFSET + 2104,
-            LocationType.EXTRA,
-            logic.protoss_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST.mission_name,
-            "Northwest Void Shard",
-            SC2LOTV_LOC_ID_OFFSET + 2105,
-            LocationType.EXTRA,
-            logic.protoss_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST.mission_name,
-            "Nerazim Warp in Zone",
-            SC2LOTV_LOC_ID_OFFSET + 2106,
-            LocationType.VANILLA,
-            logic.protoss_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST.mission_name,
-            "Tal'darim Warp in Zone",
-            SC2LOTV_LOC_ID_OFFSET + 2107,
-            LocationType.VANILLA,
-            logic.protoss_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST.mission_name,
-            "Purifier Warp in Zone",
-            SC2LOTV_LOC_ID_OFFSET + 2108,
-            LocationType.VANILLA,
-            logic.protoss_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 2200,
-            LocationType.VICTORY,
-            logic.protoss_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION.mission_name,
-            "Fabrication Matrix",
-            SC2LOTV_LOC_ID_OFFSET + 2201,
-            LocationType.EXTRA,
-            logic.protoss_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION.mission_name,
-            "Assault Cluster",
-            SC2LOTV_LOC_ID_OFFSET + 2202,
-            LocationType.EXTRA,
-            logic.protoss_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION.mission_name,
-            "Hull Breach",
-            SC2LOTV_LOC_ID_OFFSET + 2203,
-            LocationType.EXTRA,
-            logic.protoss_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION.mission_name,
-            "Core Critical",
-            SC2LOTV_LOC_ID_OFFSET + 2204,
-            LocationType.EXTRA,
-            logic.protoss_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION.mission_name,
-            "Kill Brutalisk",
-            SC2LOTV_LOC_ID_OFFSET + 2205,
-            LocationType.MASTERY,
-            logic.protoss_salvation_requirement,
-        ),
-        # Epilogue
-        make_location_data(
-            SC2Mission.INTO_THE_VOID.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 2300,
-            LocationType.VICTORY,
-            logic.into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID.mission_name,
-            "Corruption Source",
-            SC2LOTV_LOC_ID_OFFSET + 2301,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID.mission_name,
-            "Southwest Forward Position",
-            SC2LOTV_LOC_ID_OFFSET + 2302,
-            LocationType.VANILLA,
-            logic.into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID.mission_name,
-            "Northwest Forward Position",
-            SC2LOTV_LOC_ID_OFFSET + 2303,
-            LocationType.VANILLA,
-            logic.into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID.mission_name,
-            "Southeast Forward Position",
-            SC2LOTV_LOC_ID_OFFSET + 2304,
-            LocationType.VANILLA,
-            logic.into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID.mission_name,
-            "Northeast Forward Position",
-            SC2LOTV_LOC_ID_OFFSET + 2305,
-            LocationType.VANILLA,
-            logic.into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 2400,
-            LocationType.VICTORY,
-            logic.essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY.mission_name,
-            "Initial Void Thrashers",
-            SC2LOTV_LOC_ID_OFFSET + 2401,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY.mission_name,
-            "Void Thrasher Wave 1",
-            SC2LOTV_LOC_ID_OFFSET + 2402,
-            LocationType.EXTRA,
-            logic.essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY.mission_name,
-            "Void Thrasher Wave 2",
-            SC2LOTV_LOC_ID_OFFSET + 2403,
-            LocationType.EXTRA,
-            logic.essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY.mission_name,
-            "Void Thrasher Wave 3",
-            SC2LOTV_LOC_ID_OFFSET + 2404,
-            LocationType.EXTRA,
-            logic.essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY.mission_name,
-            "Void Thrasher Wave 4",
-            SC2LOTV_LOC_ID_OFFSET + 2405,
-            LocationType.EXTRA,
-            logic.essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY.mission_name,
-            "No more than 15 Kerrigan Kills",
-            SC2LOTV_LOC_ID_OFFSET + 2406,
-            LocationType.MASTERY,
-            logic.essence_of_eternity_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL.mission_name,
-            "Victory",
-            SC2LOTV_LOC_ID_OFFSET + 2500,
-            LocationType.VICTORY,
-            logic.amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL.mission_name,
-            "Destroy 1 Crystal",
-            SC2LOTV_LOC_ID_OFFSET + 2501,
-            LocationType.EXTRA,
-            logic.amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL.mission_name,
-            "Destroy 2 Crystals",
-            SC2LOTV_LOC_ID_OFFSET + 2502,
-            LocationType.EXTRA,
-            logic.amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL.mission_name,
-            "Destroy 3 Crystals",
-            SC2LOTV_LOC_ID_OFFSET + 2503,
-            LocationType.EXTRA,
-            logic.amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL.mission_name,
-            "Destroy 4 Crystals",
-            SC2LOTV_LOC_ID_OFFSET + 2504,
-            LocationType.EXTRA,
-            logic.amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL.mission_name,
-            "Destroy 5 Crystals",
-            SC2LOTV_LOC_ID_OFFSET + 2505,
-            LocationType.EXTRA,
-            logic.amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL.mission_name,
-            "Destroy 6 Crystals",
-            SC2LOTV_LOC_ID_OFFSET + 2506,
-            LocationType.EXTRA,
-            logic.amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL.mission_name,
-            "Clear Void Chasms",
-            SC2LOTV_LOC_ID_OFFSET + 2507,
-            LocationType.MASTERY,
-            logic.zerg_amons_fall_full_clear,
-        ),
-        # Nova Covert Ops
-        make_location_data(
-            SC2Mission.THE_ESCAPE.mission_name,
-            "Victory",
-            SC2NCO_LOC_ID_OFFSET + 100,
-            LocationType.VICTORY,
-            logic.the_escape_requirement,
-            hard_rule=logic.the_escape_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESCAPE.mission_name,
-            "Rifle",
-            SC2NCO_LOC_ID_OFFSET + 101,
-            LocationType.VANILLA,
-            logic.the_escape_first_stage_requirement,
-            hard_rule=logic.the_escape_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESCAPE.mission_name,
-            "Grenades",
-            SC2NCO_LOC_ID_OFFSET + 102,
-            LocationType.VANILLA,
-            logic.the_escape_first_stage_requirement,
-            hard_rule=logic.the_escape_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESCAPE.mission_name,
-            "Agent Delta",
-            SC2NCO_LOC_ID_OFFSET + 103,
-            LocationType.VANILLA,
-            logic.the_escape_requirement,
-            hard_rule=logic.the_escape_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESCAPE.mission_name,
-            "Agent Pierce",
-            SC2NCO_LOC_ID_OFFSET + 104,
-            LocationType.VANILLA,
-            logic.the_escape_requirement,
-            hard_rule=logic.the_escape_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESCAPE.mission_name,
-            "Agent Stone",
-            SC2NCO_LOC_ID_OFFSET + 105,
-            LocationType.VANILLA,
-            logic.the_escape_requirement,
-            hard_rule=logic.the_escape_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE.mission_name,
-            "Victory",
-            SC2NCO_LOC_ID_OFFSET + 200,
-            LocationType.VICTORY,
-            logic.terran_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE.mission_name,
-            "Research Center",
-            SC2NCO_LOC_ID_OFFSET + 201,
-            LocationType.VANILLA,
-            logic.terran_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE.mission_name,
-            "Weaponry Labs",
-            SC2NCO_LOC_ID_OFFSET + 202,
-            LocationType.VANILLA,
-            logic.terran_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE.mission_name,
-            "Brutalisk",
-            SC2NCO_LOC_ID_OFFSET + 203,
-            LocationType.EXTRA,
-            logic.terran_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE.mission_name,
-            "Gas Pickups",
-            SC2NCO_LOC_ID_OFFSET + 204,
-            LocationType.EXTRA,
-            logic.terran_sudden_strike_requirement_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE.mission_name,
-            "Protect Buildings",
-            SC2NCO_LOC_ID_OFFSET + 205,
-            LocationType.CHALLENGE,
-            logic.terran_sudden_strike_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE.mission_name,
-            "Zerg Base",
-            SC2NCO_LOC_ID_OFFSET + 206,
-            LocationType.MASTERY,
-            logic.terran_sudden_strike_zerg_base,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE.mission_name,
-            "Victory",
-            SC2NCO_LOC_ID_OFFSET + 300,
-            LocationType.VICTORY,
-            logic.enemy_intelligence_third_stage_requirement,
-            hard_rule=logic.enemy_intelligence_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE.mission_name,
-            "West Garrison",
-            SC2NCO_LOC_ID_OFFSET + 301,
-            LocationType.EXTRA,
-            logic.enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.terran_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE.mission_name,
-            "Close Garrison",
-            SC2NCO_LOC_ID_OFFSET + 302,
-            LocationType.EXTRA,
-            logic.enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.terran_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE.mission_name,
-            "Northeast Garrison",
-            SC2NCO_LOC_ID_OFFSET + 303,
-            LocationType.EXTRA,
-            logic.enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.terran_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE.mission_name,
-            "Southeast Garrison",
-            SC2NCO_LOC_ID_OFFSET + 304,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.enemy_intelligence_first_stage_requirement(state)
-                and logic.enemy_intelligence_cliff_garrison(state)
-            ),
-            hard_rule=logic.enemy_intelligence_cliff_garrison,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE.mission_name,
-            "South Garrison",
-            SC2NCO_LOC_ID_OFFSET + 305,
-            LocationType.EXTRA,
-            logic.enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.terran_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE.mission_name,
-            "All Garrisons",
-            SC2NCO_LOC_ID_OFFSET + 306,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.enemy_intelligence_first_stage_requirement(state)
-                and logic.enemy_intelligence_cliff_garrison(state)
-            ),
-            hard_rule=logic.enemy_intelligence_cliff_garrison,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE.mission_name,
-            "Forces Rescued",
-            SC2NCO_LOC_ID_OFFSET + 307,
-            LocationType.VANILLA,
-            logic.enemy_intelligence_first_stage_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE.mission_name,
-            "Communications Hub",
-            SC2NCO_LOC_ID_OFFSET + 308,
-            LocationType.VANILLA,
-            logic.enemy_intelligence_second_stage_requirement,
-            hard_rule=logic.enemy_intelligence_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "Victory",
-            SC2NCO_LOC_ID_OFFSET + 400,
-            LocationType.VICTORY,
-            logic.trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "North Base: West Hatchery",
-            SC2NCO_LOC_ID_OFFSET + 401,
-            LocationType.VANILLA,
-            logic.trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "North Base: North Hatchery",
-            SC2NCO_LOC_ID_OFFSET + 402,
-            LocationType.VANILLA,
-            logic.trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "North Base: East Hatchery",
-            SC2NCO_LOC_ID_OFFSET + 403,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "South Base: Northwest Hatchery",
-            SC2NCO_LOC_ID_OFFSET + 404,
-            LocationType.VANILLA,
-            logic.trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "South Base: Southwest Hatchery",
-            SC2NCO_LOC_ID_OFFSET + 405,
-            LocationType.VANILLA,
-            logic.trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "South Base: East Hatchery",
-            SC2NCO_LOC_ID_OFFSET + 406,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "North Shield Projector",
-            SC2NCO_LOC_ID_OFFSET + 407,
-            LocationType.EXTRA,
-            logic.trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "East Shield Projector",
-            SC2NCO_LOC_ID_OFFSET + 408,
-            LocationType.EXTRA,
-            logic.trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "South Shield Projector",
-            SC2NCO_LOC_ID_OFFSET + 409,
-            LocationType.EXTRA,
-            logic.trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "West Shield Projector",
-            SC2NCO_LOC_ID_OFFSET + 410,
-            LocationType.EXTRA,
-            logic.trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE.mission_name,
-            "Fleet Beacon",
-            SC2NCO_LOC_ID_OFFSET + 411,
-            LocationType.VANILLA,
-            logic.trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS.mission_name,
-            "Victory",
-            SC2NCO_LOC_ID_OFFSET + 500,
-            LocationType.VICTORY,
-            logic.night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS.mission_name,
-            "1 Terrazine Node Collected",
-            SC2NCO_LOC_ID_OFFSET + 501,
-            LocationType.EXTRA,
-            logic.night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS.mission_name,
-            "2 Terrazine Nodes Collected",
-            SC2NCO_LOC_ID_OFFSET + 502,
-            LocationType.EXTRA,
-            logic.night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS.mission_name,
-            "3 Terrazine Nodes Collected",
-            SC2NCO_LOC_ID_OFFSET + 503,
-            LocationType.EXTRA,
-            logic.night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS.mission_name,
-            "4 Terrazine Nodes Collected",
-            SC2NCO_LOC_ID_OFFSET + 504,
-            LocationType.EXTRA,
-            logic.night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS.mission_name,
-            "5 Terrazine Nodes Collected",
-            SC2NCO_LOC_ID_OFFSET + 505,
-            LocationType.EXTRA,
-            logic.night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS.mission_name,
-            "HERC Outpost",
-            SC2NCO_LOC_ID_OFFSET + 506,
-            LocationType.VANILLA,
-            logic.night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS.mission_name,
-            "Umojan Mine",
-            SC2NCO_LOC_ID_OFFSET + 507,
-            LocationType.EXTRA,
-            logic.night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS.mission_name,
-            "Blightbringer",
-            SC2NCO_LOC_ID_OFFSET + 508,
-            LocationType.VANILLA,
-            logic.night_terrors_side_area_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS.mission_name,
-            "Science Facility",
-            SC2NCO_LOC_ID_OFFSET + 509,
-            LocationType.EXTRA,
-            logic.night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS.mission_name,
-            "Eradicators",
-            SC2NCO_LOC_ID_OFFSET + 510,
-            LocationType.VANILLA,
-            logic.night_terrors_side_area_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Victory",
-            SC2NCO_LOC_ID_OFFSET + 600,
-            LocationType.VICTORY,
-            logic.flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Close North Evidence Coordinates",
-            SC2NCO_LOC_ID_OFFSET + 601,
-            LocationType.EXTRA,
-            lambda state: (
-                state.has_any(
-                    {
-                        item_names.LIBERATOR_RAID_ARTILLERY,
-                        item_names.RAVEN_HUNTER_SEEKER_WEAPON,
-                    },
-                    player,
-                )
-                or logic.terran_common_unit(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Close East Evidence Coordinates",
-            SC2NCO_LOC_ID_OFFSET + 602,
-            LocationType.EXTRA,
-            lambda state: (
-                state.has_any(
-                    {
-                        item_names.LIBERATOR_RAID_ARTILLERY,
-                        item_names.RAVEN_HUNTER_SEEKER_WEAPON,
-                    },
-                    player,
-                )
-                or logic.terran_common_unit(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Far North Evidence Coordinates",
-            SC2NCO_LOC_ID_OFFSET + 603,
-            LocationType.EXTRA,
-            logic.flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Far East Evidence Coordinates",
-            SC2NCO_LOC_ID_OFFSET + 604,
-            LocationType.EXTRA,
-            logic.flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Experimental Weapon",
-            SC2NCO_LOC_ID_OFFSET + 605,
-            LocationType.VANILLA,
-            logic.flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Northwest Subway Entrance",
-            SC2NCO_LOC_ID_OFFSET + 606,
-            LocationType.VANILLA,
-            lambda state: (
-                state.has_any(
-                    {
-                        item_names.LIBERATOR_RAID_ARTILLERY,
-                        item_names.RAVEN_HUNTER_SEEKER_WEAPON,
-                    },
-                    player,
-                )
-                and logic.terran_common_unit(state)
-                or logic.flashpoint_far_requirement(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Southeast Subway Entrance",
-            SC2NCO_LOC_ID_OFFSET + 607,
-            LocationType.VANILLA,
-            lambda state: state.has_any(
-                {
-                    item_names.LIBERATOR_RAID_ARTILLERY,
-                    item_names.RAVEN_HUNTER_SEEKER_WEAPON,
-                },
-                player,
-            )
-            and logic.terran_common_unit(state)
-            or logic.flashpoint_far_requirement(state),
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Northeast Subway Entrance",
-            SC2NCO_LOC_ID_OFFSET + 608,
-            LocationType.VANILLA,
-            logic.flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Expansion Hatchery",
-            SC2NCO_LOC_ID_OFFSET + 609,
-            LocationType.EXTRA,
-            lambda state: state.has(item_names.LIBERATOR_RAID_ARTILLERY, player)
-            and logic.terran_common_unit(state)
-            or logic.flashpoint_far_requirement(state),
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Baneling Spawns",
-            SC2NCO_LOC_ID_OFFSET + 610,
-            LocationType.EXTRA,
-            logic.flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Mutalisk Spawns",
-            SC2NCO_LOC_ID_OFFSET + 611,
-            LocationType.EXTRA,
-            logic.flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Nydus Worm Spawns",
-            SC2NCO_LOC_ID_OFFSET + 612,
-            LocationType.EXTRA,
-            logic.flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Lurker Spawns",
-            SC2NCO_LOC_ID_OFFSET + 613,
-            LocationType.EXTRA,
-            logic.flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Brood Lord Spawns",
-            SC2NCO_LOC_ID_OFFSET + 614,
-            LocationType.EXTRA,
-            logic.flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT.mission_name,
-            "Ultralisk Spawns",
-            SC2NCO_LOC_ID_OFFSET + 615,
-            LocationType.EXTRA,
-            logic.flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Victory",
-            SC2NCO_LOC_ID_OFFSET + 700,
-            LocationType.VICTORY,
-            logic.enemy_shadow_victory,
-            hard_rule=logic.enemy_shadow_victory_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Sewers: Domination Visor",
-            SC2NCO_LOC_ID_OFFSET + 701,
-            LocationType.VANILLA,
-            logic.enemy_shadow_domination,
-            hard_rule=logic.enemy_shadow_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Sewers: Resupply Crate",
-            SC2NCO_LOC_ID_OFFSET + 702,
-            LocationType.EXTRA,
-            logic.enemy_shadow_first_stage,
-            hard_rule=logic.enemy_shadow_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Sewers: Facility Access",
-            SC2NCO_LOC_ID_OFFSET + 703,
-            LocationType.VANILLA,
-            logic.enemy_shadow_first_stage,
-            hard_rule=logic.enemy_shadow_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Facility: Northwest Door Lock",
-            SC2NCO_LOC_ID_OFFSET + 704,
-            LocationType.VANILLA,
-            logic.enemy_shadow_can_reach_stone,
-            hard_rule=logic.enemy_shadow_can_reach_stone_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Facility: Southeast Door Lock",
-            SC2NCO_LOC_ID_OFFSET + 705,
-            LocationType.VANILLA,
-            logic.enemy_shadow_can_reach_stone,
-            hard_rule=logic.enemy_shadow_can_reach_stone_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Facility: Blazefire Gunblade",
-            SC2NCO_LOC_ID_OFFSET + 706,
-            LocationType.VANILLA,
-            logic.enemy_shadow_blazefire_unlock,
-            hard_rule=logic.enemy_shadow_nova_damage_and_blazefire_unlock,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Facility: Blink Suit",
-            SC2NCO_LOC_ID_OFFSET + 707,
-            LocationType.VANILLA,
-            logic.enemy_shadow_second_stage,
-            hard_rule=logic.enemy_shadow_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Facility: Advanced Weaponry",
-            SC2NCO_LOC_ID_OFFSET + 708,
-            LocationType.VANILLA,
-            logic.enemy_shadow_second_stage,
-            hard_rule=logic.enemy_shadow_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Facility: Entrance Resupply Crate",
-            SC2NCO_LOC_ID_OFFSET + 709,
-            LocationType.EXTRA,
-            logic.enemy_shadow_first_stage,
-            hard_rule=logic.enemy_shadow_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Facility: West Resupply Crate",
-            SC2NCO_LOC_ID_OFFSET + 710,
-            LocationType.EXTRA,
-            logic.enemy_shadow_second_stage,
-            hard_rule=logic.enemy_shadow_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Facility: North Resupply Crate",
-            SC2NCO_LOC_ID_OFFSET + 711,
-            LocationType.EXTRA,
-            logic.enemy_shadow_second_stage,
-            hard_rule=logic.enemy_shadow_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Facility: East Resupply Crate",
-            SC2NCO_LOC_ID_OFFSET + 712,
-            LocationType.EXTRA,
-            logic.enemy_shadow_second_stage,
-            hard_rule=logic.enemy_shadow_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.IN_THE_ENEMY_S_SHADOW.mission_name,
-            "Facility: South Resupply Crate",
-            SC2NCO_LOC_ID_OFFSET + 713,
-            LocationType.EXTRA,
-            logic.enemy_shadow_second_stage,
-            hard_rule=logic.enemy_shadow_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES.mission_name,
-            "Victory",
-            SC2NCO_LOC_ID_OFFSET + 800,
-            LocationType.VICTORY,
-            logic.dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES.mission_name,
-            "First Squadron of Dominion Fleet",
-            SC2NCO_LOC_ID_OFFSET + 801,
-            LocationType.EXTRA,
-            logic.dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES.mission_name,
-            "Remainder of Dominion Fleet",
-            SC2NCO_LOC_ID_OFFSET + 802,
-            LocationType.EXTRA,
-            logic.dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES.mission_name,
-            "Ji'nara",
-            SC2NCO_LOC_ID_OFFSET + 803,
-            LocationType.EXTRA,
-            logic.dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES.mission_name,
-            "Science Facility",
-            SC2NCO_LOC_ID_OFFSET + 804,
-            LocationType.VANILLA,
-            logic.dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME.mission_name,
-            "Victory",
-            SC2NCO_LOC_ID_OFFSET + 900,
-            LocationType.VICTORY,
-            logic.end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME.mission_name,
-            "Destroy the Xanthos",
-            SC2NCO_LOC_ID_OFFSET + 901,
-            LocationType.VANILLA,
-            logic.end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME.mission_name,
-            "Disable Xanthos Railgun",
-            SC2NCO_LOC_ID_OFFSET + 902,
-            LocationType.EXTRA,
-            logic.end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME.mission_name,
-            "Disable Xanthos Flamethrower",
-            SC2NCO_LOC_ID_OFFSET + 903,
-            LocationType.EXTRA,
-            logic.end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME.mission_name,
-            "Disable Xanthos Fighter Bay",
-            SC2NCO_LOC_ID_OFFSET + 904,
-            LocationType.EXTRA,
-            logic.end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME.mission_name,
-            "Disable Xanthos Missile Pods",
-            SC2NCO_LOC_ID_OFFSET + 905,
-            LocationType.EXTRA,
-            logic.end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME.mission_name,
-            "Protect Hyperion",
-            SC2NCO_LOC_ID_OFFSET + 906,
-            LocationType.CHALLENGE,
-            logic.end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME.mission_name,
-            "Destroy Orbital Commands",
-            SC2NCO_LOC_ID_OFFSET + 907,
-            LocationType.CHALLENGE,
-            logic.end_game_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-        # Mission Variants
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 100,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_Z.mission_name,
-            "First Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 101,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_Z.mission_name,
-            "Second Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 102,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_Z.mission_name,
-            "Third Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 103,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_Z.mission_name,
-            "Fourth Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 104,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_Z.mission_name,
-            "Fifth Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 105,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_Z.mission_name,
-            "Sixth Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 106,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_Z.mission_name,
-            "Special Delivery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 107,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_Z.mission_name,
-            "Transport",
-            SC2_RACESWAP_LOC_ID_OFFSET + 108,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 200,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_P.mission_name,
-            "First Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 201,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_P.mission_name,
-            "Second Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 202,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_P.mission_name,
-            "Third Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 203,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_P.mission_name,
-            "Fourth Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 204,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_P.mission_name,
-            "Fifth Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 205,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_P.mission_name,
-            "Sixth Statue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 206,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_P.mission_name,
-            "Special Delivery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 207,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.LIBERATION_DAY_P.mission_name,
-            "Transport",
-            SC2_RACESWAP_LOC_ID_OFFSET + 208,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 300,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and logic.basic_or_no_hero(state, SC2Mission.THE_OUTLAWS_Z, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_Z.mission_name,
-            "Rebel Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 301,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                or logic.basic_hero(state, SC2Mission.THE_OUTLAWS_Z, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_Z.mission_name,
-            "North Resource Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 302,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                or logic.basic_hero(state, SC2Mission.THE_OUTLAWS_Z, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_Z.mission_name,
-            "Bunker",
-            SC2_RACESWAP_LOC_ID_OFFSET + 303,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and logic.basic_or_no_hero(state, SC2Mission.THE_OUTLAWS_Z, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_Z.mission_name,
-            "Close Resource Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 304,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_Z.mission_name,
-            "Win In Under 10 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 305,
-            LocationType.CHALLENGE,
-            logic.zerg_common_unit,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 400,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.protoss_common_unit(state)
-                and logic.basic_or_no_hero(state, SC2Mission.THE_OUTLAWS_P, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_P.mission_name,
-            "Rebel Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 401,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.protoss_common_unit(state)
-                or logic.basic_hero(state, SC2Mission.THE_OUTLAWS_P, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_P.mission_name,
-            "North Resource Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 402,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.protoss_common_unit(state)
-                or logic.basic_hero(state, SC2Mission.THE_OUTLAWS_P, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_P.mission_name,
-            "Bunker",
-            SC2_RACESWAP_LOC_ID_OFFSET + 403,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.protoss_common_unit(state)
-                and logic.basic_or_no_hero(state, SC2Mission.THE_OUTLAWS_P, False)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_P.mission_name,
-            "Close Resource Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 404,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_OUTLAWS_P.mission_name,
-            "Win In Under 10 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 405,
-            LocationType.CHALLENGE,
-            logic.protoss_common_unit,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 500,
-            LocationType.VICTORY,
-            logic.zerg_zero_hour_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_Z.mission_name,
-            "First Group Rescued",
-            SC2_RACESWAP_LOC_ID_OFFSET + 501,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_Z.mission_name,
-            "Second Group Rescued",
-            SC2_RACESWAP_LOC_ID_OFFSET + 502,
-            LocationType.VANILLA,
-            logic.zerg_zero_hour_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_Z.mission_name,
-            "Third Group Rescued",
-            SC2_RACESWAP_LOC_ID_OFFSET + 503,
-            LocationType.VANILLA,
-            logic.zerg_zero_hour_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_Z.mission_name,
-            "First Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 504,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_Z.mission_name,
-            "Second Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 505,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_Z.mission_name,
-            "Third Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 506,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_Z.mission_name,
-            "Fourth Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 507,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_Z.mission_name,
-            "Ride's on its Way",
-            SC2_RACESWAP_LOC_ID_OFFSET + 508,
-            LocationType.EXTRA,
-            logic.zerg_zero_hour_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_Z.mission_name,
-            "Hold Just a Little Longer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 509,
-            LocationType.EXTRA,
-            logic.zerg_zero_hour_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_Z.mission_name,
-            "Cavalry's on the Way",
-            SC2_RACESWAP_LOC_ID_OFFSET + 510,
-            LocationType.EXTRA,
-            logic.zerg_zero_hour_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 600,
-            LocationType.VICTORY,
-            logic.protoss_zero_hour_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_P.mission_name,
-            "First Group Rescued",
-            SC2_RACESWAP_LOC_ID_OFFSET + 601,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_P.mission_name,
-            "Second Group Rescued",
-            SC2_RACESWAP_LOC_ID_OFFSET + 602,
-            LocationType.VANILLA,
-            logic.protoss_zero_hour_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_P.mission_name,
-            "Third Group Rescued",
-            SC2_RACESWAP_LOC_ID_OFFSET + 603,
-            LocationType.VANILLA,
-            logic.protoss_zero_hour_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_P.mission_name,
-            "First Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 604,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_P.mission_name,
-            "Second Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 605,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_P.mission_name,
-            "Third Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 606,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_P.mission_name,
-            "Fourth Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 607,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_P.mission_name,
-            "Ride's on its Way",
-            SC2_RACESWAP_LOC_ID_OFFSET + 608,
-            LocationType.EXTRA,
-            logic.protoss_zero_hour_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_P.mission_name,
-            "Hold Just a Little Longer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 609,
-            LocationType.EXTRA,
-            logic.protoss_zero_hour_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ZERO_HOUR_P.mission_name,
-            "Cavalry's on the Way",
-            SC2_RACESWAP_LOC_ID_OFFSET + 610,
-            LocationType.EXTRA,
-            logic.protoss_zero_hour_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 700,
-            LocationType.VICTORY,
-            logic.zerg_evacuation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_Z.mission_name,
-            "North Chrysalis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 701,
-            LocationType.VANILLA,
-            logic.zerg_evacuation_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_Z.mission_name,
-            "West Chrysalis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 702,
-            LocationType.VANILLA,
-            logic.zerg_evacuation_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_Z.mission_name,
-            "East Chrysalis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 703,
-            LocationType.VANILLA,
-            logic.zerg_evacuation_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_Z.mission_name,
-            "Reach Hanson",
-            SC2_RACESWAP_LOC_ID_OFFSET + 704,
-            LocationType.EXTRA,
-            logic.zerg_evacuation_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_Z.mission_name,
-            "Secret Resource Stash",
-            SC2_RACESWAP_LOC_ID_OFFSET + 705,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_Z.mission_name,
-            "Flawless",
-            SC2_RACESWAP_LOC_ID_OFFSET + 706,
-            LocationType.CHALLENGE,
-            logic.zerg_evacuation_flawless_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_Z.mission_name,
-            "Western Zerg Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 707,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.zerg_common_unit_competent_aa(state)
-                and logic.zerg_ultimate_comp(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_Z.mission_name,
-            "Eastern Zerg Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 708,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.zerg_common_unit_competent_aa(state)
-                and logic.zerg_ultimate_comp(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 800,
-            LocationType.VICTORY,
-            logic.protoss_evacuation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_P.mission_name,
-            "North Chrysalis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 801,
-            LocationType.VANILLA,
-            logic.protoss_evacuation_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_P.mission_name,
-            "West Chrysalis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 802,
-            LocationType.VANILLA,
-            logic.protoss_evacuation_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_P.mission_name,
-            "East Chrysalis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 803,
-            LocationType.VANILLA,
-            logic.protoss_evacuation_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_P.mission_name,
-            "Reach Hanson",
-            SC2_RACESWAP_LOC_ID_OFFSET + 804,
-            LocationType.EXTRA,
-            logic.protoss_evacuation_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_P.mission_name,
-            "Secret Resource Stash",
-            SC2_RACESWAP_LOC_ID_OFFSET + 805,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_P.mission_name,
-            "Flawless",
-            SC2_RACESWAP_LOC_ID_OFFSET + 806,
-            LocationType.CHALLENGE,
-            logic.protoss_evacuation_flawless_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_P.mission_name,
-            "Western Zerg Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 807,
-            LocationType.MASTERY,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.EVACUATION_P.mission_name,
-            "Eastern Zerg Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 808,
-            LocationType.MASTERY,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 900,
-            LocationType.VICTORY,
-            logic.zerg_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_Z.mission_name,
-            "Left Infestor",
-            SC2_RACESWAP_LOC_ID_OFFSET + 901,
-            LocationType.VANILLA,
-            logic.zerg_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_Z.mission_name,
-            "Right Infestor",
-            SC2_RACESWAP_LOC_ID_OFFSET + 902,
-            LocationType.VANILLA,
-            logic.zerg_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_Z.mission_name,
-            "North Infested Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 903,
-            LocationType.EXTRA,
-            logic.zerg_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_Z.mission_name,
-            "South Infested Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 904,
-            LocationType.EXTRA,
-            logic.zerg_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_Z.mission_name,
-            "Northwest Bar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 905,
-            LocationType.EXTRA,
-            logic.zerg_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_Z.mission_name,
-            "North Bar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 906,
-            LocationType.EXTRA,
-            logic.zerg_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_Z.mission_name,
-            "South Bar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 907,
-            LocationType.EXTRA,
-            logic.zerg_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1000,
-            LocationType.VICTORY,
-            logic.protoss_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_P.mission_name,
-            "Left Infestor",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1001,
-            LocationType.VANILLA,
-            logic.protoss_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_P.mission_name,
-            "Right Infestor",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1002,
-            LocationType.VANILLA,
-            logic.protoss_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_P.mission_name,
-            "North Infested Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1003,
-            LocationType.EXTRA,
-            logic.protoss_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_P.mission_name,
-            "South Infested Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1004,
-            LocationType.EXTRA,
-            logic.protoss_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_P.mission_name,
-            "Northwest Bar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1005,
-            LocationType.EXTRA,
-            logic.protoss_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_P.mission_name,
-            "North Bar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1006,
-            LocationType.EXTRA,
-            logic.protoss_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.OUTBREAK_P.mission_name,
-            "South Bar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1007,
-            LocationType.EXTRA,
-            logic.protoss_outbreak_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1100,
-            LocationType.VICTORY,
-            logic.zerg_common_unit_competent_aa,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_Z.mission_name,
-            "North Nexus",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1101,
-            LocationType.EXTRA,
-            logic.zerg_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_Z.mission_name,
-            "East Nexus",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1102,
-            LocationType.EXTRA,
-            logic.zerg_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_Z.mission_name,
-            "South Nexus",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1103,
-            LocationType.EXTRA,
-            logic.zerg_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_Z.mission_name,
-            "First Terror Fleet",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1104,
-            LocationType.VANILLA,
-            logic.zerg_common_unit_competent_aa,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_Z.mission_name,
-            "Second Terror Fleet",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1105,
-            LocationType.VANILLA,
-            logic.zerg_common_unit_competent_aa,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_Z.mission_name,
-            "Third Terror Fleet",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1106,
-            LocationType.VANILLA,
-            logic.zerg_common_unit_competent_aa,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1200,
-            LocationType.VICTORY,
-            logic.protoss_common_unit_anti_armor_air,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_P.mission_name,
-            "North Nexus",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1201,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_anti_armor_air,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_P.mission_name,
-            "East Nexus",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1202,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_anti_armor_air,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_P.mission_name,
-            "South Nexus",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1203,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_anti_armor_air,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_P.mission_name,
-            "First Terror Fleet",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1204,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_anti_armor_air,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_P.mission_name,
-            "Second Terror Fleet",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1205,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_anti_armor_air,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.SAFE_HAVEN_P.mission_name,
-            "Third Terror Fleet",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1206,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_anti_armor_air,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1300,
-            LocationType.VICTORY,
-            logic.zerg_havens_fall_requirement,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "North Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1301,
-            LocationType.VANILLA,
-            logic.zerg_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "East Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1302,
-            LocationType.VANILLA,
-            logic.zerg_havens_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "South Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1303,
-            LocationType.VANILLA,
-            logic.zerg_havens_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "Northeast Colony Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1304,
-            LocationType.CHALLENGE,
-            logic.zerg_havens_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "East Colony Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1305,
-            LocationType.CHALLENGE,
-            logic.zerg_respond_to_colony_infestations,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "Middle Colony Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1306,
-            LocationType.CHALLENGE,
-            logic.zerg_respond_to_colony_infestations,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "Southeast Colony Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1307,
-            LocationType.CHALLENGE,
-            logic.zerg_respond_to_colony_infestations,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "Southwest Colony Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1308,
-            LocationType.CHALLENGE,
-            logic.zerg_respond_to_colony_infestations,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "Southwest Gas Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1309,
-            LocationType.EXTRA,
-            lambda state: state.has_any(
-                (item_names.OVERLORD_VENTRAL_SACS, item_names.YGGDRASIL), player
-            )
-            or adv_tactics
-            and state.has_all(
-                (
-                    item_names.INFESTED_BANSHEE,
-                    item_names.INFESTED_BANSHEE_RAPID_HIBERNATION,
-                ),
-                player,
-            ),
-            hard_rule=logic.zerg_can_collect_pickup_across_gap,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "East Gas Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1310,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_havens_fall_requirement(state)
-                and (
-                    state.has(item_names.OVERLORD_VENTRAL_SACS, player)
-                    or adv_tactics
-                    and (
-                        state.has_all(
-                            (
-                                item_names.INFESTED_BANSHEE,
-                                item_names.INFESTED_BANSHEE_RAPID_HIBERNATION,
-                            ),
-                            player,
-                        )
-                        or state.has(item_names.YGGDRASIL, player)
-                        or logic.morph_viper(state)
-                    )
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_Z.mission_name,
-            "Southeast Gas Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1311,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_havens_fall_requirement(state)
-                and (
-                    state.has(item_names.OVERLORD_VENTRAL_SACS, player)
-                    or adv_tactics
-                    and (
-                        state.has_all(
-                            (
-                                item_names.INFESTED_BANSHEE,
-                                item_names.INFESTED_BANSHEE_RAPID_HIBERNATION,
-                            ),
-                            player,
-                        )
-                        or state.has(item_names.YGGDRASIL, player)
-                    )
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1400,
-            LocationType.VICTORY,
-            logic.protoss_havens_fall_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "North Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1401,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_competent_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "East Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1402,
-            LocationType.VANILLA,
-            logic.protoss_havens_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "South Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1403,
-            LocationType.VANILLA,
-            logic.protoss_havens_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "Northeast Colony Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1404,
-            LocationType.CHALLENGE,
-            logic.protoss_havens_fall_respond_to_colony_infestations,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "East Colony Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1405,
-            LocationType.CHALLENGE,
-            logic.protoss_havens_fall_respond_to_colony_infestations,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "Middle Colony Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1406,
-            LocationType.CHALLENGE,
-            logic.protoss_havens_fall_respond_to_colony_infestations,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "Southeast Colony Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1407,
-            LocationType.CHALLENGE,
-            logic.protoss_havens_fall_respond_to_colony_infestations,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "Southwest Colony Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1408,
-            LocationType.CHALLENGE,
-            logic.protoss_havens_fall_respond_to_colony_infestations,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "Southwest Gas Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1409,
-            LocationType.EXTRA,
-            lambda state: (
-                state.has(item_names.WARP_PRISM, player)
-                or adv_tactics
-                and (
-                    state.has_all(
-                        (item_names.MISTWING, item_names.MISTWING_PILOT), player
-                    )
-                    or state.has(item_names.ARBITER, player)
-                )
-            ),
-            hard_rule=logic.protoss_any_gap_transport,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "East Gas Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1410,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.protoss_havens_fall_requirement(state)
-                and (
-                    state.has(item_names.WARP_PRISM, player)
-                    or adv_tactics
-                    and (
-                        state.has_all(
-                            (item_names.MISTWING, item_names.MISTWING_PILOT), player
-                        )
-                        or state.has(item_names.ARBITER, player)
-                    )
-                )
-            ),
-            hard_rule=logic.protoss_any_gap_transport,
-        ),
-        make_location_data(
-            SC2Mission.HAVENS_FALL_P.mission_name,
-            "Southeast Gas Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1411,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.protoss_havens_fall_requirement(state)
-                and (
-                    state.has(item_names.WARP_PRISM, player)
-                    or adv_tactics
-                    and (
-                        state.has_all(
-                            (item_names.MISTWING, item_names.MISTWING_PILOT), player
-                        )
-                        or state.has(item_names.ARBITER, player)
-                    )
-                )
-            ),
-            hard_rule=logic.protoss_any_gap_transport,
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1500,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and (
-                    (adv_tactics and logic.zerg_moderate_anti_air(state))
-                    or logic.zerg_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_Z.mission_name,
-            "First Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1501,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_Z.mission_name,
-            "Second Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1502,
-            LocationType.VANILLA,
-            lambda state: logic.zerg_common_unit(state)
-            or state.has(item_names.OVERLORD_VENTRAL_SACS, player),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_Z.mission_name,
-            "Third Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1503,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and (
-                    (adv_tactics and logic.zerg_moderate_anti_air(state))
-                    or logic.zerg_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_Z.mission_name,
-            "Fourth Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1504,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and (
-                    (adv_tactics and logic.zerg_moderate_anti_air(state))
-                    or logic.zerg_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_Z.mission_name,
-            "First Forcefield Area Busted",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1505,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and (
-                    (adv_tactics and logic.zerg_moderate_anti_air(state))
-                    or logic.zerg_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_Z.mission_name,
-            "Second Forcefield Area Busted",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1506,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and (
-                    (adv_tactics and logic.zerg_moderate_anti_air(state))
-                    or logic.zerg_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_Z.mission_name,
-            "Defeat Kerrigan",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1507,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.zerg_common_unit_competent_aa(state)
-                and logic.zerg_ultimate_comp(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1600,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.protoss_common_unit(state)
-                and (
-                    (adv_tactics and logic.protoss_basic_anti_air(state))
-                    or logic.protoss_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_P.mission_name,
-            "First Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1601,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_P.mission_name,
-            "Second Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1602,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_P.mission_name,
-            "Third Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1603,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.protoss_common_unit(state)
-                and (
-                    (adv_tactics and logic.protoss_basic_anti_air(state))
-                    or logic.protoss_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_P.mission_name,
-            "Fourth Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1604,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.protoss_common_unit(state)
-                and (
-                    (adv_tactics and logic.protoss_basic_anti_air(state))
-                    or logic.protoss_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_P.mission_name,
-            "First Forcefield Area Busted",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1605,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.protoss_common_unit(state)
-                and (
-                    (adv_tactics and logic.protoss_basic_anti_air(state))
-                    or logic.protoss_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_P.mission_name,
-            "Second Forcefield Area Busted",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1606,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.protoss_common_unit(state)
-                and (
-                    (adv_tactics and logic.protoss_basic_anti_air(state))
-                    or logic.protoss_competent_anti_air(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SMASH_AND_GRAB_P.mission_name,
-            "Defeat Kerrigan",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1607,
-            LocationType.MASTERY,
-            logic.protoss_ultimate_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1700,
-            LocationType.VICTORY,
-            logic.zerg_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Left Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1701,
-            LocationType.VANILLA,
-            logic.zerg_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Right Ground Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1702,
-            LocationType.VANILLA,
-            logic.zerg_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Right Cliff Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1703,
-            LocationType.VANILLA,
-            logic.zerg_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Moebius Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1704,
-            LocationType.EXTRA,
-            logic.zerg_the_dig_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Door Outer Layer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1705,
-            LocationType.EXTRA,
-            logic.zerg_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Door Thermal Barrier",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1706,
-            LocationType.EXTRA,
-            logic.zerg_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Cutting Through the Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1707,
-            LocationType.EXTRA,
-            logic.zerg_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Structure Access Imminent",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1708,
-            LocationType.EXTRA,
-            logic.zerg_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Northwestern Protoss Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1709,
-            LocationType.MASTERY,
-            logic.zerg_the_dig_bases_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Northeastern Protoss Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1710,
-            LocationType.MASTERY,
-            logic.zerg_the_dig_bases_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_Z.mission_name,
-            "Eastern Protoss Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1711,
-            LocationType.MASTERY,
-            logic.zerg_the_dig_bases_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1800,
-            LocationType.VICTORY,
-            logic.protoss_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Left Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1801,
-            LocationType.VANILLA,
-            logic.protoss_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Right Ground Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1802,
-            LocationType.VANILLA,
-            logic.protoss_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Right Cliff Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1803,
-            LocationType.VANILLA,
-            logic.protoss_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Moebius Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1804,
-            LocationType.EXTRA,
-            logic.protoss_the_dig_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Door Outer Layer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1805,
-            LocationType.EXTRA,
-            logic.protoss_the_dig_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Door Thermal Barrier",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1806,
-            LocationType.EXTRA,
-            logic.protoss_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Cutting Through the Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1807,
-            LocationType.EXTRA,
-            logic.protoss_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Structure Access Imminent",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1808,
-            LocationType.EXTRA,
-            logic.protoss_the_dig_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Northwestern Protoss Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1809,
-            LocationType.MASTERY,
-            logic.protoss_the_dig_bases_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Northeastern Protoss Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1810,
-            LocationType.MASTERY,
-            logic.protoss_the_dig_bases_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_DIG_P.mission_name,
-            "Eastern Protoss Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1811,
-            LocationType.MASTERY,
-            logic.protoss_the_dig_bases_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1900,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.zerg_moderate_anti_air(state)
-                and (
-                    logic.zerg_versatile_air(state)
-                    or state.has_any(
-                        {
-                            item_names.YGGDRASIL,
-                            item_names.OVERLORD_VENTRAL_SACS,
-                            item_names.NYDUS_WORM,
-                            item_names.BULLFROG,
-                        },
-                        player,
-                    )
-                    and logic.zerg_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_Z.mission_name,
-            "1st Data Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1901,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_Z.mission_name,
-            "2nd Data Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1902,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_versatile_air(state)
-                or state.has_any(
-                    {
-                        item_names.YGGDRASIL,
-                        item_names.OVERLORD_VENTRAL_SACS,
-                        item_names.NYDUS_WORM,
-                        item_names.BULLFROG,
-                    },
-                    player,
-                )
-                and logic.zerg_common_unit(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_Z.mission_name,
-            "South Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1903,
-            LocationType.EXTRA,
-            logic.zerg_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_Z.mission_name,
-            "Wall Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1904,
-            LocationType.EXTRA,
-            logic.zerg_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_Z.mission_name,
-            "Mid Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1905,
-            LocationType.EXTRA,
-            logic.zerg_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_Z.mission_name,
-            "Nydus Roof Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1906,
-            LocationType.EXTRA,
-            logic.zerg_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_Z.mission_name,
-            "Alive Inside Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1907,
-            LocationType.EXTRA,
-            logic.zerg_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_Z.mission_name,
-            "Brutalisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1908,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_moderate_anti_air(state)
-                and (
-                    logic.zerg_versatile_air(state)
-                    or state.has_any(
-                        {
-                            item_names.YGGDRASIL,
-                            item_names.OVERLORD_VENTRAL_SACS,
-                            item_names.NYDUS_WORM,
-                            item_names.BULLFROG,
-                        },
-                        player,
-                    )
-                    and logic.zerg_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_Z.mission_name,
-            "3rd Data Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 1909,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_moderate_anti_air(state)
-                and (
-                    logic.zerg_versatile_air(state)
-                    or state.has_any(
-                        {
-                            item_names.YGGDRASIL,
-                            item_names.OVERLORD_VENTRAL_SACS,
-                            item_names.NYDUS_WORM,
-                            item_names.BULLFROG,
-                        },
-                        player,
-                    )
-                    and logic.zerg_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2000,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.protoss_competent_anti_air(state)
-                and (
-                    logic.protoss_fleet(state)
-                    or state.has(item_names.WARP_PRISM, player)
-                    and logic.protoss_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_P.mission_name,
-            "1st Data Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2001,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_P.mission_name,
-            "2nd Data Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2002,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.protoss_fleet(state)
-                or (
-                    state.has(item_names.WARP_PRISM, player)
-                    and logic.protoss_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_P.mission_name,
-            "South Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2003,
-            LocationType.EXTRA,
-            logic.protoss_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_P.mission_name,
-            "Wall Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2004,
-            LocationType.EXTRA,
-            logic.protoss_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_P.mission_name,
-            "Mid Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2005,
-            LocationType.EXTRA,
-            logic.protoss_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_P.mission_name,
-            "Nydus Roof Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2006,
-            LocationType.EXTRA,
-            logic.protoss_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_P.mission_name,
-            "Alive Inside Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2007,
-            LocationType.EXTRA,
-            logic.protoss_moebius_factor_can_rescue,
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_P.mission_name,
-            "Brutalisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2008,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.protoss_competent_anti_air(state)
-                and (
-                    logic.protoss_fleet(state)
-                    or state.has(item_names.WARP_PRISM, player)
-                    and logic.protoss_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_MOEBIUS_FACTOR_P.mission_name,
-            "3rd Data Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2009,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.protoss_competent_anti_air(state)
-                and (
-                    logic.protoss_fleet(state)
-                    or state.has(item_names.WARP_PRISM, player)
-                    and logic.protoss_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2100,
-            LocationType.VICTORY,
-            logic.zerg_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_Z.mission_name,
-            "West Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2101,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_Z.mission_name,
-            "North Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2102,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_Z.mission_name,
-            "South Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2103,
-            LocationType.VANILLA,
-            logic.zerg_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_Z.mission_name,
-            "East Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2104,
-            LocationType.VANILLA,
-            logic.zerg_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_Z.mission_name,
-            "Landing Zone Cleared",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2105,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_Z.mission_name,
-            "Middle Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2106,
-            LocationType.EXTRA,
-            logic.zerg_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_Z.mission_name,
-            "Southeast Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2107,
-            LocationType.EXTRA,
-            logic.zerg_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2200,
-            LocationType.VICTORY,
-            logic.protoss_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_P.mission_name,
-            "West Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2201,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_P.mission_name,
-            "North Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2202,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_P.mission_name,
-            "South Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2203,
-            LocationType.VANILLA,
-            logic.protoss_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_P.mission_name,
-            "East Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2204,
-            LocationType.VANILLA,
-            logic.protoss_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_P.mission_name,
-            "Landing Zone Cleared",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2205,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_P.mission_name,
-            "Middle Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2206,
-            LocationType.EXTRA,
-            logic.protoss_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUPERNOVA_P.mission_name,
-            "Southeast Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2207,
-            LocationType.EXTRA,
-            logic.protoss_supernova_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2300,
-            LocationType.VICTORY,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "Landing Zone Cleared",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2301,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "Expansion Prisoners",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2302,
-            LocationType.VANILLA,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "South Close Prisoners",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2303,
-            LocationType.VANILLA,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "South Far Prisoners",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2304,
-            LocationType.VANILLA,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "North Prisoners",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2305,
-            LocationType.VANILLA,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "Mothership",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2306,
-            LocationType.EXTRA,
-            logic.zerg_maw_requirement,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "Expansion Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2307,
-            LocationType.EXTRA,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "Middle Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2308,
-            LocationType.EXTRA,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "Southeast Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2309,
-            LocationType.EXTRA,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "Stargate Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2310,
-            LocationType.EXTRA,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "Northwest Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2311,
-            LocationType.CHALLENGE,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "West Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2312,
-            LocationType.CHALLENGE,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_Z.mission_name,
-            "Southwest Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2313,
-            LocationType.CHALLENGE,
-            logic.zerg_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2400,
-            LocationType.VICTORY,
-            logic.protoss_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "Landing Zone Cleared",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2401,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "Expansion Prisoners",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2402,
-            LocationType.VANILLA,
-            logic.protoss_maw_snipeable_locations,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "South Close Prisoners",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2403,
-            LocationType.VANILLA,
-            logic.protoss_maw_snipeable_locations,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "South Far Prisoners",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2404,
-            LocationType.VANILLA,
-            logic.protoss_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "North Prisoners",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2405,
-            LocationType.VANILLA,
-            logic.protoss_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "Mothership",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2406,
-            LocationType.EXTRA,
-            logic.protoss_maw_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "Expansion Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2407,
-            LocationType.EXTRA,
-            logic.protoss_maw_snipeable_locations,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "Middle Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2408,
-            LocationType.EXTRA,
-            logic.protoss_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "Southeast Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2409,
-            LocationType.EXTRA,
-            logic.protoss_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "Stargate Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2410,
-            LocationType.EXTRA,
-            logic.protoss_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "Northwest Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2411,
-            LocationType.CHALLENGE,
-            logic.protoss_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "West Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2412,
-            LocationType.CHALLENGE,
-            logic.protoss_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MAW_OF_THE_VOID_P.mission_name,
-            "Southwest Rip Field Generator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2413,
-            LocationType.CHALLENGE,
-            logic.protoss_maw_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2500,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.zerg_moderate_anti_air(state)
-                and logic.zerg_common_unit(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_Z.mission_name,
-            "Tosh's Miners",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2501,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_Z.mission_name,
-            "Brutalisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2502,
-            LocationType.VANILLA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_Z.mission_name,
-            "North Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2503,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_Z.mission_name,
-            "Middle Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2504,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_Z.mission_name,
-            "Southwest Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2505,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_Z.mission_name,
-            "Southeast Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2506,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_moderate_anti_air(state)
-                and logic.zerg_common_unit(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_Z.mission_name,
-            "East Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2507,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_moderate_anti_air(state)
-                and logic.zerg_common_unit(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_Z.mission_name,
-            "Zerg Cleared",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2508,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.zerg_competent_anti_air(state)
-                and logic.zerg_common_unit(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2600,
-            LocationType.VICTORY,
-            lambda state: (
-                adv_tactics
-                or logic.protoss_basic_anti_air(state)
-                and logic.protoss_common_unit(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_P.mission_name,
-            "Tosh's Miners",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2601,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_P.mission_name,
-            "Brutalisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2602,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.protoss_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_P.mission_name,
-            "North Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2603,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_P.mission_name,
-            "Middle Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2604,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_P.mission_name,
-            "Southwest Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2605,
-            LocationType.EXTRA,
-            lambda state: adv_tactics or logic.protoss_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_P.mission_name,
-            "Southeast Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2606,
-            LocationType.EXTRA,
-            lambda state: (
-                adv_tactics
-                or logic.protoss_basic_anti_air(state)
-                and logic.protoss_common_unit(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_P.mission_name,
-            "East Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2607,
-            LocationType.EXTRA,
-            lambda state: (
-                adv_tactics
-                or logic.protoss_basic_anti_air(state)
-                and logic.protoss_common_unit(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.DEVILS_PLAYGROUND_P.mission_name,
-            "Zerg Cleared",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2608,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.protoss_competent_anti_air(state)
-                and (logic.protoss_common_unit(state))
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2700,
-            LocationType.VICTORY,
-            logic.zerg_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "Close Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2701,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "West Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2702,
-            LocationType.VANILLA,
-            logic.zerg_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "North-East Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2703,
-            LocationType.VANILLA,
-            logic.zerg_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "Middle Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2704,
-            LocationType.EXTRA,
-            logic.zerg_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "Protoss Cleared",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2705,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.zerg_welcome_to_the_jungle_requirement(state)
-                and logic.zerg_competent_anti_air(state)
-                and logic.zerg_ultimate_comp(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "No Terrazine Nodes Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2706,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.zerg_welcome_to_the_jungle_requirement(state)
-                and logic.zerg_competent_anti_air(state)
-                and logic.zerg_big_monsters(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "Up to 1 Terrazine Node Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2707,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.zerg_welcome_to_the_jungle_requirement(state)
-                and logic.zerg_competent_anti_air(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "Up to 2 Terrazine Nodes Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2708,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.zerg_welcome_to_the_jungle_requirement(state)
-                and logic.zerg_competent_anti_air(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "Up to 3 Terrazine Nodes Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2709,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.zerg_welcome_to_the_jungle_requirement(state)
-                and logic.zerg_competent_anti_air(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "Up to 4 Terrazine Nodes Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2710,
-            LocationType.EXTRA,
-            logic.zerg_welcome_to_the_jungle_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_Z.mission_name,
-            "Up to 5 Terrazine Nodes Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2711,
-            LocationType.EXTRA,
-            logic.zerg_welcome_to_the_jungle_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2800,
-            LocationType.VICTORY,
-            logic.protoss_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "Close Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2801,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "West Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2802,
-            LocationType.VANILLA,
-            logic.protoss_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "North-East Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2803,
-            LocationType.VANILLA,
-            logic.protoss_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "Middle Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2804,
-            LocationType.EXTRA,
-            logic.protoss_welcome_to_the_jungle_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "Protoss Cleared",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2805,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.protoss_welcome_to_the_jungle_requirement(state)
-                and logic.protoss_competent_comp(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "No Terrazine Nodes Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2806,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.protoss_welcome_to_the_jungle_requirement(state)
-                and logic.protoss_competent_comp(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "Up to 1 Terrazine Node Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2807,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.protoss_welcome_to_the_jungle_requirement(state)
-                and logic.protoss_competent_comp(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "Up to 2 Terrazine Nodes Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2808,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.protoss_welcome_to_the_jungle_requirement(state)
-                and logic.protoss_basic_splash(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "Up to 3 Terrazine Nodes Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2809,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.protoss_welcome_to_the_jungle_requirement(state)
-                and logic.protoss_basic_splash(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "Up to 4 Terrazine Nodes Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2810,
-            LocationType.EXTRA,
-            logic.protoss_welcome_to_the_jungle_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.WELCOME_TO_THE_JUNGLE_P.mission_name,
-            "Up to 5 Terrazine Nodes Sealed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2811,
-            LocationType.EXTRA,
-            logic.protoss_welcome_to_the_jungle_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2900,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT_Z.mission_name,
-            "Diamondback Prison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2901,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT_Z.mission_name,
-            "Siege Tank Prison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2902,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT_Z.mission_name,
-            "First Checkpoint",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2903,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT_Z.mission_name,
-            "Second Checkpoint",
-            SC2_RACESWAP_LOC_ID_OFFSET + 2904,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3000,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT_P.mission_name,
-            "Diamondback Prison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3001,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT_P.mission_name,
-            "Siege Tank Prison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3002,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT_P.mission_name,
-            "First Checkpoint",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3003,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.BREAKOUT_P.mission_name,
-            "Second Checkpoint",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3004,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3300,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.zerg_great_train_robbery_train_stopper(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "North Defiler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3301,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "Mid Defiler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3302,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "South Defiler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3303,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "Close Infested Diamondback",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3304,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "Northwest Infested Diamondback",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3305,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "North Infested Diamondback",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3306,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "Northeast Infested Diamondback",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3307,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "Southwest Infested Diamondback",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3308,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "Southeast Infested Diamondback",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3309,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "Kill Team",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3310,
-            LocationType.CHALLENGE,
-            lambda state: (
-                (adv_tactics or logic.zerg_common_unit(state))
-                and logic.zerg_great_train_robbery_train_stopper(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "Flawless",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3311,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.zerg_great_train_robbery_train_stopper(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "2 Trains Destroyed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3312,
-            LocationType.EXTRA,
-            logic.zerg_great_train_robbery_train_stopper,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "4 Trains Destroyed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3313,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_great_train_robbery_train_stopper(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z.mission_name,
-            "6 Trains Destroyed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3314,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_great_train_robbery_train_stopper(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3400,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.protoss_great_train_robbery_train_stopper(state)
-                and logic.protoss_basic_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "North Defiler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3401,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "Mid Defiler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3402,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "South Defiler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3403,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "Close Immortal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3404,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "Northwest Immortal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3405,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "North Instigator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3406,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "Northeast Instigator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3407,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "Southwest Instigator",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3408,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "Southeast Immortal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3409,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "Kill Team",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3410,
-            LocationType.CHALLENGE,
-            lambda state: (
-                (adv_tactics or logic.protoss_common_unit(state))
-                and logic.protoss_great_train_robbery_train_stopper(state)
-                and logic.protoss_basic_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "Flawless",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3411,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.protoss_great_train_robbery_train_stopper(state)
-                and logic.protoss_basic_anti_air(state)
-            ),
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "2 Trains Destroyed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3412,
-            LocationType.EXTRA,
-            logic.protoss_great_train_robbery_train_stopper,
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "4 Trains Destroyed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3413,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.protoss_great_train_robbery_train_stopper(state)
-                and logic.protoss_basic_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_GREAT_TRAIN_ROBBERY_P.mission_name,
-            "6 Trains Destroyed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3414,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.protoss_great_train_robbery_train_stopper(state)
-                and logic.protoss_basic_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3500,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.zerg_common_unit(state)
-                and (adv_tactics or logic.zerg_moderate_anti_air(state))
-            ),
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_Z.mission_name,
-            "Mira Han",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3501,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_Z.mission_name,
-            "North Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3502,
-            LocationType.VANILLA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_Z.mission_name,
-            "Mid Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3503,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_Z.mission_name,
-            "Southwest Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3504,
-            LocationType.VANILLA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_Z.mission_name,
-            "North Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3505,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_Z.mission_name,
-            "South Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3506,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_Z.mission_name,
-            "West Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3507,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3600,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.protoss_common_unit(state)
-                and (adv_tactics or logic.protoss_basic_anti_air(state))
-            ),
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_P.mission_name,
-            "Mira Han",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3601,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_P.mission_name,
-            "North Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3602,
-            LocationType.VANILLA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_P.mission_name,
-            "Mid Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3603,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_P.mission_name,
-            "Southwest Relic",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3604,
-            LocationType.VANILLA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_P.mission_name,
-            "North Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3605,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_P.mission_name,
-            "South Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3606,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.CUTTHROAT_P.mission_name,
-            "West Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3607,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3700,
-            LocationType.VICTORY,
-            logic.zerg_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_Z.mission_name,
-            "Odin",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3701,
-            LocationType.EXTRA,
-            logic.zerg_engine_of_destruction_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_Z.mission_name,
-            "Loki",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3702,
-            LocationType.CHALLENGE,
-            logic.zerg_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_Z.mission_name,
-            "Lab Devourer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3703,
-            LocationType.VANILLA,
-            logic.zerg_engine_of_destruction_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_Z.mission_name,
-            "North Devourer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3704,
-            LocationType.VANILLA,
-            logic.zerg_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_Z.mission_name,
-            "Southeast Devourer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3705,
-            LocationType.VANILLA,
-            logic.zerg_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_Z.mission_name,
-            "West Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3706,
-            LocationType.EXTRA,
-            logic.zerg_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_Z.mission_name,
-            "Northwest Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3707,
-            LocationType.EXTRA,
-            logic.zerg_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_Z.mission_name,
-            "Northeast Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3708,
-            LocationType.EXTRA,
-            logic.zerg_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_Z.mission_name,
-            "Southeast Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3709,
-            LocationType.EXTRA,
-            logic.zerg_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3800,
-            LocationType.VICTORY,
-            logic.protoss_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_P.mission_name,
-            "Odin",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3801,
-            LocationType.EXTRA,
-            logic.protoss_engine_of_destruction_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_P.mission_name,
-            "Loki",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3802,
-            LocationType.CHALLENGE,
-            logic.protoss_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_P.mission_name,
-            "Lab Devourer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3803,
-            LocationType.VANILLA,
-            logic.protoss_engine_of_destruction_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_P.mission_name,
-            "North Devourer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3804,
-            LocationType.VANILLA,
-            logic.protoss_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_P.mission_name,
-            "Southeast Devourer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3805,
-            LocationType.VANILLA,
-            logic.protoss_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_P.mission_name,
-            "West Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3806,
-            LocationType.EXTRA,
-            logic.protoss_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_P.mission_name,
-            "Northwest Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3807,
-            LocationType.EXTRA,
-            logic.protoss_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_P.mission_name,
-            "Northeast Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3808,
-            LocationType.EXTRA,
-            logic.protoss_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENGINE_OF_DESTRUCTION_P.mission_name,
-            "Southeast Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3809,
-            LocationType.EXTRA,
-            logic.protoss_engine_of_destruction_requirement,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3900,
-            LocationType.VICTORY,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_Z.mission_name,
-            "Tower 1",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3901,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_Z.mission_name,
-            "Tower 2",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3902,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_Z.mission_name,
-            "Tower 3",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3903,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_Z.mission_name,
-            "Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3904,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.advanced_tactics or logic.zerg_competent_comp_competent_aa(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_Z.mission_name,
-            "All Barracks",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3905,
-            LocationType.EXTRA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_Z.mission_name,
-            "All Factories",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3906,
-            LocationType.EXTRA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_Z.mission_name,
-            "All Starports",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3907,
-            LocationType.EXTRA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_Z.mission_name,
-            "Odin Not Trashed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3908,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.zerg_competent_comp_competent_aa(state)
-                and logic.zerg_repair_odin(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_Z.mission_name,
-            "Surprise Attack Ends",
-            SC2_RACESWAP_LOC_ID_OFFSET + 3909,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4000,
-            LocationType.VICTORY,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_P.mission_name,
-            "Tower 1",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4001,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_P.mission_name,
-            "Tower 2",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4002,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_P.mission_name,
-            "Tower 3",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4003,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_P.mission_name,
-            "Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4004,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.protoss_competent_comp(state),
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_P.mission_name,
-            "All Barracks",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4005,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_P.mission_name,
-            "All Factories",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4006,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_P.mission_name,
-            "All Starports",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4007,
-            LocationType.EXTRA,
-            lambda state: adv_tactics or logic.protoss_competent_comp(state),
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_P.mission_name,
-            "Odin Not Trashed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4008,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.protoss_competent_comp(state) and logic.protoss_repair_odin(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.MEDIA_BLITZ_P.mission_name,
-            "Surprise Attack Ends",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4009,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4500,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.terran_competent_comp(state)
-                and logic.terran_common_unit(state)
-                and logic.terran_competent_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_T.mission_name,
-            "Factory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4501,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.terran_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_T.mission_name,
-            "Armory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4502,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.terran_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_T.mission_name,
-            "Shadow Ops",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4503,
-            LocationType.VANILLA,
-            lambda state: logic.terran_common_unit(state)
-            and logic.terran_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_T.mission_name,
-            "Northeast Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4504,
-            LocationType.EXTRA,
-            lambda state: logic.terran_common_unit(state)
-            and logic.terran_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_T.mission_name,
-            "Southwest Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4505,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.terran_competent_comp(state)
-                and logic.terran_common_unit(state)
-                and logic.terran_competent_anti_air(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_T.mission_name,
-            "Maar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4506,
-            LocationType.EXTRA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_T.mission_name,
-            "Northwest Preserver",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4507,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.terran_competent_comp(state)
-                and logic.terran_common_unit(state)
-                and logic.terran_competent_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_T.mission_name,
-            "Southwest Preserver",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4508,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.terran_competent_comp(state)
-                and logic.terran_common_unit(state)
-                and logic.terran_competent_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_T.mission_name,
-            "East Preserver",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4509,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.terran_competent_comp(state)
-                and logic.terran_common_unit(state)
-                and logic.terran_competent_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4600,
-            LocationType.VICTORY,
-            lambda state: logic.zerg_competent_comp(state)
-            and logic.zerg_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_Z.mission_name,
-            "Ultralisk Cavern",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4601,
-            LocationType.VANILLA,
-            lambda state: (adv_tactics or logic.zerg_common_unit(state))
-            and logic.spread_creep(state),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_Z.mission_name,
-            "Hydralisk Den",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4602,
-            LocationType.VANILLA,
-            lambda state: (adv_tactics or logic.zerg_common_unit(state))
-            and logic.spread_creep(state),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_Z.mission_name,
-            "Infestation Pit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4603,
-            LocationType.VANILLA,
-            lambda state: logic.zerg_common_unit(state)
-            and logic.zerg_competent_anti_air(state)
-            and logic.spread_creep(state),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_Z.mission_name,
-            "Northeast Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4604,
-            LocationType.EXTRA,
-            lambda state: logic.zerg_common_unit(state)
-            and logic.zerg_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_Z.mission_name,
-            "Southwest Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4605,
-            LocationType.CHALLENGE,
-            lambda state: logic.zerg_common_unit(state)
-            and logic.zerg_competent_anti_air(state),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_Z.mission_name,
-            "Maar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4606,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_Z.mission_name,
-            "Northwest Preserver",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4607,
-            LocationType.EXTRA,
-            lambda state: logic.zerg_competent_comp(state)
-            and logic.zerg_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_Z.mission_name,
-            "Southwest Preserver",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4608,
-            LocationType.EXTRA,
-            lambda state: logic.zerg_competent_comp(state)
-            and logic.zerg_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.A_SINISTER_TURN_Z.mission_name,
-            "East Preserver",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4609,
-            LocationType.EXTRA,
-            lambda state: logic.zerg_competent_comp(state)
-            and logic.zerg_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4700,
-            LocationType.VICTORY,
-            lambda state: logic.terran_common_unit(state)
-            and logic.terran_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_T.mission_name,
-            "Close Obelisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4701,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.terran_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_T.mission_name,
-            "West Obelisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4702,
-            LocationType.VANILLA,
-            lambda state: adv_tactics
-            or (logic.terran_common_unit(state) and logic.terran_basic_anti_air(state)),
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_T.mission_name,
-            "Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4703,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_T.mission_name,
-            "Southwest Tendril",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4704,
-            LocationType.EXTRA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_T.mission_name,
-            "Southeast Tendril",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4705,
-            LocationType.EXTRA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_T.mission_name,
-            "Northeast Tendril",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4706,
-            LocationType.EXTRA,
-            lambda state: logic.terran_common_unit(state)
-            and logic.terran_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_T.mission_name,
-            "Northwest Tendril",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4707,
-            LocationType.EXTRA,
-            lambda state: logic.terran_common_unit(state)
-            and logic.terran_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4800,
-            LocationType.VICTORY,
-            lambda state: logic.zerg_common_unit(state)
-            and logic.zerg_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_Z.mission_name,
-            "Close Obelisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4801,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.zerg_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_Z.mission_name,
-            "West Obelisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4802,
-            LocationType.VANILLA,
-            lambda state: (
-                adv_tactics
-                or (
-                    logic.zerg_common_unit(state)
-                    and logic.zerg_basic_kerriganless_anti_air(state)
-                    and logic.spread_creep(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_Z.mission_name,
-            "Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4803,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_Z.mission_name,
-            "Southwest Tendril",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4804,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_Z.mission_name,
-            "Southeast Tendril",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4805,
-            LocationType.EXTRA,
-            logic.zerg_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_Z.mission_name,
-            "Northeast Tendril",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4806,
-            LocationType.EXTRA,
-            lambda state: logic.zerg_common_unit(state)
-            and logic.zerg_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.ECHOES_OF_THE_FUTURE_Z.mission_name,
-            "Northwest Tendril",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4807,
-            LocationType.EXTRA,
-            lambda state: logic.zerg_common_unit(state)
-            and logic.zerg_competent_anti_air(state),
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_T.mission_name,
-            "Defeat",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4900,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_T.mission_name,
-            "Protoss Archive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4901,
-            LocationType.VANILLA,
-            logic.terran_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_T.mission_name,
-            "Kills",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4902,
-            LocationType.VANILLA,
-            logic.terran_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_T.mission_name,
-            "Urun",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4903,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_T.mission_name,
-            "Mohandar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4904,
-            LocationType.EXTRA,
-            logic.terran_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_T.mission_name,
-            "Selendis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4905,
-            LocationType.EXTRA,
-            logic.terran_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_T.mission_name,
-            "Artanis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 4906,
-            LocationType.EXTRA,
-            logic.terran_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_Z.mission_name,
-            "Defeat",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5000,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_Z.mission_name,
-            "Protoss Archive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5001,
-            LocationType.VANILLA,
-            logic.zerg_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_Z.mission_name,
-            "Kills",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5002,
-            LocationType.VANILLA,
-            logic.zerg_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_Z.mission_name,
-            "Urun",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5003,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_Z.mission_name,
-            "Mohandar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5004,
-            LocationType.EXTRA,
-            logic.zerg_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_Z.mission_name,
-            "Selendis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5005,
-            LocationType.EXTRA,
-            logic.zerg_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.IN_UTTER_DARKNESS_Z.mission_name,
-            "Artanis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5006,
-            LocationType.EXTRA,
-            logic.zerg_in_utter_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5100,
-            LocationType.VICTORY,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "Large Army",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5101,
-            LocationType.VANILLA,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "2 Drop Pods",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5102,
-            LocationType.VANILLA,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "4 Drop Pods",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5103,
-            LocationType.VANILLA,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "6 Drop Pods",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5104,
-            LocationType.EXTRA,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "8 Drop Pods",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5105,
-            LocationType.CHALLENGE,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "Southwest Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5106,
-            LocationType.EXTRA,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "Northwest Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5107,
-            LocationType.EXTRA,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "Northeast Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5108,
-            LocationType.EXTRA,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "East Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5109,
-            LocationType.EXTRA,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "Southeast Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5110,
-            LocationType.EXTRA,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_Z.mission_name,
-            "Expansion Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5111,
-            LocationType.EXTRA,
-            logic.zerg_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5200,
-            LocationType.VICTORY,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "Large Army",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5201,
-            LocationType.VANILLA,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "2 Drop Pods",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5202,
-            LocationType.VANILLA,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "4 Drop Pods",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5203,
-            LocationType.VANILLA,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "6 Drop Pods",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5204,
-            LocationType.EXTRA,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "8 Drop Pods",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5205,
-            LocationType.CHALLENGE,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "Southwest Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5206,
-            LocationType.EXTRA,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "Northwest Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5207,
-            LocationType.EXTRA,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "Northeast Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5208,
-            LocationType.EXTRA,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "East Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5209,
-            LocationType.EXTRA,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "Southeast Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5210,
-            LocationType.EXTRA,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GATES_OF_HELL_P.mission_name,
-            "Expansion Spore Cannon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5211,
-            LocationType.EXTRA,
-            logic.protoss_gates_of_hell_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5500,
-            LocationType.VICTORY,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_Z.mission_name,
-            "Close Coolant Tower",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5501,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_Z.mission_name,
-            "Northwest Coolant Tower",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5502,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_Z.mission_name,
-            "Southeast Coolant Tower",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5503,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_Z.mission_name,
-            "Southwest Coolant Tower",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5504,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_Z.mission_name,
-            "Leviathan",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5505,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_Z.mission_name,
-            "East Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5506,
-            LocationType.EXTRA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_Z.mission_name,
-            "North Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5507,
-            LocationType.EXTRA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_Z.mission_name,
-            "Mid Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5508,
-            LocationType.EXTRA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5600,
-            LocationType.VICTORY,
-            logic.protoss_competent_comp_wa2,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_P.mission_name,
-            "Close Coolant Tower",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5601,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_P.mission_name,
-            "Northwest Coolant Tower",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5602,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_P.mission_name,
-            "Southeast Coolant Tower",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5603,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp_wa2,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_P.mission_name,
-            "Southwest Coolant Tower",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5604,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp_wa2,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_P.mission_name,
-            "Leviathan",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5605,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp_wa2,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_P.mission_name,
-            "East Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5606,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_P.mission_name,
-            "North Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5607,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.SHATTER_THE_SKY_P.mission_name,
-            "Mid Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5608,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5700,
-            LocationType.VICTORY,
-            logic.zerg_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_Z.mission_name,
-            "First Kerrigan Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5701,
-            LocationType.EXTRA,
-            logic.zerg_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_Z.mission_name,
-            "Second Kerrigan Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5702,
-            LocationType.EXTRA,
-            logic.zerg_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_Z.mission_name,
-            "Third Kerrigan Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5703,
-            LocationType.EXTRA,
-            logic.zerg_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_Z.mission_name,
-            "Fourth Kerrigan Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5704,
-            LocationType.EXTRA,
-            logic.zerg_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_Z.mission_name,
-            "Fifth Kerrigan Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5705,
-            LocationType.EXTRA,
-            logic.zerg_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5800,
-            LocationType.VICTORY,
-            logic.protoss_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_P.mission_name,
-            "First Kerrigan Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5801,
-            LocationType.EXTRA,
-            logic.protoss_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_P.mission_name,
-            "Second Kerrigan Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5802,
-            LocationType.EXTRA,
-            logic.protoss_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_P.mission_name,
-            "Third Kerrigan Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5803,
-            LocationType.EXTRA,
-            logic.protoss_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_P.mission_name,
-            "Fourth Kerrigan Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5804,
-            LocationType.EXTRA,
-            logic.protoss_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ALL_IN_P.mission_name,
-            "Fifth Kerrigan Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5805,
-            LocationType.EXTRA,
-            logic.protoss_all_in_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5900,
-            LocationType.VICTORY,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_T.mission_name,
-            "Gather Minerals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5901,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_T.mission_name,
-            "South Marine Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5902,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.terran_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_T.mission_name,
-            "East Marine Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5903,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.terran_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_T.mission_name,
-            "West Marine Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5904,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.terran_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_T.mission_name,
-            "Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5905,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_T.mission_name,
-            "Supply Depot",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5906,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_T.mission_name,
-            "Gas Turrets",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5907,
-            LocationType.EXTRA,
-            lambda state: adv_tactics or logic.terran_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_T.mission_name,
-            "Win In Under 10 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 5908,
-            LocationType.CHALLENGE,
-            lambda state: logic.terran_common_unit(state)
-            and logic.terran_early_tech(state),
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6000,
-            LocationType.VICTORY,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_P.mission_name,
-            "Gather Minerals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6001,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_P.mission_name,
-            "South Zealot Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6002,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.protoss_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_P.mission_name,
-            "East Zealot Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6003,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.protoss_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_P.mission_name,
-            "West Zealot Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6004,
-            LocationType.VANILLA,
-            lambda state: adv_tactics or logic.protoss_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_P.mission_name,
-            "Nexus",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6005,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_P.mission_name,
-            "Pylon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6006,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_P.mission_name,
-            "Gas Turrets",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6007,
-            LocationType.EXTRA,
-            lambda state: adv_tactics or logic.protoss_common_unit(state),
-        ),
-        make_location_data(
-            SC2Mission.LAB_RAT_P.mission_name,
-            "Win In Under 10 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6008,
-            LocationType.CHALLENGE,
-            logic.protoss_common_unit,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6300,
-            LocationType.VICTORY,
-            logic.terran_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_T.mission_name,
-            "Right Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6301,
-            LocationType.VANILLA,
-            logic.terran_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_T.mission_name,
-            "Center Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6302,
-            LocationType.VANILLA,
-            logic.terran_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_T.mission_name,
-            "Left Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6303,
-            LocationType.VANILLA,
-            logic.terran_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_T.mission_name,
-            "Hold Out Finished",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6304,
-            LocationType.EXTRA,
-            logic.terran_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_T.mission_name,
-            "Kill All Buildings Before Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6305,
-            LocationType.MASTERY,
-            logic.terran_rendezvous_speedrun_requirement,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6400,
-            LocationType.VICTORY,
-            logic.protoss_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_P.mission_name,
-            "Right Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6401,
-            LocationType.VANILLA,
-            logic.protoss_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_P.mission_name,
-            "Center Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6402,
-            LocationType.VANILLA,
-            logic.protoss_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_P.mission_name,
-            "Left Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6403,
-            LocationType.VANILLA,
-            logic.protoss_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_P.mission_name,
-            "Hold Out Finished",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6404,
-            LocationType.EXTRA,
-            logic.protoss_rendezvous_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RENDEZVOUS_P.mission_name,
-            "Kill All Buildings Before Reinforcements",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6405,
-            LocationType.MASTERY,
-            logic.protoss_rendezvous_speedrun_requirement,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6500,
-            LocationType.VICTORY,
-            logic.terran_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_T.mission_name,
-            "First Ursadon Matriarch",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6501,
-            LocationType.VANILLA,
-            logic.terran_harvest_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_T.mission_name,
-            "North Ursadon Matriarch",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6502,
-            LocationType.VANILLA,
-            logic.terran_harvest_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_T.mission_name,
-            "West Ursadon Matriarch",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6503,
-            LocationType.VANILLA,
-            logic.terran_harvest_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_T.mission_name,
-            "Lost Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6504,
-            LocationType.EXTRA,
-            logic.terran_harvest_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_T.mission_name,
-            "Northeast Psi-link Spire",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6505,
-            LocationType.EXTRA,
-            logic.terran_harvest_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_T.mission_name,
-            "Northwest Psi-link Spire",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6506,
-            LocationType.EXTRA,
-            logic.terran_harvest_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_T.mission_name,
-            "Southwest Psi-link Spire",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6507,
-            LocationType.EXTRA,
-            logic.terran_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_T.mission_name,
-            "Nafash",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6508,
-            LocationType.EXTRA,
-            logic.terran_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_T.mission_name,
-            "20 Unfrozen Structures",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6509,
-            LocationType.CHALLENGE,
-            logic.terran_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6600,
-            LocationType.VICTORY,
-            logic.protoss_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_P.mission_name,
-            "First Ursadon Matriarch",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6601,
-            LocationType.VANILLA,
-            logic.protoss_harvest_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_P.mission_name,
-            "North Ursadon Matriarch",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6602,
-            LocationType.VANILLA,
-            logic.protoss_harvest_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_P.mission_name,
-            "West Ursadon Matriarch",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6603,
-            LocationType.VANILLA,
-            logic.protoss_harvest_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_P.mission_name,
-            "Lost Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6604,
-            LocationType.EXTRA,
-            logic.protoss_harvest_start_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_P.mission_name,
-            "Northeast Psi-link Spire",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6605,
-            LocationType.EXTRA,
-            logic.protoss_harvest_early_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_P.mission_name,
-            "Northwest Psi-link Spire",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6606,
-            LocationType.EXTRA,
-            logic.protoss_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_P.mission_name,
-            "Southwest Psi-link Spire",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6607,
-            LocationType.EXTRA,
-            logic.protoss_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_P.mission_name,
-            "Nafash",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6608,
-            LocationType.EXTRA,
-            logic.protoss_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARVEST_OF_SCREAMS_P.mission_name,
-            "20 Unfrozen Structures",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6609,
-            LocationType.CHALLENGE,
-            logic.protoss_harvest_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6700,
-            LocationType.VICTORY,
-            logic.terran_common_unit_competent_aa,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "East Stasis Chamber",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6701,
-            LocationType.VANILLA,
-            logic.terran_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "Center Stasis Chamber",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6702,
-            LocationType.VANILLA,
-            logic.terran_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "West Stasis Chamber",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6703,
-            LocationType.VANILLA,
-            logic.terran_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "Destroy 4 Shuttles",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6704,
-            LocationType.EXTRA,
-            logic.terran_common_unit_competent_aa,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "Frozen Expansion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6705,
-            LocationType.EXTRA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "Southwest Frozen Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6706,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "Southeast Frozen Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6707,
-            LocationType.EXTRA,
-            logic.terran_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "West Frozen Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6708,
-            LocationType.EXTRA,
-            logic.terran_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "East Frozen Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6709,
-            LocationType.EXTRA,
-            logic.terran_common_unit_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "West Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6710,
-            LocationType.CHALLENGE,
-            lambda state: logic.terran_beats_protoss_deathball(state)
-                and logic.terran_common_unit(state),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "Center Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6711,
-            LocationType.CHALLENGE,
-            lambda state: logic.terran_beats_protoss_deathball(state)
-                and logic.terran_competent_ground_to_air(state)
-                and logic.terran_common_unit(state),
-            hard_rule=logic.terran_any_anti_air,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_T.mission_name,
-            "East Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6712,
-            LocationType.CHALLENGE,
-            lambda state: logic.terran_beats_protoss_deathball(state)
-                and logic.terran_competent_ground_to_air(state)
-                and logic.terran_common_unit(state),
-            hard_rule=logic.terran_any_anti_air,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6800,
-            LocationType.VICTORY,
-            logic.protoss_common_unit_anti_armor_air,
-            hard_rule=logic.protoss_any_anti_air_unit,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "East Stasis Chamber",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6801,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_anti_armor_air,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "Center Stasis Chamber",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6802,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "West Stasis Chamber",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6803,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_anti_armor_air,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "Destroy 4 Shuttles",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6804,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_anti_armor_air,
-            hard_rule=logic.protoss_any_anti_air_unit,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "Frozen Expansion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6805,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "Southwest Frozen Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6806,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "Southeast Frozen Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6807,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "West Frozen Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6808,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_anti_armor_air,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "East Frozen Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6809,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_anti_armor_air,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "West Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6810,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            hard_rule=logic.protoss_any_anti_air_unit,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "Center Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6811,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            hard_rule=logic.protoss_any_anti_air_unit,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.SHOOT_THE_MESSENGER_P.mission_name,
-            "East Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6812,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            hard_rule=logic.protoss_any_anti_air_unit,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6900,
-            LocationType.VICTORY,
-            logic.terran_enemy_within_requirement,
-            hard_rule=logic.terran_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_T.mission_name,
-            "Giant Ursadon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6901,
-            LocationType.VANILLA,
-            logic.terran_enemy_within_requirement,
-            hard_rule=logic.terran_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_T.mission_name,
-            "First Stetmann Levelup",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6902,
-            LocationType.VANILLA,
-            logic.terran_enemy_within_requirement,
-            hard_rule=logic.terran_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_T.mission_name,
-            "Second Stetmann Levelup",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6903,
-            LocationType.VANILLA,
-            logic.terran_enemy_within_requirement,
-            hard_rule=logic.terran_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_T.mission_name,
-            "Third Stetmann Levelup",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6904,
-            LocationType.VANILLA,
-            logic.terran_enemy_within_requirement,
-            hard_rule=logic.terran_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_T.mission_name,
-            "Warp Drive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6905,
-            LocationType.EXTRA,
-            logic.terran_enemy_within_requirement,
-            hard_rule=logic.terran_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_T.mission_name,
-            "Stasis Quadrant",
-            SC2_RACESWAP_LOC_ID_OFFSET + 6906,
-            LocationType.EXTRA,
-            logic.terran_enemy_within_requirement,
-            hard_rule=logic.terran_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7000,
-            LocationType.VICTORY,
-            logic.protoss_enemy_within_requirement,
-            hard_rule=logic.protoss_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_P.mission_name,
-            "Giant Ursadon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7001,
-            LocationType.VANILLA,
-            logic.protoss_enemy_within_requirement,
-            hard_rule=logic.protoss_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_P.mission_name,
-            "First Probius Upgrade",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7002,
-            LocationType.VANILLA,
-            logic.protoss_enemy_within_requirement,
-            hard_rule=logic.protoss_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_P.mission_name,
-            "Second Probius Upgrade",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7003,
-            LocationType.VANILLA,
-            logic.protoss_enemy_within_requirement,
-            hard_rule=logic.protoss_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_P.mission_name,
-            "Third Probius Upgrade",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7004,
-            LocationType.VANILLA,
-            logic.protoss_enemy_within_requirement,
-            hard_rule=logic.protoss_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_P.mission_name,
-            "Warp Drive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7005,
-            LocationType.EXTRA,
-            logic.protoss_enemy_within_requirement,
-            hard_rule=logic.protoss_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_WITHIN_P.mission_name,
-            "Stasis Quadrant",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7006,
-            LocationType.EXTRA,
-            logic.protoss_enemy_within_requirement,
-            hard_rule=logic.protoss_enemy_within_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7100,
-            LocationType.VICTORY,
-            logic.terran_domination_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_T.mission_name,
-            "Center Infested Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7101,
-            LocationType.VANILLA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_T.mission_name,
-            "North Infested Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7102,
-            LocationType.VANILLA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_T.mission_name,
-            "Repel Zagara",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7103,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_T.mission_name,
-            "Close Bunker",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7104,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_T.mission_name,
-            "South Bunker",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7105,
-            LocationType.EXTRA,
-            logic.terran_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_T.mission_name,
-            "Southwest Bunker",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7106,
-            LocationType.EXTRA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_T.mission_name,
-            "Southeast Bunker",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7107,
-            LocationType.EXTRA,
-            logic.terran_domination_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_T.mission_name,
-            "North Bunker",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7108,
-            LocationType.EXTRA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_T.mission_name,
-            "Northeast Bunker",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7109,
-            LocationType.EXTRA,
-            logic.terran_domination_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_T.mission_name,
-            "Win Without 100 Eggs",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7110,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7200,
-            LocationType.VICTORY,
-            logic.protoss_domination_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_P.mission_name,
-            "Center Infested Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7201,
-            LocationType.VANILLA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_P.mission_name,
-            "North Infested Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7202,
-            LocationType.VANILLA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_P.mission_name,
-            "Repel Zagara",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7203,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_P.mission_name,
-            "Close Templar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7204,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_P.mission_name,
-            "South Templar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7205,
-            LocationType.EXTRA,
-            logic.protoss_common_unit_or_advanced_tactics,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_P.mission_name,
-            "Southwest Templar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7206,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_P.mission_name,
-            "Southeast Templar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7207,
-            LocationType.EXTRA,
-            logic.protoss_domination_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_P.mission_name,
-            "North Templar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7208,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_P.mission_name,
-            "Northeast Templar",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7209,
-            LocationType.EXTRA,
-            logic.protoss_domination_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DOMINATION_P.mission_name,
-            "Win Without 100 Eggs",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7210,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7300,
-            LocationType.VICTORY,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "West Biomass",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7301,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "North Biomass",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7302,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "South Biomass",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7303,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "Destroy 3 Gorgons",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7304,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "Close Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7305,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "South Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7306,
-            LocationType.EXTRA,
-            logic.terran_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "North Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7307,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "West Medic Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7308,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "East Medic Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7309,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "South Orbital Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7310,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "Northwest Orbital Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7311,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_T.mission_name,
-            "Southeast Orbital Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7312,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7400,
-            LocationType.VICTORY,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "West Biomass",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7401,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "North Biomass",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7402,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "South Biomass",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7403,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "Destroy 3 Gorgons",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7404,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "Close Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7405,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "South Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7406,
-            LocationType.EXTRA,
-            logic.protoss_common_unit,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "North Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7407,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "West Energizer Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7408,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "East Energizer Rescue",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7409,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "South Orbital Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7410,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "Northwest Orbital Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7411,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.FIRE_IN_THE_SKY_P.mission_name,
-            "Southeast Orbital Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7412,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7500,
-            LocationType.VICTORY,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_T.mission_name,
-            "East Science Lab",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7501,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_T.mission_name,
-            "North Science Lab",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7502,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_T.mission_name,
-            "Get Nuked",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7503,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_T.mission_name,
-            "Entrance Gate",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7504,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_T.mission_name,
-            "Citadel Gate",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7505,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_T.mission_name,
-            "South Expansion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7506,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_T.mission_name,
-            "Rich Mineral Expansion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7507,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7600,
-            LocationType.VICTORY,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_P.mission_name,
-            "East Science Lab",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7601,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_P.mission_name,
-            "North Science Lab",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7602,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_P.mission_name,
-            "Get Nuked",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7603,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_P.mission_name,
-            "Entrance Gate",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7604,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_P.mission_name,
-            "Citadel Gate",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7605,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_P.mission_name,
-            "South Expansion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7606,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.OLD_SOLDIERS_P.mission_name,
-            "Rich Mineral Expansion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7607,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7700,
-            LocationType.VICTORY,
-            logic.terran_competent_comp,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_T.mission_name,
-            "Center Essence Pool",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7701,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_T.mission_name,
-            "East Essence Pool",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7702,
-            LocationType.VANILLA,
-            logic.terran_waking_the_ancient_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_T.mission_name,
-            "South Essence Pool",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7703,
-            LocationType.VANILLA,
-            logic.terran_waking_the_ancient_requirement,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_T.mission_name,
-            "Finish Feeding",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7704,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_T.mission_name,
-            "South Proxy Primal Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7705,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_T.mission_name,
-            "East Proxy Primal Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7706,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_T.mission_name,
-            "South Main Primal Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7707,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-            flags=LocationFlag.BASEBUST,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_T.mission_name,
-            "East Main Primal Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7708,
-            LocationType.CHALLENGE,
-            logic.terran_competent_comp,
-            flags=LocationFlag.BASEBUST,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_T.mission_name,
-            "Flawless",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7709,
-            LocationType.CHALLENGE,
-            logic.terran_waking_the_ancient_flawless,
-            flags=LocationFlag.PREVENTATIVE,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7800,
-            LocationType.VICTORY,
-            logic.protoss_competent_comp,
-            hard_rule=logic.protoss_any_anti_air_unit,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_P.mission_name,
-            "Center Essence Pool",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7801,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_P.mission_name,
-            "East Essence Pool",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7802,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_anti_light_air,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_P.mission_name,
-            "South Essence Pool",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7803,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_anti_light_air,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_P.mission_name,
-            "Finish Feeding",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7804,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-            hard_rule=logic.protoss_any_anti_air_unit,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_P.mission_name,
-            "South Proxy Primal Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7805,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_P.mission_name,
-            "East Proxy Primal Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7806,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_P.mission_name,
-            "South Main Primal Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7807,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-            hard_rule=logic.protoss_any_anti_air_unit,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_P.mission_name,
-            "East Main Primal Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7808,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.BASEBUST,
-            hard_rule=logic.protoss_any_anti_air_unit,
-        ),
-        make_location_data(
-            SC2Mission.WAKING_THE_ANCIENT_P.mission_name,
-            "Flawless",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7809,
-            LocationType.CHALLENGE,
-            logic.protoss_competent_comp,
-            flags=LocationFlag.PREVENTATIVE,
-            hard_rule=logic.protoss_any_anti_air_unit,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7900,
-            LocationType.VICTORY,
-            logic.terran_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_T.mission_name,
-            "Tyrannozor",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7901,
-            LocationType.VANILLA,
-            logic.terran_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_T.mission_name,
-            "Reach the Pool",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7902,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_T.mission_name,
-            "15 Minutes Remaining",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7903,
-            LocationType.EXTRA,
-            logic.terran_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_T.mission_name,
-            "5 Minutes Remaining",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7904,
-            LocationType.EXTRA,
-            logic.terran_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_T.mission_name,
-            "Pincer Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7905,
-            LocationType.EXTRA,
-            logic.terran_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_T.mission_name,
-            "Yagdra Claims Brakk's Pack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 7906,
-            LocationType.EXTRA,
-            logic.terran_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8000,
-            LocationType.VICTORY,
-            logic.protoss_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_P.mission_name,
-            "Tyrannozor",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8001,
-            LocationType.VANILLA,
-            logic.protoss_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_P.mission_name,
-            "Reach the Pool",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8002,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_P.mission_name,
-            "15 Minutes Remaining",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8003,
-            LocationType.EXTRA,
-            logic.protoss_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_P.mission_name,
-            "5 Minutes Remaining",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8004,
-            LocationType.EXTRA,
-            logic.protoss_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_P.mission_name,
-            "Pincer Attack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8005,
-            LocationType.EXTRA,
-            logic.protoss_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_CRUCIBLE_P.mission_name,
-            "Yagdra Claims Brakk's Pack",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8006,
-            LocationType.EXTRA,
-            logic.protoss_crucible_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8300,
-            LocationType.VICTORY,
-            logic.terran_competent_comp,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "East Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8301,
-            LocationType.VANILLA,
-            logic.terran_common_unit_moderate_aa,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "Center Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8302,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "West Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8303,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "First Intro Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8304,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "Second Intro Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8305,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "Base Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8306,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "East Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8307,
-            LocationType.EXTRA,
-            logic.terran_infested_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "Mid Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8308,
-            LocationType.EXTRA,
-            logic.terran_infested_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "North Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8309,
-            LocationType.EXTRA,
-            logic.terran_infested_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "Close Southwest Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8310,
-            LocationType.EXTRA,
-            logic.terran_infested_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_T.mission_name,
-            "Far Southwest Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8311,
-            LocationType.EXTRA,
-            logic.terran_infested_far_garrison,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8400,
-            LocationType.VICTORY,
-            logic.protoss_competent_comp,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "East Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8401,
-            LocationType.VANILLA,
-            logic.protoss_common_unit_basic_aa,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "Center Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8402,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "West Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8403,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "First Intro Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8404,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "Second Intro Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8405,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "Base Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8406,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "East Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8407,
-            LocationType.EXTRA,
-            logic.protoss_infested_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "Mid Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8408,
-            LocationType.EXTRA,
-            logic.protoss_infested_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "North Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8409,
-            LocationType.EXTRA,
-            logic.protoss_infested_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "Close Southwest Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8410,
-            LocationType.EXTRA,
-            logic.protoss_infested_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INFESTED_P.mission_name,
-            "Far Southwest Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8411,
-            LocationType.EXTRA,
-            logic.protoss_infested_far_garrison,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8500,
-            LocationType.VICTORY,
-            logic.terran_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_T.mission_name,
-            "North War Bot",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8501,
-            LocationType.VANILLA,
-            logic.terran_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_T.mission_name,
-            "South War Bot",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8502,
-            LocationType.VANILLA,
-            logic.terran_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_T.mission_name,
-            "Kill 1 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8503,
-            LocationType.EXTRA,
-            logic.terran_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_T.mission_name,
-            "Kill 2 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8504,
-            LocationType.EXTRA,
-            logic.terran_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_T.mission_name,
-            "Kill 3 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8505,
-            LocationType.EXTRA,
-            logic.terran_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_T.mission_name,
-            "Kill 4 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8506,
-            LocationType.EXTRA,
-            logic.terran_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_T.mission_name,
-            "Kill 5 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8507,
-            LocationType.EXTRA,
-            logic.terran_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_T.mission_name,
-            "Kill 6 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8508,
-            LocationType.EXTRA,
-            logic.terran_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_T.mission_name,
-            "Kill 7 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8509,
-            LocationType.EXTRA,
-            logic.terran_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8600,
-            LocationType.VICTORY,
-            logic.protoss_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_P.mission_name,
-            "North Stone Zealot",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8601,
-            LocationType.VANILLA,
-            logic.protoss_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_P.mission_name,
-            "South Stone Zealot",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8602,
-            LocationType.VANILLA,
-            logic.protoss_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_P.mission_name,
-            "Kill 1 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8603,
-            LocationType.EXTRA,
-            logic.protoss_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_P.mission_name,
-            "Kill 2 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8604,
-            LocationType.EXTRA,
-            logic.protoss_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_P.mission_name,
-            "Kill 3 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8605,
-            LocationType.EXTRA,
-            logic.protoss_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_P.mission_name,
-            "Kill 4 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8606,
-            LocationType.EXTRA,
-            logic.protoss_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_P.mission_name,
-            "Kill 5 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8607,
-            LocationType.EXTRA,
-            logic.protoss_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_P.mission_name,
-            "Kill 6 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8608,
-            LocationType.EXTRA,
-            logic.protoss_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HAND_OF_DARKNESS_P.mission_name,
-            "Kill 7 Hybrid",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8609,
-            LocationType.EXTRA,
-            logic.protoss_hand_of_darkness_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8700,
-            LocationType.VICTORY,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_T.mission_name,
-            "Northwest Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8701,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_T.mission_name,
-            "Northeast Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8702,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_T.mission_name,
-            "South Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8703,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_T.mission_name,
-            "Base Established",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8704,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_T.mission_name,
-            "Close Temple",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8705,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_T.mission_name,
-            "Mid Temple",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8706,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_T.mission_name,
-            "Southeast Temple",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8707,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_T.mission_name,
-            "Northeast Temple",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8708,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_T.mission_name,
-            "Northwest Temple",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8709,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8800,
-            LocationType.VICTORY,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_P.mission_name,
-            "Northwest Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8801,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_P.mission_name,
-            "Northeast Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8802,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_P.mission_name,
-            "South Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8803,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_P.mission_name,
-            "Base Established",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8804,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_P.mission_name,
-            "Close Temple",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8805,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_P.mission_name,
-            "Mid Temple",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8806,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_P.mission_name,
-            "Southeast Temple",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8807,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_P.mission_name,
-            "Northeast Temple",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8808,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PHANTOMS_OF_THE_VOID_P.mission_name,
-            "Northwest Temple",
-            SC2_RACESWAP_LOC_ID_OFFSET + 8809,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9300,
-            LocationType.VICTORY,
-            logic.terran_planetfall_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "East Gate",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9301,
-            LocationType.VANILLA,
-            logic.terran_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "Northwest Gate",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9302,
-            LocationType.VANILLA,
-            logic.terran_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "North Gate",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9303,
-            LocationType.VANILLA,
-            logic.terran_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "1 Laser Drill Deployed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9304,
-            LocationType.EXTRA,
-            logic.terran_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "2 Laser Drills Deployed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9305,
-            LocationType.EXTRA,
-            logic.terran_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "3 Laser Drills Deployed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9306,
-            LocationType.EXTRA,
-            logic.terran_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "4 Laser Drills Deployed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9307,
-            LocationType.EXTRA,
-            logic.terran_planetfall_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "5 Laser Drills Deployed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9308,
-            LocationType.EXTRA,
-            logic.terran_planetfall_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "Sons of Korhal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9309,
-            LocationType.EXTRA,
-            logic.terran_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "Night Wolves",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9310,
-            LocationType.EXTRA,
-            logic.terran_planetfall_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "West Expansion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9311,
-            LocationType.EXTRA,
-            logic.terran_planetfall_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_T.mission_name,
-            "Mid Expansion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9312,
-            LocationType.EXTRA,
-            logic.terran_planetfall_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9400,
-            LocationType.VICTORY,
-            logic.protoss_planetfall_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "East Gate",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9401,
-            LocationType.VANILLA,
-            logic.protoss_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "Northwest Gate",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9402,
-            LocationType.VANILLA,
-            logic.protoss_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "North Gate",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9403,
-            LocationType.VANILLA,
-            logic.protoss_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "1 Particle Cannon Deployed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9404,
-            LocationType.EXTRA,
-            logic.protoss_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "2 Particle Cannons Deployed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9405,
-            LocationType.EXTRA,
-            logic.protoss_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "3 Particle Cannons Deployed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9406,
-            LocationType.EXTRA,
-            logic.protoss_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "4 Particle Cannons Deployed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9407,
-            LocationType.EXTRA,
-            logic.protoss_planetfall_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "5 Particle Cannons Deployed",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9408,
-            LocationType.EXTRA,
-            logic.protoss_planetfall_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "Sons of Korhal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9409,
-            LocationType.EXTRA,
-            logic.protoss_planetfall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "Night Wolves",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9410,
-            LocationType.EXTRA,
-            logic.protoss_planetfall_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "West Expansion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9411,
-            LocationType.EXTRA,
-            logic.protoss_planetfall_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.PLANETFALL_P.mission_name,
-            "Mid Expansion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9412,
-            LocationType.EXTRA,
-            logic.protoss_planetfall_requirement,
-            hard_rule=logic.protoss_any_anti_air_unit_or_soa_any_protoss,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9500,
-            LocationType.VICTORY,
-            logic.terran_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_T.mission_name,
-            "First Power Link",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9501,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_T.mission_name,
-            "Second Power Link",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9502,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_T.mission_name,
-            "Third Power Link",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9503,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_T.mission_name,
-            "Expansion Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9504,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_T.mission_name,
-            "Main Path Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9505,
-            LocationType.EXTRA,
-            logic.terran_ultimate_comp,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9600,
-            LocationType.VICTORY,
-            logic.protoss_deathball_or_advanced_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_P.mission_name,
-            "First Power Link",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9601,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_P.mission_name,
-            "Second Power Link",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9602,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_P.mission_name,
-            "Third Power Link",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9603,
-            LocationType.VANILLA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_P.mission_name,
-            "Expansion Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9604,
-            LocationType.EXTRA,
-            logic.protoss_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DEATH_FROM_ABOVE_P.mission_name,
-            "Main Path Command Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9605,
-            LocationType.EXTRA,
-            logic.protoss_deathball_or_advanced_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9700,
-            LocationType.VICTORY,
-            logic.terran_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_T.mission_name,
-            "South Lane",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9701,
-            LocationType.VANILLA,
-            logic.terran_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_T.mission_name,
-            "North Lane",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9702,
-            LocationType.VANILLA,
-            logic.terran_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_T.mission_name,
-            "East Lane",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9703,
-            LocationType.VANILLA,
-            logic.terran_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_T.mission_name,
-            "Odin",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9704,
-            LocationType.EXTRA,
-            logic.terran_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_T.mission_name,
-            "Trash the Odin Early",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9705,
-            LocationType.MASTERY,
-            logic.terran_the_reckoning_odin_speedrun,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9800,
-            LocationType.VICTORY,
-            logic.protoss_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_P.mission_name,
-            "South Lane",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9801,
-            LocationType.VANILLA,
-            logic.protoss_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_P.mission_name,
-            "North Lane",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9802,
-            LocationType.VANILLA,
-            logic.protoss_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_P.mission_name,
-            "East Lane",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9803,
-            LocationType.VANILLA,
-            logic.protoss_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_P.mission_name,
-            "Odin",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9804,
-            LocationType.EXTRA,
-            logic.protoss_the_reckoning_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_RECKONING_P.mission_name,
-            "Trash the Odin Early",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9805,
-            LocationType.MASTERY,
-            logic.protoss_the_reckoning_odin_speedrun,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9900,
-            LocationType.VICTORY,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_T.mission_name,
-            "First Prisoner Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9901,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_T.mission_name,
-            "Second Prisoner Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9902,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_T.mission_name,
-            "First Pylon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9903,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_T.mission_name,
-            "Second Pylon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9904,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_T.mission_name,
-            "Zerg Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 9905,
-            LocationType.MASTERY,
-            logic.terran_dark_whispers_zerg_base,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10000,
-            LocationType.VICTORY,
-            logic.zerg_competent_comp_moderate_aa,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_Z.mission_name,
-            "First Prisoner Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10001,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_moderate_aa,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_Z.mission_name,
-            "Second Prisoner Group",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10002,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_moderate_aa,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_Z.mission_name,
-            "First Pylon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10003,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_moderate_aa,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_Z.mission_name,
-            "Second Pylon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10004,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_moderate_aa,
-        ),
-        make_location_data(
-            SC2Mission.DARK_WHISPERS_Z.mission_name,
-            "Zerg Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10005,
-            LocationType.MASTERY,
-            logic.zerg_dark_whispers_zerg_base,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10100,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.terran_beats_protoss_deathball(state)
-                and logic.terran_mineral_dump(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG_T.mission_name,
-            "South Rock Formation",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10101,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_beats_protoss_deathball(state)
-                and logic.terran_mineral_dump(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG_T.mission_name,
-            "West Rock Formation",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10102,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_beats_protoss_deathball(state)
-                and logic.terran_mineral_dump(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG_T.mission_name,
-            "East Rock Formation",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10103,
-            LocationType.VANILLA,
-            logic.terran_ghosts_in_the_fog_east_rock_formation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG_T.mission_name,
-            "All Rock Formations In Under 10 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10104,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.terran_beats_protoss_deathball(state)
-                and logic.terran_mineral_dump(state)
-                and logic.terran_can_grab_ghosts_in_the_fog_east_rock_formation(state)
-            ),
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10200,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.zerg_competent_comp(state)
-                and logic.zerg_competent_anti_air(state)
-                and logic.zerg_mineral_dump(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG_Z.mission_name,
-            "South Rock Formation",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10201,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_competent_comp(state)
-                and logic.zerg_competent_anti_air(state)
-                and logic.zerg_mineral_dump(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG_Z.mission_name,
-            "West Rock Formation",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10202,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_competent_comp(state)
-                and logic.zerg_competent_anti_air(state)
-                and logic.zerg_mineral_dump(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG_Z.mission_name,
-            "East Rock Formation",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10203,
-            LocationType.VANILLA,
-            logic.zerg_ghosts_in_the_fog_east_rock_formation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.GHOSTS_IN_THE_FOG_Z.mission_name,
-            "All Rock Formations In Under 10 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10204,
-            LocationType.CHALLENGE,
-            lambda state: (
-                logic.zerg_competent_comp(state)
-                and logic.zerg_mineral_dump(state)
-                and logic.zerg_can_grab_ghosts_in_the_fog_east_rock_formation(state)
-            ),
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10500,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_T.mission_name,
-            "Southwest Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10501,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_T.mission_name,
-            "Northwest Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10502,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_T.mission_name,
-            "Northeast Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10503,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_T.mission_name,
-            "East Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10504,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_T.mission_name,
-            "West Conduit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10505,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_T.mission_name,
-            "Middle Conduit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10506,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_T.mission_name,
-            "Northeast Conduit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10507,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10600,
-            LocationType.VICTORY,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_Z.mission_name,
-            "Southwest Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10601,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_Z.mission_name,
-            "Northwest Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10602,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_Z.mission_name,
-            "Northeast Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10603,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_Z.mission_name,
-            "East Hive",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10604,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_Z.mission_name,
-            "West Conduit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10605,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_Z.mission_name,
-            "Middle Conduit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10606,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FOR_AIUR_Z.mission_name,
-            "Northeast Conduit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10607,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10700,
-            LocationType.VICTORY,
-            logic.terran_growing_shadow_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_T.mission_name,
-            "Close Pylon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10701,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_T.mission_name,
-            "East Pylon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10702,
-            LocationType.VANILLA,
-            logic.terran_growing_shadow_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_T.mission_name,
-            "West Pylon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10703,
-            LocationType.VANILLA,
-            logic.terran_growing_shadow_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_T.mission_name,
-            "Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10704,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_T.mission_name,
-            "Templar Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10705,
-            LocationType.EXTRA,
-            logic.terran_growing_shadow_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10800,
-            LocationType.VICTORY,
-            logic.zerg_growing_shadow_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_Z.mission_name,
-            "Close Pylon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10801,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_Z.mission_name,
-            "East Pylon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10802,
-            LocationType.VANILLA,
-            logic.zerg_growing_shadow_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_Z.mission_name,
-            "West Pylon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10803,
-            LocationType.VANILLA,
-            logic.zerg_growing_shadow_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_Z.mission_name,
-            "Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10804,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_GROWING_SHADOW_Z.mission_name,
-            "Templar Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10805,
-            LocationType.EXTRA,
-            logic.zerg_growing_shadow_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10900,
-            LocationType.VICTORY,
-            logic.terran_spear_of_adun_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_T.mission_name,
-            "Factory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10901,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_T.mission_name,
-            "Armory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10902,
-            LocationType.VANILLA,
-            logic.terran_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_T.mission_name,
-            "Starport",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10903,
-            LocationType.VANILLA,
-            logic.terran_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_T.mission_name,
-            "North Power Cell",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10904,
-            LocationType.EXTRA,
-            logic.terran_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_T.mission_name,
-            "East Power Cell",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10905,
-            LocationType.EXTRA,
-            logic.terran_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_T.mission_name,
-            "South Power Cell",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10906,
-            LocationType.EXTRA,
-            logic.terran_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_T.mission_name,
-            "Southeast Power Cell",
-            SC2_RACESWAP_LOC_ID_OFFSET + 10907,
-            LocationType.EXTRA,
-            logic.terran_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11000,
-            LocationType.VICTORY,
-            logic.zerg_competent_comp_competent_aa,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_Z.mission_name,
-            "Baneling Nest",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11001,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_Z.mission_name,
-            "Roach Warren",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11002,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_spear_of_adun_requirement(state)
-                and logic.spread_creep(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_Z.mission_name,
-            "Infestation Pit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11003,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_spear_of_adun_requirement(state)
-                and logic.spread_creep(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_Z.mission_name,
-            "North Power Cell",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11004,
-            LocationType.EXTRA,
-            logic.zerg_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_Z.mission_name,
-            "East Power Cell",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11005,
-            LocationType.EXTRA,
-            logic.zerg_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_Z.mission_name,
-            "South Power Cell",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11006,
-            LocationType.EXTRA,
-            logic.zerg_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_SPEAR_OF_ADUN_Z.mission_name,
-            "Southeast Power Cell",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11007,
-            LocationType.EXTRA,
-            logic.zerg_spear_of_adun_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11100,
-            LocationType.VICTORY,
-            logic.terran_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_T.mission_name,
-            "Mid EMP Scrambler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11101,
-            LocationType.VANILLA,
-            logic.terran_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_T.mission_name,
-            "Southeast EMP Scrambler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11102,
-            LocationType.VANILLA,
-            logic.terran_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_T.mission_name,
-            "North EMP Scrambler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11103,
-            LocationType.VANILLA,
-            logic.terran_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_T.mission_name,
-            "Mid Stabilizer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11104,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_T.mission_name,
-            "Southwest Stabilizer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11105,
-            LocationType.EXTRA,
-            logic.terran_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_T.mission_name,
-            "Northwest Stabilizer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11106,
-            LocationType.EXTRA,
-            logic.terran_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_T.mission_name,
-            "Northeast Stabilizer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11107,
-            LocationType.EXTRA,
-            logic.terran_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_T.mission_name,
-            "Southeast Stabilizer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11108,
-            LocationType.EXTRA,
-            logic.terran_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_T.mission_name,
-            "West Raynor Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11109,
-            LocationType.EXTRA,
-            logic.terran_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_T.mission_name,
-            "East Raynor Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11110,
-            LocationType.EXTRA,
-            logic.terran_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11200,
-            LocationType.VICTORY,
-            logic.zerg_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_Z.mission_name,
-            "Mid EMP Scrambler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11201,
-            LocationType.VANILLA,
-            logic.zerg_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_Z.mission_name,
-            "Southeast EMP Scrambler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11202,
-            LocationType.VANILLA,
-            logic.zerg_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_Z.mission_name,
-            "North EMP Scrambler",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11203,
-            LocationType.VANILLA,
-            logic.zerg_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_Z.mission_name,
-            "Mid Stabilizer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11204,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_Z.mission_name,
-            "Southwest Stabilizer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11205,
-            LocationType.EXTRA,
-            logic.zerg_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_Z.mission_name,
-            "Northwest Stabilizer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11206,
-            LocationType.EXTRA,
-            logic.zerg_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_Z.mission_name,
-            "Northeast Stabilizer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11207,
-            LocationType.EXTRA,
-            logic.zerg_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_Z.mission_name,
-            "Southeast Stabilizer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11208,
-            LocationType.EXTRA,
-            logic.zerg_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_Z.mission_name,
-            "West Raynor Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11209,
-            LocationType.EXTRA,
-            logic.zerg_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SKY_SHIELD_Z.mission_name,
-            "East Raynor Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11210,
-            LocationType.EXTRA,
-            logic.zerg_sky_shield_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11300,
-            LocationType.VICTORY,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_T.mission_name,
-            "Mid Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11301,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_T.mission_name,
-            "North Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11302,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_competent_comp(state)
-                or (
-                    logic.take_over_ai_allies
-                    and logic.advanced_tactics
-                    and logic.terran_common_unit(state)
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_T.mission_name,
-            "South Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11303,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_T.mission_name,
-            "Raynor Forward Positions",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11304,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_T.mission_name,
-            "Valerian Forward Positions",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11305,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_T.mission_name,
-            "Win In Under 15 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11306,
-            LocationType.CHALLENGE,
-            logic.terran_brothers_in_arms_speedrun,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11400,
-            LocationType.VICTORY,
-            logic.zerg_brothers_in_arms_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_Z.mission_name,
-            "Mid Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11401,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_Z.mission_name,
-            "North Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11402,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_brothers_in_arms_requirement(state)
-                or (
-                    logic.take_over_ai_allies
-                    and logic.advanced_tactics
-                    and (
-                        logic.zerg_common_unit(state) or logic.terran_common_unit(state)
-                    )
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_Z.mission_name,
-            "South Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11403,
-            LocationType.VANILLA,
-            logic.zerg_brothers_in_arms_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_Z.mission_name,
-            "Raynor Forward Positions",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11404,
-            LocationType.EXTRA,
-            logic.zerg_brothers_in_arms_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_Z.mission_name,
-            "Valerian Forward Positions",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11405,
-            LocationType.EXTRA,
-            logic.zerg_brothers_in_arms_requirement,
-        ),
-        make_location_data(
-            SC2Mission.BROTHERS_IN_ARMS_Z.mission_name,
-            "Win In Under 15 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11406,
-            LocationType.CHALLENGE,
-            logic.zerg_brothers_in_arms_speedrun,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11500,
-            LocationType.VICTORY,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_T.mission_name,
-            "Close Solarite Reserve",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11501,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_T.mission_name,
-            "North Solarite Reserve",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11502,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_T.mission_name,
-            "East Solarite Reserve",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11503,
-            LocationType.VANILLA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_T.mission_name,
-            "West Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11504,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_T.mission_name,
-            "South Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11505,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_T.mission_name,
-            "Northwest Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11506,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_T.mission_name,
-            "East Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11507,
-            LocationType.EXTRA,
-            logic.terran_competent_comp,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11600,
-            LocationType.VICTORY,
-            lambda state: (
-                logic.zerg_competent_comp(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_Z.mission_name,
-            "Close Solarite Reserve",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11601,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_Z.mission_name,
-            "North Solarite Reserve",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11602,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_competent_comp(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_Z.mission_name,
-            "East Solarite Reserve",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11603,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_competent_comp(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_Z.mission_name,
-            "West Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11604,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_competent_comp(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_Z.mission_name,
-            "South Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11605,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_competent_comp(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_Z.mission_name,
-            "Northwest Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11606,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_competent_comp(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_REACH_Z.mission_name,
-            "East Launch Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11607,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_competent_comp(state)
-                and logic.zerg_basic_kerriganless_anti_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11700,
-            LocationType.VICTORY,
-            logic.terran_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_T.mission_name,
-            "West Zenith Stone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11701,
-            LocationType.VANILLA,
-            logic.terran_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_T.mission_name,
-            "North Zenith Stone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11702,
-            LocationType.VANILLA,
-            logic.terran_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_T.mission_name,
-            "East Zenith Stone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11703,
-            LocationType.VANILLA,
-            logic.terran_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_T.mission_name,
-            "1 Billion Zerg",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11704,
-            LocationType.EXTRA,
-            logic.terran_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_T.mission_name,
-            "1.5 Billion Zerg",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11705,
-            LocationType.VANILLA,
-            logic.terran_last_stand_1p5_billion,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_T.mission_name,
-            "All Zenith Stones In Under 10 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11706,
-            LocationType.CHALLENGE,
-            logic.terran_last_stand_requirement,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11800,
-            LocationType.VICTORY,
-            logic.zerg_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_Z.mission_name,
-            "West Zenith Stone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11801,
-            LocationType.VANILLA,
-            logic.zerg_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_Z.mission_name,
-            "North Zenith Stone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11802,
-            LocationType.VANILLA,
-            logic.zerg_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_Z.mission_name,
-            "East Zenith Stone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11803,
-            LocationType.VANILLA,
-            logic.zerg_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_Z.mission_name,
-            "1 Billion Zerg",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11804,
-            LocationType.EXTRA,
-            logic.zerg_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_Z.mission_name,
-            "1.5 Billion Zerg",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11805,
-            LocationType.VANILLA,
-            logic.zerg_last_stand_requirement,
-        ),
-        make_location_data(
-            SC2Mission.LAST_STAND_Z.mission_name,
-            "All Zenith Stones In Under 10 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11806,
-            LocationType.CHALLENGE,
-            logic.zerg_last_stand_requirement,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11900,
-            LocationType.VICTORY,
-            logic.terran_beats_protoss_deathball,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_T.mission_name,
-            "South Solarite",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11901,
-            LocationType.VANILLA,
-            logic.terran_beats_protoss_deathball,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_T.mission_name,
-            "North Solarite",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11902,
-            LocationType.VANILLA,
-            logic.terran_beats_protoss_deathball,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_T.mission_name,
-            "Northwest Solarite",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11903,
-            LocationType.VANILLA,
-            logic.terran_beats_protoss_deathball,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_T.mission_name,
-            "Rescue Medics",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11904,
-            LocationType.EXTRA,
-            logic.terran_beats_protoss_deathball,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_T.mission_name,
-            "Destroy Gateways",
-            SC2_RACESWAP_LOC_ID_OFFSET + 11905,
-            LocationType.CHALLENGE,
-            logic.terran_beats_protoss_deathball,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12000,
-            LocationType.VICTORY,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_Z.mission_name,
-            "South Solarite",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12001,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_Z.mission_name,
-            "North Solarite",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12002,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_Z.mission_name,
-            "Northwest Solarite",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12003,
-            LocationType.VANILLA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_Z.mission_name,
-            "Rescue Infested Medics",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12004,
-            LocationType.EXTRA,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.FORBIDDEN_WEAPON_Z.mission_name,
-            "Destroy Gateways",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12005,
-            LocationType.CHALLENGE,
-            logic.zerg_competent_comp_competent_aa,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12100,
-            LocationType.VICTORY,
-            logic.terran_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_T.mission_name,
-            "Mid Celestial Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12101,
-            LocationType.EXTRA,
-            logic.terran_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_T.mission_name,
-            "West Celestial Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12102,
-            LocationType.EXTRA,
-            logic.terran_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_T.mission_name,
-            "South Celestial Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12103,
-            LocationType.EXTRA,
-            logic.terran_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_T.mission_name,
-            "East Celestial Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12104,
-            LocationType.EXTRA,
-            logic.terran_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_T.mission_name,
-            "North Celestial Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12105,
-            LocationType.EXTRA,
-            logic.terran_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_T.mission_name,
-            "Titanic Warp Prism",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12106,
-            LocationType.VANILLA,
-            logic.terran_temple_of_unification_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_T.mission_name,
-            "Terran Main Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12107,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.terran_temple_of_unification_requirement(state)
-                and logic.terran_ultimate_comp(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_T.mission_name,
-            "Protoss Main Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12108,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.terran_temple_of_unification_requirement(state)
-                and logic.terran_ultimate_comp(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12200,
-            LocationType.VICTORY,
-            logic.zerg_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_Z.mission_name,
-            "Mid Celestial Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12201,
-            LocationType.EXTRA,
-            logic.zerg_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_Z.mission_name,
-            "West Celestial Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12202,
-            LocationType.EXTRA,
-            logic.zerg_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_Z.mission_name,
-            "South Celestial Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12203,
-            LocationType.EXTRA,
-            logic.zerg_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_Z.mission_name,
-            "East Celestial Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12204,
-            LocationType.EXTRA,
-            logic.zerg_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_Z.mission_name,
-            "North Celestial Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12205,
-            LocationType.EXTRA,
-            logic.zerg_temple_of_unification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_Z.mission_name,
-            "Titanic Warp Prism",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12206,
-            LocationType.VANILLA,
-            logic.zerg_temple_of_unification_requirement,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_Z.mission_name,
-            "Terran Main Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12207,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.zerg_temple_of_unification_requirement(state)
-                and logic.zerg_ultimate_comp(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLE_OF_UNIFICATION_Z.mission_name,
-            "Protoss Main Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12208,
-            LocationType.MASTERY,
-            lambda state: (
-                logic.zerg_temple_of_unification_requirement(state)
-                and logic.zerg_ultimate_comp(state)
-            ),
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12500,
-            LocationType.VICTORY,
-            logic.terran_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_T.mission_name,
-            "Artanis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12501,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_T.mission_name,
-            "Northwest Void Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12502,
-            LocationType.EXTRA,
-            logic.terran_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_T.mission_name,
-            "Northeast Void Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12503,
-            LocationType.EXTRA,
-            logic.terran_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_T.mission_name,
-            "Southwest Void Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12504,
-            LocationType.EXTRA,
-            logic.terran_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_T.mission_name,
-            "Southeast Void Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12505,
-            LocationType.EXTRA,
-            logic.terran_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_T.mission_name,
-            "South Xel'Naga Vessel",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12506,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_T.mission_name,
-            "Mid Xel'Naga Vessel",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12507,
-            LocationType.VANILLA,
-            logic.terran_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_T.mission_name,
-            "North Xel'Naga Vessel",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12508,
-            LocationType.VANILLA,
-            logic.terran_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12600,
-            LocationType.VICTORY,
-            logic.zerg_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_Z.mission_name,
-            "Artanis",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12601,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_Z.mission_name,
-            "Northwest Void Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12602,
-            LocationType.EXTRA,
-            logic.zerg_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_Z.mission_name,
-            "Northeast Void Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12603,
-            LocationType.EXTRA,
-            logic.zerg_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_Z.mission_name,
-            "Southwest Void Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12604,
-            LocationType.EXTRA,
-            logic.zerg_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_Z.mission_name,
-            "Southeast Void Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12605,
-            LocationType.EXTRA,
-            logic.zerg_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_Z.mission_name,
-            "South Xel'Naga Vessel",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12606,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_Z.mission_name,
-            "Mid Xel'Naga Vessel",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12607,
-            LocationType.VANILLA,
-            logic.zerg_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.HARBINGER_OF_OBLIVION_Z.mission_name,
-            "North Xel'Naga Vessel",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12608,
-            LocationType.VANILLA,
-            logic.zerg_harbinger_of_oblivion_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12700,
-            LocationType.VICTORY,
-            logic.terran_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_T.mission_name,
-            "Zerg Cleared",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12701,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_T.mission_name,
-            "First Stasis Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12702,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.advanced_tactics
-                or logic.terran_unsealing_the_past_requirement(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_T.mission_name,
-            "Second Stasis Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12703,
-            LocationType.EXTRA,
-            logic.terran_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_T.mission_name,
-            "Third Stasis Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12704,
-            LocationType.EXTRA,
-            logic.terran_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_T.mission_name,
-            "Fourth Stasis Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12705,
-            LocationType.EXTRA,
-            logic.terran_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_T.mission_name,
-            "South Power Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12706,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_unsealing_the_past_requirement(state)
-                and (
-                    adv_tactics
-                    or logic.terran_air(state)
-                    or state.has_all(
-                        {item_names.GOLIATH, item_names.GOLIATH_JUMP_JETS}, player
-                    )
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_T.mission_name,
-            "East Power Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12707,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_unsealing_the_past_requirement(state)
-                and (
-                    adv_tactics
-                    or logic.terran_air(state)
-                    or state.has_all(
-                        {item_names.GOLIATH, item_names.GOLIATH_JUMP_JETS}, player
-                    )
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12800,
-            LocationType.VICTORY,
-            logic.zerg_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_Z.mission_name,
-            "Zerg Cleared",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12801,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_Z.mission_name,
-            "First Stasis Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12802,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.advanced_tactics
-                or logic.zerg_unsealing_the_past_requirement(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_Z.mission_name,
-            "Second Stasis Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12803,
-            LocationType.EXTRA,
-            logic.zerg_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_Z.mission_name,
-            "Third Stasis Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12804,
-            LocationType.EXTRA,
-            logic.zerg_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_Z.mission_name,
-            "Fourth Stasis Lock",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12805,
-            LocationType.EXTRA,
-            logic.zerg_unsealing_the_past_requirement,
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_Z.mission_name,
-            "South Power Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12806,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_unsealing_the_past_requirement(state)
-                and (
-                    adv_tactics
-                    or (
-                        state.has(item_names.MUTALISK, player)
-                        or logic.morph_brood_lord(state)
-                        or logic.morph_guardian(state)
-                    )
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.UNSEALING_THE_PAST_Z.mission_name,
-            "East Power Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12807,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_unsealing_the_past_requirement(state)
-                and (
-                    adv_tactics
-                    or (
-                        state.has(item_names.MUTALISK, player)
-                        or logic.morph_brood_lord(state)
-                        or logic.morph_guardian(state)
-                    )
-                )
-            ),
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12900,
-            LocationType.VICTORY,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "North Sector: West Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12901,
-            LocationType.VANILLA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "North Sector: Northeast Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12902,
-            LocationType.EXTRA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "North Sector: Southeast Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12903,
-            LocationType.EXTRA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "South Sector: West Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12904,
-            LocationType.VANILLA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "South Sector: North Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12905,
-            LocationType.EXTRA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "South Sector: East Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12906,
-            LocationType.EXTRA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "West Sector: West Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12907,
-            LocationType.VANILLA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "West Sector: Mid Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12908,
-            LocationType.EXTRA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "West Sector: East Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12909,
-            LocationType.EXTRA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "East Sector: North Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12910,
-            LocationType.VANILLA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "East Sector: West Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12911,
-            LocationType.EXTRA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "East Sector: South Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12912,
-            LocationType.EXTRA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_T.mission_name,
-            "Purifier Warden",
-            SC2_RACESWAP_LOC_ID_OFFSET + 12913,
-            LocationType.VANILLA,
-            logic.terran_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13000,
-            LocationType.VICTORY,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "North Sector: West Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13001,
-            LocationType.VANILLA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "North Sector: Northeast Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13002,
-            LocationType.EXTRA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "North Sector: Southeast Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13003,
-            LocationType.EXTRA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "South Sector: West Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13004,
-            LocationType.VANILLA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "South Sector: North Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13005,
-            LocationType.EXTRA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "South Sector: East Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13006,
-            LocationType.EXTRA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "West Sector: West Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13007,
-            LocationType.VANILLA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "West Sector: Mid Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13008,
-            LocationType.EXTRA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "West Sector: East Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13009,
-            LocationType.EXTRA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "East Sector: North Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13010,
-            LocationType.VANILLA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "East Sector: West Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13011,
-            LocationType.EXTRA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "East Sector: South Null Circuit",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13012,
-            LocationType.EXTRA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.PURIFICATION_Z.mission_name,
-            "Purifier Warden",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13013,
-            LocationType.VANILLA,
-            logic.zerg_purification_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13100,
-            LocationType.VICTORY,
-            logic.terran_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_T.mission_name,
-            "First Terrazine Fog",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13101,
-            LocationType.EXTRA,
-            logic.terran_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_T.mission_name,
-            "Southwest Guardian",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13102,
-            LocationType.EXTRA,
-            logic.terran_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_T.mission_name,
-            "West Guardian",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13103,
-            LocationType.EXTRA,
-            logic.terran_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_T.mission_name,
-            "Northwest Guardian",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13104,
-            LocationType.EXTRA,
-            logic.terran_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_T.mission_name,
-            "Northeast Guardian",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13105,
-            LocationType.EXTRA,
-            logic.terran_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_T.mission_name,
-            "North Mothership",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13106,
-            LocationType.VANILLA,
-            logic.terran_steps_of_the_rite_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_T.mission_name,
-            "South Mothership",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13107,
-            LocationType.VANILLA,
-            logic.terran_steps_of_the_rite_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13200,
-            LocationType.VICTORY,
-            logic.zerg_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_Z.mission_name,
-            "First Terrazine Fog",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13201,
-            LocationType.EXTRA,
-            logic.zerg_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_Z.mission_name,
-            "Southwest Guardian",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13202,
-            LocationType.EXTRA,
-            logic.zerg_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_Z.mission_name,
-            "West Guardian",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13203,
-            LocationType.EXTRA,
-            logic.zerg_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_Z.mission_name,
-            "Northwest Guardian",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13204,
-            LocationType.EXTRA,
-            logic.zerg_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_Z.mission_name,
-            "Northeast Guardian",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13205,
-            LocationType.EXTRA,
-            logic.zerg_steps_of_the_rite_requirement,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_Z.mission_name,
-            "North Mothership",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13206,
-            LocationType.VANILLA,
-            logic.zerg_steps_of_the_rite_requirement,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.STEPS_OF_THE_RITE_Z.mission_name,
-            "South Mothership",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13207,
-            LocationType.VANILLA,
-            logic.zerg_steps_of_the_rite_requirement,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13300,
-            LocationType.VICTORY,
-            logic.terran_rak_shir_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_T.mission_name,
-            "North Slayn Elemental",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13301,
-            LocationType.VANILLA,
-            logic.terran_rak_shir_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_T.mission_name,
-            "Southwest Slayn Elemental",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13302,
-            LocationType.VANILLA,
-            logic.terran_rak_shir_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_T.mission_name,
-            "East Slayn Elemental",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13303,
-            LocationType.VANILLA,
-            logic.terran_rak_shir_requirement,
-            hard_rule=logic.terran_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_T.mission_name,
-            "Resource Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13304,
-            LocationType.EXTRA,
-            logic.terran_rak_shir_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_T.mission_name,
-            "Destroy Nexuses",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13305,
-            LocationType.CHALLENGE,
-            logic.terran_rak_shir_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_T.mission_name,
-            "Win In Under 15 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13306,
-            LocationType.MASTERY,
-            logic.terran_rak_shir_requirement,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13400,
-            LocationType.VICTORY,
-            logic.zerg_rak_shir_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_Z.mission_name,
-            "North Slayn Elemental",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13401,
-            LocationType.VANILLA,
-            logic.zerg_rak_shir_requirement,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_Z.mission_name,
-            "Southwest Slayn Elemental",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13402,
-            LocationType.VANILLA,
-            logic.zerg_rak_shir_requirement,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_Z.mission_name,
-            "East Slayn Elemental",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13403,
-            LocationType.VANILLA,
-            logic.zerg_rak_shir_requirement,
-            hard_rule=logic.zerg_any_anti_air,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_Z.mission_name,
-            "Resource Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13404,
-            LocationType.EXTRA,
-            logic.zerg_rak_shir_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_Z.mission_name,
-            "Destroy Nexuses",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13405,
-            LocationType.CHALLENGE,
-            logic.zerg_rak_shir_requirement,
-        ),
-        make_location_data(
-            SC2Mission.RAK_SHIR_Z.mission_name,
-            "Win In Under 15 Minutes",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13406,
-            LocationType.MASTERY,
-            logic.zerg_rak_shir_requirement,
-            flags=LocationFlag.SPEEDRUN,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13500,
-            LocationType.VICTORY,
-            logic.terran_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_T.mission_name,
-            "Northwest Power Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13501,
-            LocationType.EXTRA,
-            logic.terran_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_T.mission_name,
-            "Northeast Power Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13502,
-            LocationType.EXTRA,
-            logic.terran_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_T.mission_name,
-            "Southeast Power Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13503,
-            LocationType.EXTRA,
-            logic.terran_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_T.mission_name,
-            "West Hybrid Stasis Chamber",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13504,
-            LocationType.VANILLA,
-            logic.terran_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_T.mission_name,
-            "Southeast Hybrid Stasis Chamber",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13505,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.terran_templars_charge_requirement(state)
-                and logic.terran_air(state)
-            ),
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13600,
-            LocationType.VICTORY,
-            logic.zerg_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_Z.mission_name,
-            "Northwest Power Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13601,
-            LocationType.EXTRA,
-            logic.zerg_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_Z.mission_name,
-            "Northeast Power Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13602,
-            LocationType.EXTRA,
-            logic.zerg_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_Z.mission_name,
-            "Southeast Power Core",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13603,
-            LocationType.EXTRA,
-            logic.zerg_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_Z.mission_name,
-            "West Hybrid Stasis Chamber",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13604,
-            LocationType.VANILLA,
-            logic.zerg_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TEMPLAR_S_CHARGE_Z.mission_name,
-            "Southeast Hybrid Stasis Chamber",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13605,
-            LocationType.VANILLA,
-            logic.zerg_templars_charge_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13900,
-            LocationType.VICTORY,
-            logic.terran_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_T.mission_name,
-            "Southeast Void Shard",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13901,
-            LocationType.EXTRA,
-            logic.terran_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_T.mission_name,
-            "South Void Shard",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13902,
-            LocationType.EXTRA,
-            logic.terran_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_T.mission_name,
-            "Southwest Void Shard",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13903,
-            LocationType.EXTRA,
-            logic.terran_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_T.mission_name,
-            "North Void Shard",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13904,
-            LocationType.EXTRA,
-            logic.terran_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_T.mission_name,
-            "Northwest Void Shard",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13905,
-            LocationType.EXTRA,
-            logic.terran_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_T.mission_name,
-            "Nerazim Warp in Zone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13906,
-            LocationType.VANILLA,
-            logic.terran_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_T.mission_name,
-            "Tal'darim Warp in Zone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13907,
-            LocationType.VANILLA,
-            logic.terran_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_T.mission_name,
-            "Purifier Warp in Zone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 13908,
-            LocationType.VANILLA,
-            logic.terran_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14000,
-            LocationType.VICTORY,
-            logic.zerg_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_Z.mission_name,
-            "Southeast Void Shard",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14001,
-            LocationType.EXTRA,
-            logic.zerg_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_Z.mission_name,
-            "South Void Shard",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14002,
-            LocationType.EXTRA,
-            logic.zerg_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_Z.mission_name,
-            "Southwest Void Shard",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14003,
-            LocationType.EXTRA,
-            logic.zerg_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_Z.mission_name,
-            "North Void Shard",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14004,
-            LocationType.EXTRA,
-            logic.zerg_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_Z.mission_name,
-            "Northwest Void Shard",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14005,
-            LocationType.EXTRA,
-            logic.zerg_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_Z.mission_name,
-            "Nerazim Warp in Zone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14006,
-            LocationType.VANILLA,
-            logic.zerg_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_Z.mission_name,
-            "Tal'darim Warp in Zone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14007,
-            LocationType.VANILLA,
-            logic.zerg_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_HOST_Z.mission_name,
-            "Purifier Warp in Zone",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14008,
-            LocationType.VANILLA,
-            logic.zerg_the_host_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14100,
-            LocationType.VICTORY,
-            logic.terran_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_T.mission_name,
-            "Fabrication Matrix",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14101,
-            LocationType.EXTRA,
-            logic.terran_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_T.mission_name,
-            "Assault Cluster",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14102,
-            LocationType.EXTRA,
-            logic.terran_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_T.mission_name,
-            "Hull Breach",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14103,
-            LocationType.EXTRA,
-            logic.terran_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_T.mission_name,
-            "Core Critical",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14104,
-            LocationType.EXTRA,
-            logic.terran_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_T.mission_name,
-            "Kill Brutalisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14105,
-            LocationType.MASTERY,
-            logic.terran_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14200,
-            LocationType.VICTORY,
-            logic.zerg_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_Z.mission_name,
-            "Fabrication Matrix",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14201,
-            LocationType.EXTRA,
-            logic.zerg_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_Z.mission_name,
-            "Assault Cluster",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14202,
-            LocationType.EXTRA,
-            logic.zerg_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_Z.mission_name,
-            "Hull Breach",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14203,
-            LocationType.EXTRA,
-            logic.zerg_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_Z.mission_name,
-            "Core Critical",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14204,
-            LocationType.EXTRA,
-            logic.zerg_salvation_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SALVATION_Z.mission_name,
-            "Kill Brutalisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14205,
-            LocationType.MASTERY,
-            logic.zerg_salvation_requirement,
-        ),
+    def __init__(
+        self,
+        id: int,
+        location_name: str,
+        mission: SC2Mission,
+        type: LocationType,
+        flags: LocationFlag = LocationFlag.NONE,
+    ) -> None:
+        self.id = id
+        self.location_name = location_name
+        self.mission = mission
+        self.type = type
+        self.flags = flags
 
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14300,
-            LocationType.VICTORY,
-            logic.terran_into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_T.mission_name,
-            "Corruption Source",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14301,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_T.mission_name,
-            "Southwest Forward Position",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14302,
-            LocationType.VANILLA,
-            logic.terran_into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_T.mission_name,
-            "Northwest Forward Position",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14303,
-            LocationType.VANILLA,
-            logic.terran_into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_T.mission_name,
-            "Southeast Forward Position",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14304,
-            LocationType.VANILLA,
-            logic.terran_into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_T.mission_name,
-            "Northeast Forward Position",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14305,
-            LocationType.VANILLA,
-            logic.terran_into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14400,
-            LocationType.VICTORY,
-            logic.zerg_into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_Z.mission_name,
-            "Corruption Source",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14401,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_Z.mission_name,
-            "Southwest Forward Position",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14402,
-            LocationType.VANILLA,
-            logic.zerg_into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_Z.mission_name,
-            "Northwest Forward Position",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14403,
-            LocationType.VANILLA,
-            logic.zerg_into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_Z.mission_name,
-            "Southeast Forward Position",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14404,
-            LocationType.VANILLA,
-            logic.zerg_into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.INTO_THE_VOID_Z.mission_name,
-            "Northeast Forward Position",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14405,
-            LocationType.VANILLA,
-            logic.zerg_into_the_void_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14500,
-            LocationType.VICTORY,
-            logic.zerg_essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_Z.mission_name,
-            "Initial Void Thrashers",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14501,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_Z.mission_name,
-            "Void Thrasher Wave 1",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14502,
-            LocationType.EXTRA,
-            logic.zerg_essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_Z.mission_name,
-            "Void Thrasher Wave 2",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14503,
-            LocationType.EXTRA,
-            logic.zerg_essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_Z.mission_name,
-            "Void Thrasher Wave 3",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14504,
-            LocationType.EXTRA,
-            logic.zerg_essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_Z.mission_name,
-            "Void Thrasher Wave 4",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14505,
-            LocationType.EXTRA,
-            logic.zerg_essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_Z.mission_name,
-            "No more than 15 Kerrigan Kills",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14506,
-            LocationType.MASTERY,
-            logic.zerg_essence_of_eternity_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14600,
-            LocationType.VICTORY,
-            logic.protoss_essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_P.mission_name,
-            "Initial Void Thrashers",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14601,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_P.mission_name,
-            "Void Thrasher Wave 1",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14602,
-            LocationType.EXTRA,
-            logic.protoss_essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_P.mission_name,
-            "Void Thrasher Wave 2",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14603,
-            LocationType.EXTRA,
-            logic.protoss_essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_P.mission_name,
-            "Void Thrasher Wave 3",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14604,
-            LocationType.EXTRA,
-            logic.protoss_essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_P.mission_name,
-            "Void Thrasher Wave 4",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14605,
-            LocationType.EXTRA,
-            logic.protoss_essence_of_eternity_requirement,
-        ),
-        make_location_data(
-            SC2Mission.THE_ESSENCE_OF_ETERNITY_P.mission_name,
-            "No more than 15 Kerrigan Kills",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14606,
-            LocationType.MASTERY,
-            logic.protoss_essence_of_eternity_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_T.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14700,
-            LocationType.VICTORY,
-            logic.terran_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_T.mission_name,
-            "Destroy 1 Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14701,
-            LocationType.EXTRA,
-            logic.terran_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_T.mission_name,
-            "Destroy 2 Crystals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14702,
-            LocationType.EXTRA,
-            logic.terran_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_T.mission_name,
-            "Destroy 3 Crystals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14703,
-            LocationType.EXTRA,
-            logic.terran_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_T.mission_name,
-            "Destroy 4 Crystals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14704,
-            LocationType.EXTRA,
-            logic.terran_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_T.mission_name,
-            "Destroy 5 Crystals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14705,
-            LocationType.EXTRA,
-            logic.terran_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_T.mission_name,
-            "Destroy 6 Crystals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14706,
-            LocationType.EXTRA,
-            logic.terran_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_T.mission_name,
-            "Clear Void Chasms",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14707,
-            LocationType.MASTERY,
-            logic.terran_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14800,
-            LocationType.VICTORY,
-            logic.protoss_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_P.mission_name,
-            "Destroy 1 Crystal",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14801,
-            LocationType.EXTRA,
-            logic.protoss_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_P.mission_name,
-            "Destroy 2 Crystals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14802,
-            LocationType.EXTRA,
-            logic.protoss_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_P.mission_name,
-            "Destroy 3 Crystals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14803,
-            LocationType.EXTRA,
-            logic.protoss_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_P.mission_name,
-            "Destroy 4 Crystals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14804,
-            LocationType.EXTRA,
-            logic.protoss_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_P.mission_name,
-            "Destroy 5 Crystals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14805,
-            LocationType.EXTRA,
-            logic.protoss_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_P.mission_name,
-            "Destroy 6 Crystals",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14806,
-            LocationType.EXTRA,
-            logic.protoss_amons_fall_requirement,
-        ),
-        make_location_data(
-            SC2Mission.AMON_S_FALL_P.mission_name,
-            "Clear Void Chasms",
-            SC2_RACESWAP_LOC_ID_OFFSET + 14807,
-            LocationType.MASTERY,
-            logic.protoss_amons_fall_requirement,
-        ),
-        # The Escape, 14900 + 15000
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15100,
-            LocationType.VICTORY,
-            logic.zerg_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_Z.mission_name,
-            "Research Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15101,
-            LocationType.VANILLA,
-            logic.zerg_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_Z.mission_name,
-            "Weaponry Labs",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15102,
-            LocationType.VANILLA,
-            logic.zerg_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_Z.mission_name,
-            "Brutalisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15103,
-            LocationType.EXTRA,
-            logic.zerg_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_Z.mission_name,
-            "Gas Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15104,
-            LocationType.EXTRA,
-            logic.zerg_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_Z.mission_name,
-            "Protect Buildings",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15105,
-            LocationType.CHALLENGE,
-            logic.zerg_sudden_strike_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_Z.mission_name,
-            "Zerg Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15106,
-            LocationType.MASTERY,
-            logic.zerg_sudden_strike_zerg_base,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15200,
-            LocationType.VICTORY,
-            logic.protoss_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_P.mission_name,
-            "Research Center",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15201,
-            LocationType.VANILLA,
-            logic.protoss_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_P.mission_name,
-            "Weaponry Labs",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15202,
-            LocationType.VANILLA,
-            logic.protoss_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_P.mission_name,
-            "Brutalisk",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15203,
-            LocationType.EXTRA,
-            logic.protoss_sudden_strike_requirement,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_P.mission_name,
-            "Gas Pickups",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15204,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_P.mission_name,
-            "Protect Buildings",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15205,
-            LocationType.CHALLENGE,
-            logic.protoss_sudden_strike_requirement,
-            flags=LocationFlag.PREVENTATIVE,
-        ),
-        make_location_data(
-            SC2Mission.SUDDEN_STRIKE_P.mission_name,
-            "Zerg Base",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15206,
-            LocationType.MASTERY,
-            logic.protoss_sudden_strike_zerg_base,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15300,
-            LocationType.VICTORY,
-            logic.zerg_enemy_intelligence_third_stage_requirement,
-            hard_rule=logic.zerg_enemy_intelligence_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_Z.mission_name,
-            "West Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15301,
-            LocationType.EXTRA,
-            logic.zerg_enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.zerg_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_Z.mission_name,
-            "Close Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15302,
-            LocationType.EXTRA,
-            logic.zerg_enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.zerg_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_Z.mission_name,
-            "Northeast Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15303,
-            LocationType.EXTRA,
-            logic.zerg_enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.zerg_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_Z.mission_name,
-            "Southeast Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15304,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.zerg_enemy_intelligence_first_stage_requirement(state)
-                and logic.zerg_enemy_intelligence_cliff_garrison(state)
-            ),
-            hard_rule=logic.zerg_enemy_intelligence_cliff_garrison,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_Z.mission_name,
-            "South Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15305,
-            LocationType.EXTRA,
-            logic.zerg_enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.zerg_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_Z.mission_name,
-            "All Garrisons",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15306,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.zerg_enemy_intelligence_first_stage_requirement(state)
-                and logic.zerg_enemy_intelligence_cliff_garrison(state)
-            ),
-            hard_rule=logic.zerg_enemy_intelligence_cliff_garrison,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_Z.mission_name,
-            "Forces Rescued",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15307,
-            LocationType.VANILLA,
-            logic.zerg_enemy_intelligence_first_stage_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_Z.mission_name,
-            "Communications Hub",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15308,
-            LocationType.VANILLA,
-            logic.zerg_enemy_intelligence_second_stage_requirement,
-            hard_rule=logic.zerg_enemy_intelligence_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15400,
-            LocationType.VICTORY,
-            logic.protoss_enemy_intelligence_third_stage_requirement,
-            hard_rule=logic.protoss_enemy_intelligence_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_P.mission_name,
-            "West Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15401,
-            LocationType.EXTRA,
-            logic.protoss_enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.protoss_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_P.mission_name,
-            "Close Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15402,
-            LocationType.EXTRA,
-            logic.protoss_enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.protoss_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_P.mission_name,
-            "Northeast Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15403,
-            LocationType.EXTRA,
-            logic.protoss_enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.protoss_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_P.mission_name,
-            "Southeast Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15404,
-            LocationType.EXTRA,
-            lambda state: (
-                logic.protoss_enemy_intelligence_first_stage_requirement(state)
-                and logic.protoss_enemy_intelligence_cliff_garrison(state)
-            ),
-            hard_rule=logic.protoss_enemy_intelligence_cliff_garrison,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_P.mission_name,
-            "South Garrison",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15405,
-            LocationType.EXTRA,
-            logic.protoss_enemy_intelligence_first_stage_requirement,
-            hard_rule=logic.protoss_enemy_intelligence_garrisonable_unit,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_P.mission_name,
-            "All Garrisons",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15406,
-            LocationType.VANILLA,
-            lambda state: (
-                logic.protoss_enemy_intelligence_first_stage_requirement(state)
-                and logic.protoss_enemy_intelligence_cliff_garrison(state)
-            ),
-            hard_rule=logic.protoss_enemy_intelligence_cliff_garrison,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_P.mission_name,
-            "Forces Rescued",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15407,
-            LocationType.VANILLA,
-            logic.protoss_enemy_intelligence_first_stage_requirement,
-        ),
-        make_location_data(
-            SC2Mission.ENEMY_INTELLIGENCE_P.mission_name,
-            "Communications Hub",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15408,
-            LocationType.VANILLA,
-            logic.protoss_enemy_intelligence_second_stage_requirement,
-            hard_rule=logic.protoss_enemy_intelligence_hard_rule,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15500,
-            LocationType.VICTORY,
-            logic.zerg_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "North Base: West Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15501,
-            LocationType.VANILLA,
-            logic.zerg_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "North Base: North Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15502,
-            LocationType.VANILLA,
-            logic.zerg_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "North Base: East Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15503,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "South Base: Northwest Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15504,
-            LocationType.VANILLA,
-            logic.zerg_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "South Base: Southwest Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15505,
-            LocationType.VANILLA,
-            logic.zerg_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "South Base: East Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15506,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "North Shield Projector",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15507,
-            LocationType.EXTRA,
-            logic.zerg_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "East Shield Projector",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15508,
-            LocationType.EXTRA,
-            logic.zerg_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "South Shield Projector",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15509,
-            LocationType.EXTRA,
-            logic.zerg_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "West Shield Projector",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15510,
-            LocationType.EXTRA,
-            logic.zerg_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_Z.mission_name,
-            "Fleet Beacon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15511,
-            LocationType.VANILLA,
-            logic.zerg_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15600,
-            LocationType.VICTORY,
-            logic.protoss_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "North Base: West Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15601,
-            LocationType.VANILLA,
-            logic.protoss_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "North Base: North Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15602,
-            LocationType.VANILLA,
-            logic.protoss_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "North Base: East Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15603,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "South Base: Northwest Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15604,
-            LocationType.VANILLA,
-            logic.protoss_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "South Base: Southwest Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15605,
-            LocationType.VANILLA,
-            logic.protoss_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "South Base: East Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15606,
-            LocationType.VANILLA,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "North Shield Projector",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15607,
-            LocationType.EXTRA,
-            logic.protoss_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "East Shield Projector",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15608,
-            LocationType.EXTRA,
-            logic.protoss_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "South Shield Projector",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15609,
-            LocationType.EXTRA,
-            logic.protoss_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "West Shield Projector",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15610,
-            LocationType.EXTRA,
-            logic.protoss_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.TROUBLE_IN_PARADISE_P.mission_name,
-            "Fleet Beacon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15611,
-            LocationType.VANILLA,
-            logic.protoss_trouble_in_paradise_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15700,
-            LocationType.VICTORY,
-            logic.zerg_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_Z.mission_name,
-            "1 Terrazine Node Collected",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15701,
-            LocationType.EXTRA,
-            logic.zerg_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_Z.mission_name,
-            "2 Terrazine Nodes Collected",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15702,
-            LocationType.EXTRA,
-            logic.zerg_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_Z.mission_name,
-            "3 Terrazine Nodes Collected",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15703,
-            LocationType.EXTRA,
-            logic.zerg_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_Z.mission_name,
-            "4 Terrazine Nodes Collected",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15704,
-            LocationType.EXTRA,
-            logic.zerg_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_Z.mission_name,
-            "5 Terrazine Nodes Collected",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15705,
-            LocationType.EXTRA,
-            logic.zerg_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_Z.mission_name,
-            "HERC Outpost",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15706,
-            LocationType.VANILLA,
-            logic.zerg_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_Z.mission_name,
-            "Umojan Mine",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15707,
-            LocationType.EXTRA,
-            logic.zerg_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_Z.mission_name,
-            "Blightbringer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15708,
-            LocationType.VANILLA,
-            logic.zerg_night_terrors_side_area_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_Z.mission_name,
-            "Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15709,
-            LocationType.EXTRA,
-            logic.zerg_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_Z.mission_name,
-            "Eradicators",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15710,
-            LocationType.VANILLA,
-            logic.zerg_night_terrors_side_area_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15800,
-            LocationType.VICTORY,
-            logic.protoss_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_P.mission_name,
-            "1 Terrazine Node Collected",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15801,
-            LocationType.EXTRA,
-            logic.protoss_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_P.mission_name,
-            "2 Terrazine Nodes Collected",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15802,
-            LocationType.EXTRA,
-            logic.protoss_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_P.mission_name,
-            "3 Terrazine Nodes Collected",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15803,
-            LocationType.EXTRA,
-            logic.protoss_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_P.mission_name,
-            "4 Terrazine Nodes Collected",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15804,
-            LocationType.EXTRA,
-            logic.protoss_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_P.mission_name,
-            "5 Terrazine Nodes Collected",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15805,
-            LocationType.EXTRA,
-            logic.protoss_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_P.mission_name,
-            "HERC Outpost",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15806,
-            LocationType.VANILLA,
-            logic.protoss_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_P.mission_name,
-            "Umojan Mine",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15807,
-            LocationType.EXTRA,
-            logic.protoss_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_P.mission_name,
-            "Blightbringer",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15808,
-            LocationType.VANILLA,
-            logic.protoss_night_terrors_side_area_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_P.mission_name,
-            "Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15809,
-            LocationType.EXTRA,
-            logic.protoss_night_terrors_requirement,
-        ),
-        make_location_data(
-            SC2Mission.NIGHT_TERRORS_P.mission_name,
-            "Eradicators",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15810,
-            LocationType.VANILLA,
-            logic.protoss_night_terrors_side_area_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15900,
-            LocationType.VICTORY,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Close North Evidence Coordinates",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15901,
-            LocationType.EXTRA,
-            logic.zerg_common_unit, # or Nova-less/Nova with damage
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Close East Evidence Coordinates",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15902,
-            LocationType.EXTRA,
-            logic.zerg_common_unit, # or Nova-less/Nova with damage
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Far North Evidence Coordinates",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15903,
-            LocationType.EXTRA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Far East Evidence Coordinates",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15904,
-            LocationType.EXTRA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Experimental Weapon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15905,
-            LocationType.VANILLA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Northwest Subway Entrance",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15906,
-            LocationType.VANILLA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Southeast Subway Entrance",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15907,
-            LocationType.VANILLA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Northeast Subway Entrance",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15908,
-            LocationType.VANILLA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Expansion Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15909,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Baneling Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15910,
-            LocationType.EXTRA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Mutalisk Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15911,
-            LocationType.EXTRA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Nydus Worm Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15912,
-            LocationType.EXTRA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Lurker Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15913,
-            LocationType.EXTRA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Brood Lord Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15914,
-            LocationType.EXTRA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_Z.mission_name,
-            "Ultralisk Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 15915,
-            LocationType.EXTRA,
-            logic.zerg_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16000,
-            LocationType.VICTORY,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Close North Evidence Coordinates",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16001,
-            LocationType.EXTRA,
-            logic.protoss_common_unit, # or Nova-less/Nova with damage
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Close East Evidence Coordinates",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16002,
-            LocationType.EXTRA,
-            logic.protoss_common_unit, # or Nova-less/Nova with damage
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Far North Evidence Coordinates",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16003,
-            LocationType.EXTRA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Far East Evidence Coordinates",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16004,
-            LocationType.EXTRA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Experimental Weapon",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16005,
-            LocationType.VANILLA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Northwest Subway Entrance",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16006,
-            LocationType.VANILLA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Southeast Subway Entrance",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16007,
-            LocationType.VANILLA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Northeast Subway Entrance",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16008,
-            LocationType.VANILLA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Expansion Hatchery",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16009,
-            LocationType.EXTRA,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Baneling Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16010,
-            LocationType.EXTRA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Mutalisk Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16011,
-            LocationType.EXTRA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Nydus Worm Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16012,
-            LocationType.EXTRA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Lurker Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16013,
-            LocationType.EXTRA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Brood Lord Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16014,
-            LocationType.EXTRA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        make_location_data(
-            SC2Mission.FLASHPOINT_P.mission_name,
-            "Ultralisk Spawns",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16015,
-            LocationType.EXTRA,
-            logic.protoss_flashpoint_far_requirement,
-        ),
-        # In the Enemy's Shadow 16100 + 16200
-        make_location_data(
-            SC2Mission.DARK_SKIES_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16300,
-            LocationType.VICTORY,
-            logic.zerg_dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES_Z.mission_name,
-            "First Squadron of Dominion Fleet",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16301,
-            LocationType.EXTRA,
-            logic.zerg_dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES_Z.mission_name,
-            "Remainder of Dominion Fleet",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16302,
-            LocationType.EXTRA,
-            logic.zerg_dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES_Z.mission_name,
-            "Ji'nara",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16303,
-            LocationType.EXTRA,
-            logic.zerg_dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES_Z.mission_name,
-            "Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16304,
-            LocationType.VANILLA,
-            logic.zerg_dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16400,
-            LocationType.VICTORY,
-            logic.protoss_dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES_P.mission_name,
-            "First Squadron of Dominion Fleet",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16401,
-            LocationType.EXTRA,
-            logic.protoss_dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES_P.mission_name,
-            "Remainder of Dominion Fleet",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16402,
-            LocationType.EXTRA,
-            logic.protoss_dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES_P.mission_name,
-            "Ji'nara",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16403,
-            LocationType.EXTRA,
-            logic.protoss_dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.DARK_SKIES_P.mission_name,
-            "Science Facility",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16404,
-            LocationType.VANILLA,
-            logic.protoss_dark_skies_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_Z.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16500,
-            LocationType.VICTORY,
-            logic.zerg_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_Z.mission_name,
-            "Destroy the Xanthos",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16501,
-            LocationType.VANILLA,
-            logic.zerg_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_Z.mission_name,
-            "Disable Xanthos Railgun",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16502,
-            LocationType.EXTRA,
-            logic.zerg_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_Z.mission_name,
-            "Disable Xanthos Flamethrower",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16503,
-            LocationType.EXTRA,
-            logic.zerg_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_Z.mission_name,
-            "Disable Xanthos Fighter Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16504,
-            LocationType.EXTRA,
-            logic.zerg_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_Z.mission_name,
-            "Disable Xanthos Missile Pods",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16505,
-            LocationType.EXTRA,
-            logic.zerg_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_Z.mission_name,
-            "Protect Hyperion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16506,
-            LocationType.CHALLENGE,
-            logic.zerg_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_Z.mission_name,
-            "Destroy Orbital Commands",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16507,
-            LocationType.CHALLENGE,
-            logic.zerg_end_game_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_P.mission_name,
-            "Victory",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16600,
-            LocationType.VICTORY,
-            logic.protoss_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_P.mission_name,
-            "Destroy the Xanthos",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16601,
-            LocationType.VANILLA,
-            logic.protoss_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_P.mission_name,
-            "Disable Xanthos Railgun",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16602,
-            LocationType.EXTRA,
-            logic.protoss_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_P.mission_name,
-            "Disable Xanthos Flamethrower",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16603,
-            LocationType.EXTRA,
-            logic.protoss_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_P.mission_name,
-            "Disable Xanthos Fighter Bay",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16604,
-            LocationType.EXTRA,
-            logic.protoss_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_P.mission_name,
-            "Disable Xanthos Missile Pods",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16605,
-            LocationType.EXTRA,
-            logic.protoss_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_P.mission_name,
-            "Protect Hyperion",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16606,
-            LocationType.CHALLENGE,
-            logic.protoss_end_game_requirement,
-        ),
-        make_location_data(
-            SC2Mission.END_GAME_P.mission_name,
-            "Destroy Orbital Commands",
-            SC2_RACESWAP_LOC_ID_OFFSET + 16607,
-            LocationType.CHALLENGE,
-            logic.protoss_end_game_requirement,
-            flags=LocationFlag.BASEBUST,
-        ),
-    ]
+    def global_name(self) -> str:
+        return f"{self.mission.mission_name}: {self.location_name}"
 
-    # Filtering out excluded locations
-    if world is not None:
-        excluded_location_types = get_location_types(
-            world, LocationInclusion.option_disabled
-        )
-        excluded_location_flags = get_location_flags(
-            world, LocationInclusion.option_disabled
-        )
-        chance_location_types = get_location_types(
-            world, LocationInclusion.option_half_chance
-        )
-        chance_location_flags = get_location_flags(
-            world, LocationInclusion.option_half_chance
-        )
-        plando_locations = get_plando_locations(world)
-        exclude_locations = world.options.exclude_locations.value
+    LIBERATION_DAY_VICTORY = SC2WOL_LOC_ID_OFFSET + 100, "Victory", SC2Mission.LIBERATION_DAY, LocationType.VICTORY
+    LIBERATION_DAY_FIRST_STATUE = SC2WOL_LOC_ID_OFFSET + 101, "First Statue", SC2Mission.LIBERATION_DAY, LocationType.VANILLA
+    LIBERATION_DAY_SECOND_STATUE = SC2WOL_LOC_ID_OFFSET + 102, "Second Statue", SC2Mission.LIBERATION_DAY, LocationType.VANILLA
+    LIBERATION_DAY_THIRD_STATUE = SC2WOL_LOC_ID_OFFSET + 103, "Third Statue", SC2Mission.LIBERATION_DAY, LocationType.VANILLA
+    LIBERATION_DAY_FOURTH_STATUE = SC2WOL_LOC_ID_OFFSET + 104, "Fourth Statue", SC2Mission.LIBERATION_DAY, LocationType.VANILLA
+    LIBERATION_DAY_FIFTH_STATUE = SC2WOL_LOC_ID_OFFSET + 105, "Fifth Statue", SC2Mission.LIBERATION_DAY, LocationType.VANILLA
+    LIBERATION_DAY_SIXTH_STATUE = SC2WOL_LOC_ID_OFFSET + 106, "Sixth Statue", SC2Mission.LIBERATION_DAY, LocationType.VANILLA
+    LIBERATION_DAY_SPECIAL_DELIVERY = SC2WOL_LOC_ID_OFFSET + 107, "Special Delivery", SC2Mission.LIBERATION_DAY, LocationType.EXTRA
+    LIBERATION_DAY_TRANSPORT = SC2WOL_LOC_ID_OFFSET + 108, "Transport", SC2Mission.LIBERATION_DAY, LocationType.EXTRA
 
-        def include_location(location: LocationData) -> bool:
-            if location.type is LocationType.VICTORY:
-                return True
-            if location.name in plando_locations:
-                return True
-            if location.name in exclude_locations:
-                return False
-            if location.flags & excluded_location_flags:
-                return False
-            if location.type in excluded_location_types:
-                return False
-            if location.flags & chance_location_flags:
-                if world.random.random() < 0.5:
-                    return False
-            if location.type in chance_location_types:
-                if world.random.random() < 0.5:
-                    return False
-            return True
+    THE_OUTLAWS_VICTORY = SC2WOL_LOC_ID_OFFSET + 200, "Victory", SC2Mission.THE_OUTLAWS, LocationType.VICTORY
+    THE_OUTLAWS_REBEL_BASE = SC2WOL_LOC_ID_OFFSET + 201, "Rebel Base", SC2Mission.THE_OUTLAWS, LocationType.VANILLA
+    THE_OUTLAWS_NORTH_RESOURCE_PICKUPS = SC2WOL_LOC_ID_OFFSET + 202, "North Resource Pickups", SC2Mission.THE_OUTLAWS, LocationType.EXTRA
+    THE_OUTLAWS_BUNKER = SC2WOL_LOC_ID_OFFSET + 203, "Bunker", SC2Mission.THE_OUTLAWS, LocationType.VANILLA
+    THE_OUTLAWS_CLOSE_RESOURCE_PICKUPS = SC2WOL_LOC_ID_OFFSET + 204, "Close Resource Pickups", SC2Mission.THE_OUTLAWS, LocationType.EXTRA
+    THE_OUTLAWS_WIN_IN_UNDER_10_MINUTES = SC2WOL_LOC_ID_OFFSET + 205, "Win In Under 10 Minutes", SC2Mission.THE_OUTLAWS, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
 
-        location_table = [
-            location for location in location_table if include_location(location)
-        ]
-        if world is not None:
-            location_table = [
-                add_victory_hero_requirement(location, logic, world) for location in location_table
-            ]
-    beat_events: List[LocationData] = []
-    victory_caches: List[LocationData] = []
-    VICTORY_CACHE_SIZE = 10
-    for location_data in location_table:
-        # Generating Beat event and Victory Cache locations
-        if location_data.type == LocationType.VICTORY:
-            beat_events.append(
-                location_data._replace(name="Beat " + location_data.region, code=None)  # type: ignore
-            )
-            for v in range(VICTORY_CACHE_SIZE):
-                victory_caches.append(
-                    location_data._replace(
-                        name=location_data.name + f" Cache ({v + 1})",
-                        code=location_data.code + VICTORY_CACHE_OFFSET + v,
-                        type=LocationType.VICTORY_CACHE,
-                    )
-                )
+    ZERO_HOUR_VICTORY = SC2WOL_LOC_ID_OFFSET + 300, "Victory", SC2Mission.ZERO_HOUR, LocationType.VICTORY
+    ZERO_HOUR_FIRST_GROUP_RESCUED = SC2WOL_LOC_ID_OFFSET + 301, "First Group Rescued", SC2Mission.ZERO_HOUR, LocationType.VANILLA
+    ZERO_HOUR_SECOND_GROUP_RESCUED = SC2WOL_LOC_ID_OFFSET + 302, "Second Group Rescued", SC2Mission.ZERO_HOUR, LocationType.VANILLA
+    ZERO_HOUR_THIRD_GROUP_RESCUED = SC2WOL_LOC_ID_OFFSET + 303, "Third Group Rescued", SC2Mission.ZERO_HOUR, LocationType.VANILLA
+    ZERO_HOUR_FIRST_HATCHERY = SC2WOL_LOC_ID_OFFSET + 304, "First Hatchery", SC2Mission.ZERO_HOUR, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_SECOND_HATCHERY = SC2WOL_LOC_ID_OFFSET + 305, "Second Hatchery", SC2Mission.ZERO_HOUR, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_THIRD_HATCHERY = SC2WOL_LOC_ID_OFFSET + 306, "Third Hatchery", SC2Mission.ZERO_HOUR, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_FOURTH_HATCHERY = SC2WOL_LOC_ID_OFFSET + 307, "Fourth Hatchery", SC2Mission.ZERO_HOUR, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_RIDES_ON_ITS_WAY = SC2WOL_LOC_ID_OFFSET + 308, "Ride's on its Way", SC2Mission.ZERO_HOUR, LocationType.EXTRA
+    ZERO_HOUR_HOLD_JUST_A_LITTLE_LONGER = SC2WOL_LOC_ID_OFFSET + 309, "Hold Just a Little Longer", SC2Mission.ZERO_HOUR, LocationType.EXTRA
+    ZERO_HOUR_CAVALRYS_ON_THE_WAY = SC2WOL_LOC_ID_OFFSET + 310, "Cavalry's on the Way", SC2Mission.ZERO_HOUR, LocationType.EXTRA
 
-    return tuple(location_table + beat_events + victory_caches)
+    EVACUATION_VICTORY = SC2WOL_LOC_ID_OFFSET + 400, "Victory", SC2Mission.EVACUATION, LocationType.VICTORY
+    EVACUATION_NORTH_CHRYSALIS = SC2WOL_LOC_ID_OFFSET + 401, "North Chrysalis", SC2Mission.EVACUATION, LocationType.VANILLA
+    EVACUATION_WEST_CHRYSALIS = SC2WOL_LOC_ID_OFFSET + 402, "West Chrysalis", SC2Mission.EVACUATION, LocationType.VANILLA
+    EVACUATION_EAST_CHRYSALIS = SC2WOL_LOC_ID_OFFSET + 403, "East Chrysalis", SC2Mission.EVACUATION, LocationType.VANILLA
+    EVACUATION_REACH_HANSON = SC2WOL_LOC_ID_OFFSET + 404, "Reach Hanson", SC2Mission.EVACUATION, LocationType.EXTRA
+    EVACUATION_SECRET_RESOURCE_STASH = SC2WOL_LOC_ID_OFFSET + 405, "Secret Resource Stash", SC2Mission.EVACUATION, LocationType.EXTRA
+    EVACUATION_FLAWLESS = SC2WOL_LOC_ID_OFFSET + 406, "Flawless", SC2Mission.EVACUATION, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    EVACUATION_WESTERN_ZERG_BASE = SC2WOL_LOC_ID_OFFSET + 407, "Western Zerg Base", SC2Mission.EVACUATION, LocationType.MASTERY, LocationFlag.BASEBUST
+    EVACUATION_EASTERN_ZERG_BASE = SC2WOL_LOC_ID_OFFSET + 408, "Eastern Zerg Base", SC2Mission.EVACUATION, LocationType.MASTERY, LocationFlag.BASEBUST
 
+    OUTBREAK_VICTORY = SC2WOL_LOC_ID_OFFSET + 500, "Victory", SC2Mission.OUTBREAK, LocationType.VICTORY
+    OUTBREAK_LEFT_INFESTOR = SC2WOL_LOC_ID_OFFSET + 501, "Left Infestor", SC2Mission.OUTBREAK, LocationType.VANILLA
+    OUTBREAK_RIGHT_INFESTOR = SC2WOL_LOC_ID_OFFSET + 502, "Right Infestor", SC2Mission.OUTBREAK, LocationType.VANILLA
+    OUTBREAK_NORTH_INFESTED_COMMAND_CENTER = SC2WOL_LOC_ID_OFFSET + 503, "North Infested Command Center", SC2Mission.OUTBREAK, LocationType.EXTRA
+    OUTBREAK_SOUTH_INFESTED_COMMAND_CENTER = SC2WOL_LOC_ID_OFFSET + 504, "South Infested Command Center", SC2Mission.OUTBREAK, LocationType.EXTRA
+    OUTBREAK_NORTHWEST_BAR = SC2WOL_LOC_ID_OFFSET + 505, "Northwest Bar", SC2Mission.OUTBREAK, LocationType.EXTRA
+    OUTBREAK_NORTH_BAR = SC2WOL_LOC_ID_OFFSET + 506, "North Bar", SC2Mission.OUTBREAK, LocationType.EXTRA
+    OUTBREAK_SOUTH_BAR = SC2WOL_LOC_ID_OFFSET + 507, "South Bar", SC2Mission.OUTBREAK, LocationType.EXTRA
 
-DEFAULT_LOCATION_LIST = get_locations(None)
-"""A location table with `None` as the input world; does not contain logic rules"""
+    SAFE_HAVEN_VICTORY = SC2WOL_LOC_ID_OFFSET + 600, "Victory", SC2Mission.SAFE_HAVEN, LocationType.VICTORY
+    SAFE_HAVEN_NORTH_NEXUS = SC2WOL_LOC_ID_OFFSET + 601, "North Nexus", SC2Mission.SAFE_HAVEN, LocationType.EXTRA
+    SAFE_HAVEN_EAST_NEXUS = SC2WOL_LOC_ID_OFFSET + 602, "East Nexus", SC2Mission.SAFE_HAVEN, LocationType.EXTRA
+    SAFE_HAVEN_SOUTH_NEXUS = SC2WOL_LOC_ID_OFFSET + 603, "South Nexus", SC2Mission.SAFE_HAVEN, LocationType.EXTRA
+    SAFE_HAVEN_FIRST_TERROR_FLEET = SC2WOL_LOC_ID_OFFSET + 604, "First Terror Fleet", SC2Mission.SAFE_HAVEN, LocationType.VANILLA
+    SAFE_HAVEN_SECOND_TERROR_FLEET = SC2WOL_LOC_ID_OFFSET + 605, "Second Terror Fleet", SC2Mission.SAFE_HAVEN, LocationType.VANILLA
+    SAFE_HAVEN_THIRD_TERROR_FLEET = SC2WOL_LOC_ID_OFFSET + 606, "Third Terror Fleet", SC2Mission.SAFE_HAVEN, LocationType.VANILLA
 
-lookup_location_id_to_type = {
-    loc.code: loc.type for loc in DEFAULT_LOCATION_LIST if loc.code is not None
-}
-lookup_location_id_to_flags = {
-    loc.code: loc.flags for loc in DEFAULT_LOCATION_LIST if loc.code is not None
-}
+    HAVENS_FALL_VICTORY = SC2WOL_LOC_ID_OFFSET + 700, "Victory", SC2Mission.HAVENS_FALL, LocationType.VICTORY
+    HAVENS_FALL_NORTH_HIVE = SC2WOL_LOC_ID_OFFSET + 701, "North Hive", SC2Mission.HAVENS_FALL, LocationType.VANILLA
+    HAVENS_FALL_EAST_HIVE = SC2WOL_LOC_ID_OFFSET + 702, "East Hive", SC2Mission.HAVENS_FALL, LocationType.VANILLA
+    HAVENS_FALL_SOUTH_HIVE = SC2WOL_LOC_ID_OFFSET + 703, "South Hive", SC2Mission.HAVENS_FALL, LocationType.VANILLA
+    HAVENS_FALL_NORTHEAST_COLONY_BASE = SC2WOL_LOC_ID_OFFSET + 704, "Northeast Colony Base", SC2Mission.HAVENS_FALL, LocationType.CHALLENGE
+    HAVENS_FALL_EAST_COLONY_BASE = SC2WOL_LOC_ID_OFFSET + 705, "East Colony Base", SC2Mission.HAVENS_FALL, LocationType.CHALLENGE
+    HAVENS_FALL_MIDDLE_COLONY_BASE = SC2WOL_LOC_ID_OFFSET + 706, "Middle Colony Base", SC2Mission.HAVENS_FALL, LocationType.CHALLENGE
+    HAVENS_FALL_SOUTHEAST_COLONY_BASE = SC2WOL_LOC_ID_OFFSET + 707, "Southeast Colony Base", SC2Mission.HAVENS_FALL, LocationType.CHALLENGE
+    HAVENS_FALL_SOUTHWEST_COLONY_BASE = SC2WOL_LOC_ID_OFFSET + 708, "Southwest Colony Base", SC2Mission.HAVENS_FALL, LocationType.CHALLENGE
+    HAVENS_FALL_SOUTHWEST_GAS_PICKUPS = SC2WOL_LOC_ID_OFFSET + 709, "Southwest Gas Pickups", SC2Mission.HAVENS_FALL, LocationType.EXTRA
+    HAVENS_FALL_EAST_GAS_PICKUPS = SC2WOL_LOC_ID_OFFSET + 710, "East Gas Pickups", SC2Mission.HAVENS_FALL, LocationType.EXTRA
+    HAVENS_FALL_SOUTHEAST_GAS_PICKUPS = SC2WOL_LOC_ID_OFFSET + 711, "Southeast Gas Pickups", SC2Mission.HAVENS_FALL, LocationType.EXTRA
 
+    SMASH_AND_GRAB_VICTORY = SC2WOL_LOC_ID_OFFSET + 800, "Victory", SC2Mission.SMASH_AND_GRAB, LocationType.VICTORY
+    SMASH_AND_GRAB_FIRST_RELIC = SC2WOL_LOC_ID_OFFSET + 801, "First Relic", SC2Mission.SMASH_AND_GRAB, LocationType.VANILLA
+    SMASH_AND_GRAB_SECOND_RELIC = SC2WOL_LOC_ID_OFFSET + 802, "Second Relic", SC2Mission.SMASH_AND_GRAB, LocationType.VANILLA
+    SMASH_AND_GRAB_THIRD_RELIC = SC2WOL_LOC_ID_OFFSET + 803, "Third Relic", SC2Mission.SMASH_AND_GRAB, LocationType.VANILLA
+    SMASH_AND_GRAB_FOURTH_RELIC = SC2WOL_LOC_ID_OFFSET + 804, "Fourth Relic", SC2Mission.SMASH_AND_GRAB, LocationType.VANILLA
+    SMASH_AND_GRAB_FIRST_FORCEFIELD_AREA_BUSTED = SC2WOL_LOC_ID_OFFSET + 805, "First Forcefield Area Busted", SC2Mission.SMASH_AND_GRAB, LocationType.EXTRA
+    SMASH_AND_GRAB_SECOND_FORCEFIELD_AREA_BUSTED = SC2WOL_LOC_ID_OFFSET + 806, "Second Forcefield Area Busted", SC2Mission.SMASH_AND_GRAB, LocationType.EXTRA
+    SMASH_AND_GRAB_DEFEAT_KERRIGAN = SC2WOL_LOC_ID_OFFSET + 807, "Defeat Kerrigan", SC2Mission.SMASH_AND_GRAB, LocationType.MASTERY, LocationFlag.BASEBUST
 
-def get_location_offset(mission_id: int) -> int:
-    return (
-        SC2WOL_LOC_ID_OFFSET
-        if mission_id <= SC2Mission.ALL_IN.id
-        else (SC2HOTS_LOC_ID_OFFSET - SC2Mission.ALL_IN.id * VICTORY_MODULO)
-    )
+    THE_DIG_VICTORY = SC2WOL_LOC_ID_OFFSET + 900, "Victory", SC2Mission.THE_DIG, LocationType.VICTORY
+    THE_DIG_LEFT_RELIC = SC2WOL_LOC_ID_OFFSET + 901, "Left Relic", SC2Mission.THE_DIG, LocationType.VANILLA
+    THE_DIG_RIGHT_GROUND_RELIC = SC2WOL_LOC_ID_OFFSET + 902, "Right Ground Relic", SC2Mission.THE_DIG, LocationType.VANILLA
+    THE_DIG_RIGHT_CLIFF_RELIC = SC2WOL_LOC_ID_OFFSET + 903, "Right Cliff Relic", SC2Mission.THE_DIG, LocationType.VANILLA
+    THE_DIG_MOEBIUS_BASE = SC2WOL_LOC_ID_OFFSET + 904, "Moebius Base", SC2Mission.THE_DIG, LocationType.EXTRA
+    THE_DIG_DOOR_OUTER_LAYER = SC2WOL_LOC_ID_OFFSET + 905, "Door Outer Layer", SC2Mission.THE_DIG, LocationType.EXTRA
+    THE_DIG_DOOR_THERMAL_BARRIER = SC2WOL_LOC_ID_OFFSET + 906, "Door Thermal Barrier", SC2Mission.THE_DIG, LocationType.EXTRA
+    THE_DIG_CUTTING_THROUGH_THE_CORE = SC2WOL_LOC_ID_OFFSET + 907, "Cutting Through the Core", SC2Mission.THE_DIG, LocationType.EXTRA
+    THE_DIG_STRUCTURE_ACCESS_IMMINENT = SC2WOL_LOC_ID_OFFSET + 908, "Structure Access Imminent", SC2Mission.THE_DIG, LocationType.EXTRA
+    THE_DIG_NORTHWESTERN_PROTOSS_BASE = SC2WOL_LOC_ID_OFFSET + 909, "Northwestern Protoss Base", SC2Mission.THE_DIG, LocationType.MASTERY, LocationFlag.BASEBUST
+    THE_DIG_NORTHEASTERN_PROTOSS_BASE = SC2WOL_LOC_ID_OFFSET + 910, "Northeastern Protoss Base", SC2Mission.THE_DIG, LocationType.MASTERY, LocationFlag.BASEBUST
+    THE_DIG_EASTERN_PROTOSS_BASE = SC2WOL_LOC_ID_OFFSET + 911, "Eastern Protoss Base", SC2Mission.THE_DIG, LocationType.MASTERY, LocationFlag.BASEBUST
 
+    THE_MOEBIUS_FACTOR_VICTORY = SC2WOL_LOC_ID_OFFSET + 1000, "Victory", SC2Mission.THE_MOEBIUS_FACTOR, LocationType.VICTORY
+    THE_MOEBIUS_FACTOR_1ST_DATA_CORE = SC2WOL_LOC_ID_OFFSET + 1001, "1st Data Core", SC2Mission.THE_MOEBIUS_FACTOR, LocationType.VANILLA
+    THE_MOEBIUS_FACTOR_2ND_DATA_CORE = SC2WOL_LOC_ID_OFFSET + 1002, "2nd Data Core", SC2Mission.THE_MOEBIUS_FACTOR, LocationType.VANILLA
+    THE_MOEBIUS_FACTOR_SOUTH_RESCUE = SC2WOL_LOC_ID_OFFSET + 1003, "South Rescue", SC2Mission.THE_MOEBIUS_FACTOR, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_WALL_RESCUE = SC2WOL_LOC_ID_OFFSET + 1004, "Wall Rescue", SC2Mission.THE_MOEBIUS_FACTOR, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_MID_RESCUE = SC2WOL_LOC_ID_OFFSET + 1005, "Mid Rescue", SC2Mission.THE_MOEBIUS_FACTOR, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_NYDUS_ROOF_RESCUE = SC2WOL_LOC_ID_OFFSET + 1006, "Nydus Roof Rescue", SC2Mission.THE_MOEBIUS_FACTOR, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_ALIVE_INSIDE_RESCUE = SC2WOL_LOC_ID_OFFSET + 1007, "Alive Inside Rescue", SC2Mission.THE_MOEBIUS_FACTOR, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_BRUTALISK = SC2WOL_LOC_ID_OFFSET + 1008, "Brutalisk", SC2Mission.THE_MOEBIUS_FACTOR, LocationType.VANILLA
+    THE_MOEBIUS_FACTOR_3RD_DATA_CORE = SC2WOL_LOC_ID_OFFSET + 1009, "3rd Data Core", SC2Mission.THE_MOEBIUS_FACTOR, LocationType.VANILLA
 
-def get_location_id(mission_id: int, objective_id: int) -> int:
-    return get_location_offset(mission_id) + mission_id * VICTORY_MODULO + objective_id
+    SUPERNOVA_VICTORY = SC2WOL_LOC_ID_OFFSET + 1100, "Victory", SC2Mission.SUPERNOVA, LocationType.VICTORY
+    SUPERNOVA_WEST_RELIC = SC2WOL_LOC_ID_OFFSET + 1101, "West Relic", SC2Mission.SUPERNOVA, LocationType.VANILLA
+    SUPERNOVA_NORTH_RELIC = SC2WOL_LOC_ID_OFFSET + 1102, "North Relic", SC2Mission.SUPERNOVA, LocationType.VANILLA
+    SUPERNOVA_SOUTH_RELIC = SC2WOL_LOC_ID_OFFSET + 1103, "South Relic", SC2Mission.SUPERNOVA, LocationType.VANILLA
+    SUPERNOVA_EAST_RELIC = SC2WOL_LOC_ID_OFFSET + 1104, "East Relic", SC2Mission.SUPERNOVA, LocationType.VANILLA
+    SUPERNOVA_LANDING_ZONE_CLEARED = SC2WOL_LOC_ID_OFFSET + 1105, "Landing Zone Cleared", SC2Mission.SUPERNOVA, LocationType.EXTRA
+    SUPERNOVA_MIDDLE_BASE = SC2WOL_LOC_ID_OFFSET + 1106, "Middle Base", SC2Mission.SUPERNOVA, LocationType.EXTRA
+    SUPERNOVA_SOUTHEAST_BASE = SC2WOL_LOC_ID_OFFSET + 1107, "Southeast Base", SC2Mission.SUPERNOVA, LocationType.EXTRA
+
+    MAW_OF_THE_VOID_VICTORY = SC2WOL_LOC_ID_OFFSET + 1200, "Victory", SC2Mission.MAW_OF_THE_VOID, LocationType.VICTORY
+    MAW_OF_THE_VOID_LANDING_ZONE_CLEARED = SC2WOL_LOC_ID_OFFSET + 1201, "Landing Zone Cleared", SC2Mission.MAW_OF_THE_VOID, LocationType.EXTRA
+    MAW_OF_THE_VOID_EXPANSION_PRISONERS = SC2WOL_LOC_ID_OFFSET + 1202, "Expansion Prisoners", SC2Mission.MAW_OF_THE_VOID, LocationType.VANILLA
+    MAW_OF_THE_VOID_SOUTH_CLOSE_PRISONERS = SC2WOL_LOC_ID_OFFSET + 1203, "South Close Prisoners", SC2Mission.MAW_OF_THE_VOID, LocationType.VANILLA
+    MAW_OF_THE_VOID_SOUTH_FAR_PRISONERS = SC2WOL_LOC_ID_OFFSET + 1204, "South Far Prisoners", SC2Mission.MAW_OF_THE_VOID, LocationType.VANILLA
+    MAW_OF_THE_VOID_NORTH_PRISONERS = SC2WOL_LOC_ID_OFFSET + 1205, "North Prisoners", SC2Mission.MAW_OF_THE_VOID, LocationType.VANILLA
+    MAW_OF_THE_VOID_MOTHERSHIP = SC2WOL_LOC_ID_OFFSET + 1206, "Mothership", SC2Mission.MAW_OF_THE_VOID, LocationType.EXTRA
+    MAW_OF_THE_VOID_EXPANSION_RIP_FIELD_GENERATOR = SC2WOL_LOC_ID_OFFSET + 1207, "Expansion Rip Field Generator", SC2Mission.MAW_OF_THE_VOID, LocationType.EXTRA
+    MAW_OF_THE_VOID_MIDDLE_RIP_FIELD_GENERATOR = SC2WOL_LOC_ID_OFFSET + 1208, "Middle Rip Field Generator", SC2Mission.MAW_OF_THE_VOID, LocationType.EXTRA
+    MAW_OF_THE_VOID_SOUTHEAST_RIP_FIELD_GENERATOR = SC2WOL_LOC_ID_OFFSET + 1209, "Southeast Rip Field Generator", SC2Mission.MAW_OF_THE_VOID, LocationType.EXTRA
+    MAW_OF_THE_VOID_STARGATE_RIP_FIELD_GENERATOR = SC2WOL_LOC_ID_OFFSET + 1210, "Stargate Rip Field Generator", SC2Mission.MAW_OF_THE_VOID, LocationType.EXTRA
+    MAW_OF_THE_VOID_NORTHWEST_RIP_FIELD_GENERATOR = SC2WOL_LOC_ID_OFFSET + 1211, "Northwest Rip Field Generator", SC2Mission.MAW_OF_THE_VOID, LocationType.CHALLENGE
+    MAW_OF_THE_VOID_WEST_RIP_FIELD_GENERATOR = SC2WOL_LOC_ID_OFFSET + 1212, "West Rip Field Generator", SC2Mission.MAW_OF_THE_VOID, LocationType.CHALLENGE
+    MAW_OF_THE_VOID_SOUTHWEST_RIP_FIELD_GENERATOR = SC2WOL_LOC_ID_OFFSET + 1213, "Southwest Rip Field Generator", SC2Mission.MAW_OF_THE_VOID, LocationType.CHALLENGE
+
+    DEVILS_PLAYGROUND_VICTORY = SC2WOL_LOC_ID_OFFSET + 1300, "Victory", SC2Mission.DEVILS_PLAYGROUND, LocationType.VICTORY
+    DEVILS_PLAYGROUND_TOSHS_MINERS = SC2WOL_LOC_ID_OFFSET + 1301, "Tosh's Miners", SC2Mission.DEVILS_PLAYGROUND, LocationType.VANILLA
+    DEVILS_PLAYGROUND_BRUTALISK = SC2WOL_LOC_ID_OFFSET + 1302, "Brutalisk", SC2Mission.DEVILS_PLAYGROUND, LocationType.VANILLA
+    DEVILS_PLAYGROUND_NORTH_REAPERS = SC2WOL_LOC_ID_OFFSET + 1303, "North Reapers", SC2Mission.DEVILS_PLAYGROUND, LocationType.EXTRA
+    DEVILS_PLAYGROUND_MIDDLE_REAPERS = SC2WOL_LOC_ID_OFFSET + 1304, "Middle Reapers", SC2Mission.DEVILS_PLAYGROUND, LocationType.EXTRA
+    DEVILS_PLAYGROUND_SOUTHWEST_REAPERS = SC2WOL_LOC_ID_OFFSET + 1305, "Southwest Reapers", SC2Mission.DEVILS_PLAYGROUND, LocationType.EXTRA
+    DEVILS_PLAYGROUND_SOUTHEAST_REAPERS = SC2WOL_LOC_ID_OFFSET + 1306, "Southeast Reapers", SC2Mission.DEVILS_PLAYGROUND, LocationType.EXTRA
+    DEVILS_PLAYGROUND_EAST_REAPERS = SC2WOL_LOC_ID_OFFSET + 1307, "East Reapers", SC2Mission.DEVILS_PLAYGROUND, LocationType.EXTRA
+    DEVILS_PLAYGROUND_ZERG_CLEARED = SC2WOL_LOC_ID_OFFSET + 1308, "Zerg Cleared", SC2Mission.DEVILS_PLAYGROUND, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    WELCOME_TO_THE_JUNGLE_VICTORY = SC2WOL_LOC_ID_OFFSET + 1400, "Victory", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.VICTORY
+    WELCOME_TO_THE_JUNGLE_CLOSE_RELIC = SC2WOL_LOC_ID_OFFSET + 1401, "Close Relic", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.VANILLA
+    WELCOME_TO_THE_JUNGLE_WEST_RELIC = SC2WOL_LOC_ID_OFFSET + 1402, "West Relic", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.VANILLA
+    WELCOME_TO_THE_JUNGLE_NORTH_EAST_RELIC = SC2WOL_LOC_ID_OFFSET + 1403, "North-East Relic", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.VANILLA
+    WELCOME_TO_THE_JUNGLE_MIDDLE_BASE = SC2WOL_LOC_ID_OFFSET + 1404, "Middle Base", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.EXTRA
+    WELCOME_TO_THE_JUNGLE_PROTOSS_CLEARED = SC2WOL_LOC_ID_OFFSET + 1405, "Protoss Cleared", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.MASTERY, LocationFlag.BASEBUST
+    WELCOME_TO_THE_JUNGLE_NO_TERRAZINE_NODES_SEALED = SC2WOL_LOC_ID_OFFSET + 1406, "No Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_UP_TO_1_TERRAZINE_NODE_SEALED = SC2WOL_LOC_ID_OFFSET + 1407, "Up to 1 Terrazine Node Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_UP_TO_2_TERRAZINE_NODES_SEALED = SC2WOL_LOC_ID_OFFSET + 1408, "Up to 2 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_UP_TO_3_TERRAZINE_NODES_SEALED = SC2WOL_LOC_ID_OFFSET + 1409, "Up to 3 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_UP_TO_4_TERRAZINE_NODES_SEALED = SC2WOL_LOC_ID_OFFSET + 1410, "Up to 4 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.EXTRA, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_UP_TO_5_TERRAZINE_NODES_SEALED = SC2WOL_LOC_ID_OFFSET + 1411, "Up to 5 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE, LocationType.EXTRA, LocationFlag.PREVENTATIVE
+
+    BREAKOUT_VICTORY = SC2WOL_LOC_ID_OFFSET + 1500, "Victory", SC2Mission.BREAKOUT, LocationType.VICTORY
+    BREAKOUT_DIAMONDBACK_PRISON = SC2WOL_LOC_ID_OFFSET + 1501, "Diamondback Prison", SC2Mission.BREAKOUT, LocationType.VANILLA
+    BREAKOUT_SIEGE_TANK_PRISON = SC2WOL_LOC_ID_OFFSET + 1502, "Siege Tank Prison", SC2Mission.BREAKOUT, LocationType.VANILLA
+    BREAKOUT_FIRST_CHECKPOINT = SC2WOL_LOC_ID_OFFSET + 1503, "First Checkpoint", SC2Mission.BREAKOUT, LocationType.EXTRA
+    BREAKOUT_SECOND_CHECKPOINT = SC2WOL_LOC_ID_OFFSET + 1504, "Second Checkpoint", SC2Mission.BREAKOUT, LocationType.EXTRA
+
+    GHOST_OF_A_CHANCE_VICTORY = SC2WOL_LOC_ID_OFFSET + 1600, "Victory", SC2Mission.GHOST_OF_A_CHANCE, LocationType.VICTORY
+    GHOST_OF_A_CHANCE_TERRAZINE_TANK = SC2WOL_LOC_ID_OFFSET + 1601, "Terrazine Tank", SC2Mission.GHOST_OF_A_CHANCE, LocationType.EXTRA
+    GHOST_OF_A_CHANCE_JORIUM_STOCKPILE = SC2WOL_LOC_ID_OFFSET + 1602, "Jorium Stockpile", SC2Mission.GHOST_OF_A_CHANCE, LocationType.EXTRA
+    GHOST_OF_A_CHANCE_FIRST_ISLAND_SPECTRES = SC2WOL_LOC_ID_OFFSET + 1603, "First Island Spectres", SC2Mission.GHOST_OF_A_CHANCE, LocationType.VANILLA
+    GHOST_OF_A_CHANCE_SECOND_ISLAND_SPECTRES = SC2WOL_LOC_ID_OFFSET + 1604, "Second Island Spectres", SC2Mission.GHOST_OF_A_CHANCE, LocationType.VANILLA
+    GHOST_OF_A_CHANCE_THIRD_ISLAND_SPECTRES = SC2WOL_LOC_ID_OFFSET + 1605, "Third Island Spectres", SC2Mission.GHOST_OF_A_CHANCE, LocationType.VANILLA
+
+    THE_GREAT_TRAIN_ROBBERY_VICTORY = SC2WOL_LOC_ID_OFFSET + 1700, "Victory", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.VICTORY
+    THE_GREAT_TRAIN_ROBBERY_NORTH_DEFILER = SC2WOL_LOC_ID_OFFSET + 1701, "North Defiler", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.VANILLA
+    THE_GREAT_TRAIN_ROBBERY_MID_DEFILER = SC2WOL_LOC_ID_OFFSET + 1702, "Mid Defiler", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.VANILLA
+    THE_GREAT_TRAIN_ROBBERY_SOUTH_DEFILER = SC2WOL_LOC_ID_OFFSET + 1703, "South Defiler", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.VANILLA
+    THE_GREAT_TRAIN_ROBBERY_CLOSE_DIAMONDBACK = SC2WOL_LOC_ID_OFFSET + 1704, "Close Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_NORTHWEST_DIAMONDBACK = SC2WOL_LOC_ID_OFFSET + 1705, "Northwest Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_NORTH_DIAMONDBACK = SC2WOL_LOC_ID_OFFSET + 1706, "North Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_NORTHEAST_DIAMONDBACK = SC2WOL_LOC_ID_OFFSET + 1707, "Northeast Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_SOUTHWEST_DIAMONDBACK = SC2WOL_LOC_ID_OFFSET + 1708, "Southwest Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_SOUTHEAST_DIAMONDBACK = SC2WOL_LOC_ID_OFFSET + 1709, "Southeast Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_KILL_TEAM = SC2WOL_LOC_ID_OFFSET + 1710, "Kill Team", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.CHALLENGE
+    THE_GREAT_TRAIN_ROBBERY_FLAWLESS = SC2WOL_LOC_ID_OFFSET + 1711, "Flawless", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    THE_GREAT_TRAIN_ROBBERY_2_TRAINS_DESTROYED = SC2WOL_LOC_ID_OFFSET + 1712, "2 Trains Destroyed", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_4_TRAINS_DESTROYED = SC2WOL_LOC_ID_OFFSET + 1713, "4 Trains Destroyed", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_6_TRAINS_DESTROYED = SC2WOL_LOC_ID_OFFSET + 1714, "6 Trains Destroyed", SC2Mission.THE_GREAT_TRAIN_ROBBERY, LocationType.EXTRA
+
+    CUTTHROAT_VICTORY = SC2WOL_LOC_ID_OFFSET + 1800, "Victory", SC2Mission.CUTTHROAT, LocationType.VICTORY
+    CUTTHROAT_MIRA_HAN = SC2WOL_LOC_ID_OFFSET + 1801, "Mira Han", SC2Mission.CUTTHROAT, LocationType.EXTRA
+    CUTTHROAT_NORTH_RELIC = SC2WOL_LOC_ID_OFFSET + 1802, "North Relic", SC2Mission.CUTTHROAT, LocationType.VANILLA
+    CUTTHROAT_MID_RELIC = SC2WOL_LOC_ID_OFFSET + 1803, "Mid Relic", SC2Mission.CUTTHROAT, LocationType.VANILLA
+    CUTTHROAT_SOUTHWEST_RELIC = SC2WOL_LOC_ID_OFFSET + 1804, "Southwest Relic", SC2Mission.CUTTHROAT, LocationType.VANILLA
+    CUTTHROAT_NORTH_COMMAND_CENTER = SC2WOL_LOC_ID_OFFSET + 1805, "North Command Center", SC2Mission.CUTTHROAT, LocationType.EXTRA
+    CUTTHROAT_SOUTH_COMMAND_CENTER = SC2WOL_LOC_ID_OFFSET + 1806, "South Command Center", SC2Mission.CUTTHROAT, LocationType.EXTRA
+    CUTTHROAT_WEST_COMMAND_CENTER = SC2WOL_LOC_ID_OFFSET + 1807, "West Command Center", SC2Mission.CUTTHROAT, LocationType.EXTRA
+
+    ENGINE_OF_DESTRUCTION_VICTORY = SC2WOL_LOC_ID_OFFSET + 1900, "Victory", SC2Mission.ENGINE_OF_DESTRUCTION, LocationType.VICTORY
+    ENGINE_OF_DESTRUCTION_ODIN = SC2WOL_LOC_ID_OFFSET + 1901, "Odin", SC2Mission.ENGINE_OF_DESTRUCTION, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_LOKI = SC2WOL_LOC_ID_OFFSET + 1902, "Loki", SC2Mission.ENGINE_OF_DESTRUCTION, LocationType.CHALLENGE
+    ENGINE_OF_DESTRUCTION_LAB_DEVOURER = SC2WOL_LOC_ID_OFFSET + 1903, "Lab Devourer", SC2Mission.ENGINE_OF_DESTRUCTION, LocationType.VANILLA
+    ENGINE_OF_DESTRUCTION_NORTH_DEVOURER = SC2WOL_LOC_ID_OFFSET + 1904, "North Devourer", SC2Mission.ENGINE_OF_DESTRUCTION, LocationType.VANILLA
+    ENGINE_OF_DESTRUCTION_SOUTHEAST_DEVOURER = SC2WOL_LOC_ID_OFFSET + 1905, "Southeast Devourer", SC2Mission.ENGINE_OF_DESTRUCTION, LocationType.VANILLA
+    ENGINE_OF_DESTRUCTION_WEST_BASE = SC2WOL_LOC_ID_OFFSET + 1906, "West Base", SC2Mission.ENGINE_OF_DESTRUCTION, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_NORTHWEST_BASE = SC2WOL_LOC_ID_OFFSET + 1907, "Northwest Base", SC2Mission.ENGINE_OF_DESTRUCTION, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_NORTHEAST_BASE = SC2WOL_LOC_ID_OFFSET + 1908, "Northeast Base", SC2Mission.ENGINE_OF_DESTRUCTION, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_SOUTHEAST_BASE = SC2WOL_LOC_ID_OFFSET + 1909, "Southeast Base", SC2Mission.ENGINE_OF_DESTRUCTION, LocationType.EXTRA
+
+    MEDIA_BLITZ_VICTORY = SC2WOL_LOC_ID_OFFSET + 2000, "Victory", SC2Mission.MEDIA_BLITZ, LocationType.VICTORY
+    MEDIA_BLITZ_TOWER_1 = SC2WOL_LOC_ID_OFFSET + 2001, "Tower 1", SC2Mission.MEDIA_BLITZ, LocationType.VANILLA
+    MEDIA_BLITZ_TOWER_2 = SC2WOL_LOC_ID_OFFSET + 2002, "Tower 2", SC2Mission.MEDIA_BLITZ, LocationType.VANILLA
+    MEDIA_BLITZ_TOWER_3 = SC2WOL_LOC_ID_OFFSET + 2003, "Tower 3", SC2Mission.MEDIA_BLITZ, LocationType.VANILLA
+    MEDIA_BLITZ_SCIENCE_FACILITY = SC2WOL_LOC_ID_OFFSET + 2004, "Science Facility", SC2Mission.MEDIA_BLITZ, LocationType.VANILLA
+    MEDIA_BLITZ_ALL_BARRACKS = SC2WOL_LOC_ID_OFFSET + 2005, "All Barracks", SC2Mission.MEDIA_BLITZ, LocationType.EXTRA
+    MEDIA_BLITZ_ALL_FACTORIES = SC2WOL_LOC_ID_OFFSET + 2006, "All Factories", SC2Mission.MEDIA_BLITZ, LocationType.EXTRA
+    MEDIA_BLITZ_ALL_STARPORTS = SC2WOL_LOC_ID_OFFSET + 2007, "All Starports", SC2Mission.MEDIA_BLITZ, LocationType.EXTRA
+    MEDIA_BLITZ_ODIN_NOT_TRASHED = SC2WOL_LOC_ID_OFFSET + 2008, "Odin Not Trashed", SC2Mission.MEDIA_BLITZ, LocationType.CHALLENGE
+    MEDIA_BLITZ_SURPRISE_ATTACK_ENDS = SC2WOL_LOC_ID_OFFSET + 2009, "Surprise Attack Ends", SC2Mission.MEDIA_BLITZ, LocationType.EXTRA
+
+    PIERCING_OF_THE_SHROUD_VICTORY = SC2WOL_LOC_ID_OFFSET + 2100, "Victory", SC2Mission.PIERCING_OF_THE_SHROUD, LocationType.VICTORY
+    PIERCING_OF_THE_SHROUD_HOLDING_CELL_RELIC = SC2WOL_LOC_ID_OFFSET + 2101, "Holding Cell Relic", SC2Mission.PIERCING_OF_THE_SHROUD, LocationType.VANILLA
+    PIERCING_OF_THE_SHROUD_BRUTALISK_RELIC = SC2WOL_LOC_ID_OFFSET + 2102, "Brutalisk Relic", SC2Mission.PIERCING_OF_THE_SHROUD, LocationType.VANILLA
+    PIERCING_OF_THE_SHROUD_FIRST_ESCAPE_RELIC = SC2WOL_LOC_ID_OFFSET + 2103, "First Escape Relic", SC2Mission.PIERCING_OF_THE_SHROUD, LocationType.VANILLA
+    PIERCING_OF_THE_SHROUD_SECOND_ESCAPE_RELIC = SC2WOL_LOC_ID_OFFSET + 2104, "Second Escape Relic", SC2Mission.PIERCING_OF_THE_SHROUD, LocationType.VANILLA
+    PIERCING_OF_THE_SHROUD_BRUTALISK = SC2WOL_LOC_ID_OFFSET + 2105, "Brutalisk", SC2Mission.PIERCING_OF_THE_SHROUD, LocationType.VANILLA
+    PIERCING_OF_THE_SHROUD_FUSION_REACTOR = SC2WOL_LOC_ID_OFFSET + 2106, "Fusion Reactor", SC2Mission.PIERCING_OF_THE_SHROUD, LocationType.EXTRA
+    PIERCING_OF_THE_SHROUD_ENTRANCE_HOLDING_PEN = SC2WOL_LOC_ID_OFFSET + 2107, "Entrance Holding Pen", SC2Mission.PIERCING_OF_THE_SHROUD, LocationType.EXTRA
+    PIERCING_OF_THE_SHROUD_CARGO_BAY_WARBOT = SC2WOL_LOC_ID_OFFSET + 2108, "Cargo Bay Warbot", SC2Mission.PIERCING_OF_THE_SHROUD, LocationType.EXTRA
+    PIERCING_OF_THE_SHROUD_ESCAPE_WARBOT = SC2WOL_LOC_ID_OFFSET + 2109, "Escape Warbot", SC2Mission.PIERCING_OF_THE_SHROUD, LocationType.EXTRA
+
+    WHISPERS_OF_DOOM_VICTORY = SC2WOL_LOC_ID_OFFSET + 2200, "Victory", SC2Mission.WHISPERS_OF_DOOM, LocationType.VICTORY
+    WHISPERS_OF_DOOM_FIRST_HATCHERY = SC2WOL_LOC_ID_OFFSET + 2201, "First Hatchery", SC2Mission.WHISPERS_OF_DOOM, LocationType.VANILLA
+    WHISPERS_OF_DOOM_SECOND_HATCHERY = SC2WOL_LOC_ID_OFFSET + 2202, "Second Hatchery", SC2Mission.WHISPERS_OF_DOOM, LocationType.VANILLA
+    WHISPERS_OF_DOOM_THIRD_HATCHERY = SC2WOL_LOC_ID_OFFSET + 2203, "Third Hatchery", SC2Mission.WHISPERS_OF_DOOM, LocationType.VANILLA
+    WHISPERS_OF_DOOM_FIRST_PROPHECY_FRAGMENT = SC2WOL_LOC_ID_OFFSET + 2204, "First Prophecy Fragment", SC2Mission.WHISPERS_OF_DOOM, LocationType.EXTRA
+    WHISPERS_OF_DOOM_SECOND_PROPHECY_FRAGMENT = SC2WOL_LOC_ID_OFFSET + 2205, "Second Prophecy Fragment", SC2Mission.WHISPERS_OF_DOOM, LocationType.EXTRA
+    WHISPERS_OF_DOOM_THIRD_PROPHECY_FRAGMENT = SC2WOL_LOC_ID_OFFSET + 2206, "Third Prophecy Fragment", SC2Mission.WHISPERS_OF_DOOM, LocationType.EXTRA
+
+    A_SINISTER_TURN_VICTORY = SC2WOL_LOC_ID_OFFSET + 2300, "Victory", SC2Mission.A_SINISTER_TURN, LocationType.VICTORY
+    A_SINISTER_TURN_ROBOTICS_FACILITY = SC2WOL_LOC_ID_OFFSET + 2301, "Robotics Facility", SC2Mission.A_SINISTER_TURN, LocationType.VANILLA
+    A_SINISTER_TURN_DARK_SHRINE = SC2WOL_LOC_ID_OFFSET + 2302, "Dark Shrine", SC2Mission.A_SINISTER_TURN, LocationType.VANILLA
+    A_SINISTER_TURN_TEMPLAR_ARCHIVES = SC2WOL_LOC_ID_OFFSET + 2303, "Templar Archives", SC2Mission.A_SINISTER_TURN, LocationType.VANILLA
+    A_SINISTER_TURN_NORTHEAST_BASE = SC2WOL_LOC_ID_OFFSET + 2304, "Northeast Base", SC2Mission.A_SINISTER_TURN, LocationType.EXTRA
+    A_SINISTER_TURN_SOUTHWEST_BASE = SC2WOL_LOC_ID_OFFSET + 2305, "Southwest Base", SC2Mission.A_SINISTER_TURN, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    A_SINISTER_TURN_MAAR = SC2WOL_LOC_ID_OFFSET + 2306, "Maar", SC2Mission.A_SINISTER_TURN, LocationType.EXTRA
+    A_SINISTER_TURN_NORTHWEST_PRESERVER = SC2WOL_LOC_ID_OFFSET + 2307, "Northwest Preserver", SC2Mission.A_SINISTER_TURN, LocationType.EXTRA
+    A_SINISTER_TURN_SOUTHWEST_PRESERVER = SC2WOL_LOC_ID_OFFSET + 2308, "Southwest Preserver", SC2Mission.A_SINISTER_TURN, LocationType.EXTRA
+    A_SINISTER_TURN_EAST_PRESERVER = SC2WOL_LOC_ID_OFFSET + 2309, "East Preserver", SC2Mission.A_SINISTER_TURN, LocationType.EXTRA
+
+    ECHOES_OF_THE_FUTURE_VICTORY = SC2WOL_LOC_ID_OFFSET + 2400, "Victory", SC2Mission.ECHOES_OF_THE_FUTURE, LocationType.VICTORY
+    ECHOES_OF_THE_FUTURE_CLOSE_OBELISK = SC2WOL_LOC_ID_OFFSET + 2401, "Close Obelisk", SC2Mission.ECHOES_OF_THE_FUTURE, LocationType.VANILLA
+    ECHOES_OF_THE_FUTURE_WEST_OBELISK = SC2WOL_LOC_ID_OFFSET + 2402, "West Obelisk", SC2Mission.ECHOES_OF_THE_FUTURE, LocationType.VANILLA
+    ECHOES_OF_THE_FUTURE_BASE = SC2WOL_LOC_ID_OFFSET + 2403, "Base", SC2Mission.ECHOES_OF_THE_FUTURE, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_SOUTHWEST_TENDRIL = SC2WOL_LOC_ID_OFFSET + 2404, "Southwest Tendril", SC2Mission.ECHOES_OF_THE_FUTURE, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_SOUTHEAST_TENDRIL = SC2WOL_LOC_ID_OFFSET + 2405, "Southeast Tendril", SC2Mission.ECHOES_OF_THE_FUTURE, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_NORTHEAST_TENDRIL = SC2WOL_LOC_ID_OFFSET + 2406, "Northeast Tendril", SC2Mission.ECHOES_OF_THE_FUTURE, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_NORTHWEST_TENDRIL = SC2WOL_LOC_ID_OFFSET + 2407, "Northwest Tendril", SC2Mission.ECHOES_OF_THE_FUTURE, LocationType.EXTRA
+
+    IN_UTTER_DARKNESS_DEFEAT = SC2WOL_LOC_ID_OFFSET + 2500, "Defeat", SC2Mission.IN_UTTER_DARKNESS, LocationType.VICTORY
+    IN_UTTER_DARKNESS_PROTOSS_ARCHIVE = SC2WOL_LOC_ID_OFFSET + 2501, "Protoss Archive", SC2Mission.IN_UTTER_DARKNESS, LocationType.VANILLA
+    IN_UTTER_DARKNESS_KILLS = SC2WOL_LOC_ID_OFFSET + 2502, "Kills", SC2Mission.IN_UTTER_DARKNESS, LocationType.VANILLA
+    IN_UTTER_DARKNESS_URUN = SC2WOL_LOC_ID_OFFSET + 2503, "Urun", SC2Mission.IN_UTTER_DARKNESS, LocationType.EXTRA
+    IN_UTTER_DARKNESS_MOHANDAR = SC2WOL_LOC_ID_OFFSET + 2504, "Mohandar", SC2Mission.IN_UTTER_DARKNESS, LocationType.EXTRA
+    IN_UTTER_DARKNESS_SELENDIS = SC2WOL_LOC_ID_OFFSET + 2505, "Selendis", SC2Mission.IN_UTTER_DARKNESS, LocationType.EXTRA
+    IN_UTTER_DARKNESS_ARTANIS = SC2WOL_LOC_ID_OFFSET + 2506, "Artanis", SC2Mission.IN_UTTER_DARKNESS, LocationType.EXTRA
+
+    GATES_OF_HELL_VICTORY = SC2WOL_LOC_ID_OFFSET + 2600, "Victory", SC2Mission.GATES_OF_HELL, LocationType.VICTORY
+    GATES_OF_HELL_LARGE_ARMY = SC2WOL_LOC_ID_OFFSET + 2601, "Large Army", SC2Mission.GATES_OF_HELL, LocationType.VANILLA
+    GATES_OF_HELL_2_DROP_PODS = SC2WOL_LOC_ID_OFFSET + 2602, "2 Drop Pods", SC2Mission.GATES_OF_HELL, LocationType.VANILLA
+    GATES_OF_HELL_4_DROP_PODS = SC2WOL_LOC_ID_OFFSET + 2603, "4 Drop Pods", SC2Mission.GATES_OF_HELL, LocationType.VANILLA
+    GATES_OF_HELL_6_DROP_PODS = SC2WOL_LOC_ID_OFFSET + 2604, "6 Drop Pods", SC2Mission.GATES_OF_HELL, LocationType.EXTRA
+    GATES_OF_HELL_8_DROP_PODS = SC2WOL_LOC_ID_OFFSET + 2605, "8 Drop Pods", SC2Mission.GATES_OF_HELL, LocationType.CHALLENGE
+    GATES_OF_HELL_SOUTHWEST_SPORE_CANNON = SC2WOL_LOC_ID_OFFSET + 2606, "Southwest Spore Cannon", SC2Mission.GATES_OF_HELL, LocationType.EXTRA
+    GATES_OF_HELL_NORTHWEST_SPORE_CANNON = SC2WOL_LOC_ID_OFFSET + 2607, "Northwest Spore Cannon", SC2Mission.GATES_OF_HELL, LocationType.EXTRA
+    GATES_OF_HELL_NORTHEAST_SPORE_CANNON = SC2WOL_LOC_ID_OFFSET + 2608, "Northeast Spore Cannon", SC2Mission.GATES_OF_HELL, LocationType.EXTRA
+    GATES_OF_HELL_EAST_SPORE_CANNON = SC2WOL_LOC_ID_OFFSET + 2609, "East Spore Cannon", SC2Mission.GATES_OF_HELL, LocationType.EXTRA
+    GATES_OF_HELL_SOUTHEAST_SPORE_CANNON = SC2WOL_LOC_ID_OFFSET + 2610, "Southeast Spore Cannon", SC2Mission.GATES_OF_HELL, LocationType.EXTRA
+    GATES_OF_HELL_EXPANSION_SPORE_CANNON = SC2WOL_LOC_ID_OFFSET + 2611, "Expansion Spore Cannon", SC2Mission.GATES_OF_HELL, LocationType.EXTRA
+
+    BELLY_OF_THE_BEAST_VICTORY = SC2WOL_LOC_ID_OFFSET + 2700, "Victory", SC2Mission.BELLY_OF_THE_BEAST, LocationType.VICTORY
+    BELLY_OF_THE_BEAST_FIRST_CHARGE = SC2WOL_LOC_ID_OFFSET + 2701, "First Charge", SC2Mission.BELLY_OF_THE_BEAST, LocationType.EXTRA
+    BELLY_OF_THE_BEAST_SECOND_CHARGE = SC2WOL_LOC_ID_OFFSET + 2702, "Second Charge", SC2Mission.BELLY_OF_THE_BEAST, LocationType.EXTRA
+    BELLY_OF_THE_BEAST_THIRD_CHARGE = SC2WOL_LOC_ID_OFFSET + 2703, "Third Charge", SC2Mission.BELLY_OF_THE_BEAST, LocationType.EXTRA
+    BELLY_OF_THE_BEAST_FIRST_GROUP_RESCUED = SC2WOL_LOC_ID_OFFSET + 2704, "First Group Rescued", SC2Mission.BELLY_OF_THE_BEAST, LocationType.VANILLA
+    BELLY_OF_THE_BEAST_SECOND_GROUP_RESCUED = SC2WOL_LOC_ID_OFFSET + 2705, "Second Group Rescued", SC2Mission.BELLY_OF_THE_BEAST, LocationType.VANILLA
+    BELLY_OF_THE_BEAST_THIRD_GROUP_RESCUED = SC2WOL_LOC_ID_OFFSET + 2706, "Third Group Rescued", SC2Mission.BELLY_OF_THE_BEAST, LocationType.VANILLA
+
+    SHATTER_THE_SKY_VICTORY = SC2WOL_LOC_ID_OFFSET + 2800, "Victory", SC2Mission.SHATTER_THE_SKY, LocationType.VICTORY
+    SHATTER_THE_SKY_CLOSE_COOLANT_TOWER = SC2WOL_LOC_ID_OFFSET + 2801, "Close Coolant Tower", SC2Mission.SHATTER_THE_SKY, LocationType.VANILLA
+    SHATTER_THE_SKY_NORTHWEST_COOLANT_TOWER = SC2WOL_LOC_ID_OFFSET + 2802, "Northwest Coolant Tower", SC2Mission.SHATTER_THE_SKY, LocationType.VANILLA
+    SHATTER_THE_SKY_SOUTHEAST_COOLANT_TOWER = SC2WOL_LOC_ID_OFFSET + 2803, "Southeast Coolant Tower", SC2Mission.SHATTER_THE_SKY, LocationType.VANILLA
+    SHATTER_THE_SKY_SOUTHWEST_COOLANT_TOWER = SC2WOL_LOC_ID_OFFSET + 2804, "Southwest Coolant Tower", SC2Mission.SHATTER_THE_SKY, LocationType.VANILLA
+    SHATTER_THE_SKY_LEVIATHAN = SC2WOL_LOC_ID_OFFSET + 2805, "Leviathan", SC2Mission.SHATTER_THE_SKY, LocationType.VANILLA
+    SHATTER_THE_SKY_EAST_HATCHERY = SC2WOL_LOC_ID_OFFSET + 2806, "East Hatchery", SC2Mission.SHATTER_THE_SKY, LocationType.EXTRA
+    SHATTER_THE_SKY_NORTH_HATCHERY = SC2WOL_LOC_ID_OFFSET + 2807, "North Hatchery", SC2Mission.SHATTER_THE_SKY, LocationType.EXTRA
+    SHATTER_THE_SKY_MID_HATCHERY = SC2WOL_LOC_ID_OFFSET + 2808, "Mid Hatchery", SC2Mission.SHATTER_THE_SKY, LocationType.EXTRA
+
+    ALL_IN_VICTORY = SC2WOL_LOC_ID_OFFSET + 2900, "Victory", SC2Mission.ALL_IN, LocationType.VICTORY
+    ALL_IN_FIRST_KERRIGAN_ATTACK = SC2WOL_LOC_ID_OFFSET + 2901, "First Kerrigan Attack", SC2Mission.ALL_IN, LocationType.EXTRA
+    ALL_IN_SECOND_KERRIGAN_ATTACK = SC2WOL_LOC_ID_OFFSET + 2902, "Second Kerrigan Attack", SC2Mission.ALL_IN, LocationType.EXTRA
+    ALL_IN_THIRD_KERRIGAN_ATTACK = SC2WOL_LOC_ID_OFFSET + 2903, "Third Kerrigan Attack", SC2Mission.ALL_IN, LocationType.EXTRA
+    ALL_IN_FOURTH_KERRIGAN_ATTACK = SC2WOL_LOC_ID_OFFSET + 2904, "Fourth Kerrigan Attack", SC2Mission.ALL_IN, LocationType.EXTRA
+    ALL_IN_FIFTH_KERRIGAN_ATTACK = SC2WOL_LOC_ID_OFFSET + 2905, "Fifth Kerrigan Attack", SC2Mission.ALL_IN, LocationType.EXTRA
+
+    LAB_RAT_VICTORY = SC2HOTS_LOC_ID_OFFSET + 100, "Victory", SC2Mission.LAB_RAT, LocationType.VICTORY
+    LAB_RAT_GATHER_MINERALS = SC2HOTS_LOC_ID_OFFSET + 101, "Gather Minerals", SC2Mission.LAB_RAT, LocationType.VANILLA
+    LAB_RAT_SOUTH_ZERGLING_GROUP = SC2HOTS_LOC_ID_OFFSET + 102, "South Zergling Group", SC2Mission.LAB_RAT, LocationType.VANILLA
+    LAB_RAT_EAST_ZERGLING_GROUP = SC2HOTS_LOC_ID_OFFSET + 103, "East Zergling Group", SC2Mission.LAB_RAT, LocationType.VANILLA
+    LAB_RAT_WEST_ZERGLING_GROUP = SC2HOTS_LOC_ID_OFFSET + 104, "West Zergling Group", SC2Mission.LAB_RAT, LocationType.VANILLA
+    LAB_RAT_HATCHERY = SC2HOTS_LOC_ID_OFFSET + 105, "Hatchery", SC2Mission.LAB_RAT, LocationType.EXTRA
+    LAB_RAT_OVERLORD = SC2HOTS_LOC_ID_OFFSET + 106, "Overlord", SC2Mission.LAB_RAT, LocationType.EXTRA
+    LAB_RAT_GAS_TURRETS = SC2HOTS_LOC_ID_OFFSET + 107, "Gas Turrets", SC2Mission.LAB_RAT, LocationType.EXTRA
+    LAB_RAT_WIN_IN_UNDER_10_MINUTES = SC2HOTS_LOC_ID_OFFSET + 108, "Win In Under 10 Minutes", SC2Mission.LAB_RAT, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    BACK_IN_THE_SADDLE_VICTORY = SC2HOTS_LOC_ID_OFFSET + 200, "Victory", SC2Mission.BACK_IN_THE_SADDLE, LocationType.VICTORY
+    BACK_IN_THE_SADDLE_DEFEND_THE_TRAM = SC2HOTS_LOC_ID_OFFSET + 201, "Defend the Tram", SC2Mission.BACK_IN_THE_SADDLE, LocationType.EXTRA
+    BACK_IN_THE_SADDLE_KINETIC_BLAST = SC2HOTS_LOC_ID_OFFSET + 202, "Kinetic Blast", SC2Mission.BACK_IN_THE_SADDLE, LocationType.VANILLA
+    BACK_IN_THE_SADDLE_CRUSHING_GRIP = SC2HOTS_LOC_ID_OFFSET + 203, "Crushing Grip", SC2Mission.BACK_IN_THE_SADDLE, LocationType.VANILLA
+    BACK_IN_THE_SADDLE_REACH_THE_SUBLEVEL = SC2HOTS_LOC_ID_OFFSET + 204, "Reach the Sublevel", SC2Mission.BACK_IN_THE_SADDLE, LocationType.EXTRA
+    BACK_IN_THE_SADDLE_DOOR_SECTION_CLEARED = SC2HOTS_LOC_ID_OFFSET + 205, "Door Section Cleared", SC2Mission.BACK_IN_THE_SADDLE, LocationType.EXTRA
+
+    RENDEZVOUS_VICTORY = SC2HOTS_LOC_ID_OFFSET + 300, "Victory", SC2Mission.RENDEZVOUS, LocationType.VICTORY
+    RENDEZVOUS_RIGHT_QUEEN = SC2HOTS_LOC_ID_OFFSET + 301, "Right Queen", SC2Mission.RENDEZVOUS, LocationType.VANILLA
+    RENDEZVOUS_CENTER_QUEEN = SC2HOTS_LOC_ID_OFFSET + 302, "Center Queen", SC2Mission.RENDEZVOUS, LocationType.VANILLA
+    RENDEZVOUS_LEFT_QUEEN = SC2HOTS_LOC_ID_OFFSET + 303, "Left Queen", SC2Mission.RENDEZVOUS, LocationType.VANILLA
+    RENDEZVOUS_HOLD_OUT_FINISHED = SC2HOTS_LOC_ID_OFFSET + 304, "Hold Out Finished", SC2Mission.RENDEZVOUS, LocationType.EXTRA
+    RENDEZVOUS_KILL_ALL_BUILDINGS_BEFORE_REINFORCEMENTS = SC2HOTS_LOC_ID_OFFSET + 305, "Kill All Buildings Before Reinforcements", SC2Mission.RENDEZVOUS, LocationType.MASTERY, LocationFlag.SPEEDRUN
+
+    HARVEST_OF_SCREAMS_VICTORY = SC2HOTS_LOC_ID_OFFSET + 400, "Victory", SC2Mission.HARVEST_OF_SCREAMS, LocationType.VICTORY
+    HARVEST_OF_SCREAMS_FIRST_URSADON_MATRIARCH = SC2HOTS_LOC_ID_OFFSET + 401, "First Ursadon Matriarch", SC2Mission.HARVEST_OF_SCREAMS, LocationType.VANILLA
+    HARVEST_OF_SCREAMS_NORTH_URSADON_MATRIARCH = SC2HOTS_LOC_ID_OFFSET + 402, "North Ursadon Matriarch", SC2Mission.HARVEST_OF_SCREAMS, LocationType.VANILLA
+    HARVEST_OF_SCREAMS_WEST_URSADON_MATRIARCH = SC2HOTS_LOC_ID_OFFSET + 403, "West Ursadon Matriarch", SC2Mission.HARVEST_OF_SCREAMS, LocationType.VANILLA
+    HARVEST_OF_SCREAMS_LOST_BROOD = SC2HOTS_LOC_ID_OFFSET + 404, "Lost Brood", SC2Mission.HARVEST_OF_SCREAMS, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_NORTHEAST_PSI_LINK_SPIRE = SC2HOTS_LOC_ID_OFFSET + 405, "Northeast Psi-link Spire", SC2Mission.HARVEST_OF_SCREAMS, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_NORTHWEST_PSI_LINK_SPIRE = SC2HOTS_LOC_ID_OFFSET + 406, "Northwest Psi-link Spire", SC2Mission.HARVEST_OF_SCREAMS, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_SOUTHWEST_PSI_LINK_SPIRE = SC2HOTS_LOC_ID_OFFSET + 407, "Southwest Psi-link Spire", SC2Mission.HARVEST_OF_SCREAMS, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_NAFASH = SC2HOTS_LOC_ID_OFFSET + 408, "Nafash", SC2Mission.HARVEST_OF_SCREAMS, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_20_UNFROZEN_STRUCTURES = SC2HOTS_LOC_ID_OFFSET + 409, "20 Unfrozen Structures", SC2Mission.HARVEST_OF_SCREAMS, LocationType.CHALLENGE
+
+    SHOOT_THE_MESSENGER_VICTORY = SC2HOTS_LOC_ID_OFFSET + 500, "Victory", SC2Mission.SHOOT_THE_MESSENGER, LocationType.VICTORY
+    SHOOT_THE_MESSENGER_EAST_STASIS_CHAMBER = SC2HOTS_LOC_ID_OFFSET + 501, "East Stasis Chamber", SC2Mission.SHOOT_THE_MESSENGER, LocationType.VANILLA
+    SHOOT_THE_MESSENGER_CENTER_STASIS_CHAMBER = SC2HOTS_LOC_ID_OFFSET + 502, "Center Stasis Chamber", SC2Mission.SHOOT_THE_MESSENGER, LocationType.VANILLA
+    SHOOT_THE_MESSENGER_WEST_STASIS_CHAMBER = SC2HOTS_LOC_ID_OFFSET + 503, "West Stasis Chamber", SC2Mission.SHOOT_THE_MESSENGER, LocationType.VANILLA
+    SHOOT_THE_MESSENGER_DESTROY_4_SHUTTLES = SC2HOTS_LOC_ID_OFFSET + 504, "Destroy 4 Shuttles", SC2Mission.SHOOT_THE_MESSENGER, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_FROZEN_EXPANSION = SC2HOTS_LOC_ID_OFFSET + 505, "Frozen Expansion", SC2Mission.SHOOT_THE_MESSENGER, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_SOUTHWEST_FROZEN_ZERG = SC2HOTS_LOC_ID_OFFSET + 506, "Southwest Frozen Zerg", SC2Mission.SHOOT_THE_MESSENGER, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_SOUTHEAST_FROZEN_ZERG = SC2HOTS_LOC_ID_OFFSET + 507, "Southeast Frozen Zerg", SC2Mission.SHOOT_THE_MESSENGER, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_WEST_FROZEN_ZERG = SC2HOTS_LOC_ID_OFFSET + 508, "West Frozen Zerg", SC2Mission.SHOOT_THE_MESSENGER, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_EAST_FROZEN_ZERG = SC2HOTS_LOC_ID_OFFSET + 509, "East Frozen Zerg", SC2Mission.SHOOT_THE_MESSENGER, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_WEST_LAUNCH_BAY = SC2HOTS_LOC_ID_OFFSET + 510, "West Launch Bay", SC2Mission.SHOOT_THE_MESSENGER, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    SHOOT_THE_MESSENGER_CENTER_LAUNCH_BAY = SC2HOTS_LOC_ID_OFFSET + 511, "Center Launch Bay", SC2Mission.SHOOT_THE_MESSENGER, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    SHOOT_THE_MESSENGER_EAST_LAUNCH_BAY = SC2HOTS_LOC_ID_OFFSET + 512, "East Launch Bay", SC2Mission.SHOOT_THE_MESSENGER, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    ENEMY_WITHIN_VICTORY = SC2HOTS_LOC_ID_OFFSET + 600, "Victory", SC2Mission.ENEMY_WITHIN, LocationType.VICTORY
+    ENEMY_WITHIN_INFEST_GIANT_URSADON = SC2HOTS_LOC_ID_OFFSET + 601, "Infest Giant Ursadon", SC2Mission.ENEMY_WITHIN, LocationType.VANILLA
+    ENEMY_WITHIN_FIRST_NIADRA_EVOLUTION = SC2HOTS_LOC_ID_OFFSET + 602, "First Niadra Evolution", SC2Mission.ENEMY_WITHIN, LocationType.VANILLA
+    ENEMY_WITHIN_SECOND_NIADRA_EVOLUTION = SC2HOTS_LOC_ID_OFFSET + 603, "Second Niadra Evolution", SC2Mission.ENEMY_WITHIN, LocationType.VANILLA
+    ENEMY_WITHIN_THIRD_NIADRA_EVOLUTION = SC2HOTS_LOC_ID_OFFSET + 604, "Third Niadra Evolution", SC2Mission.ENEMY_WITHIN, LocationType.VANILLA
+    ENEMY_WITHIN_WARP_DRIVE = SC2HOTS_LOC_ID_OFFSET + 605, "Warp Drive", SC2Mission.ENEMY_WITHIN, LocationType.EXTRA
+    ENEMY_WITHIN_STASIS_QUADRANT = SC2HOTS_LOC_ID_OFFSET + 606, "Stasis Quadrant", SC2Mission.ENEMY_WITHIN, LocationType.EXTRA
+
+    DOMINATION_VICTORY = SC2HOTS_LOC_ID_OFFSET + 700, "Victory", SC2Mission.DOMINATION, LocationType.VICTORY
+    DOMINATION_CENTER_INFESTED_COMMAND_CENTER = SC2HOTS_LOC_ID_OFFSET + 701, "Center Infested Command Center", SC2Mission.DOMINATION, LocationType.VANILLA
+    DOMINATION_NORTH_INFESTED_COMMAND_CENTER = SC2HOTS_LOC_ID_OFFSET + 702, "North Infested Command Center", SC2Mission.DOMINATION, LocationType.VANILLA
+    DOMINATION_REPEL_ZAGARA = SC2HOTS_LOC_ID_OFFSET + 703, "Repel Zagara", SC2Mission.DOMINATION, LocationType.EXTRA
+    DOMINATION_CLOSE_BANELING_NEST = SC2HOTS_LOC_ID_OFFSET + 704, "Close Baneling Nest", SC2Mission.DOMINATION, LocationType.EXTRA
+    DOMINATION_SOUTH_BANELING_NEST = SC2HOTS_LOC_ID_OFFSET + 705, "South Baneling Nest", SC2Mission.DOMINATION, LocationType.EXTRA
+    DOMINATION_SOUTHWEST_BANELING_NEST = SC2HOTS_LOC_ID_OFFSET + 706, "Southwest Baneling Nest", SC2Mission.DOMINATION, LocationType.EXTRA
+    DOMINATION_SOUTHEAST_BANELING_NEST = SC2HOTS_LOC_ID_OFFSET + 707, "Southeast Baneling Nest", SC2Mission.DOMINATION, LocationType.EXTRA
+    DOMINATION_NORTH_BANELING_NEST = SC2HOTS_LOC_ID_OFFSET + 708, "North Baneling Nest", SC2Mission.DOMINATION, LocationType.EXTRA
+    DOMINATION_NORTHEAST_BANELING_NEST = SC2HOTS_LOC_ID_OFFSET + 709, "Northeast Baneling Nest", SC2Mission.DOMINATION, LocationType.EXTRA
+    DOMINATION_WIN_WITHOUT_100_EGGS = SC2HOTS_LOC_ID_OFFSET + 710, "Win Without 100 Eggs", SC2Mission.DOMINATION, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    FIRE_IN_THE_SKY_VICTORY = SC2HOTS_LOC_ID_OFFSET + 800, "Victory", SC2Mission.FIRE_IN_THE_SKY, LocationType.VICTORY
+    FIRE_IN_THE_SKY_WEST_BIOMASS = SC2HOTS_LOC_ID_OFFSET + 801, "West Biomass", SC2Mission.FIRE_IN_THE_SKY, LocationType.VANILLA
+    FIRE_IN_THE_SKY_NORTH_BIOMASS = SC2HOTS_LOC_ID_OFFSET + 802, "North Biomass", SC2Mission.FIRE_IN_THE_SKY, LocationType.VANILLA
+    FIRE_IN_THE_SKY_SOUTH_BIOMASS = SC2HOTS_LOC_ID_OFFSET + 803, "South Biomass", SC2Mission.FIRE_IN_THE_SKY, LocationType.VANILLA
+    FIRE_IN_THE_SKY_DESTROY_3_GORGONS = SC2HOTS_LOC_ID_OFFSET + 804, "Destroy 3 Gorgons", SC2Mission.FIRE_IN_THE_SKY, LocationType.EXTRA
+    FIRE_IN_THE_SKY_CLOSE_ZERG_RESCUE = SC2HOTS_LOC_ID_OFFSET + 805, "Close Zerg Rescue", SC2Mission.FIRE_IN_THE_SKY, LocationType.EXTRA
+    FIRE_IN_THE_SKY_SOUTH_ZERG_RESCUE = SC2HOTS_LOC_ID_OFFSET + 806, "South Zerg Rescue", SC2Mission.FIRE_IN_THE_SKY, LocationType.EXTRA
+    FIRE_IN_THE_SKY_NORTH_ZERG_RESCUE = SC2HOTS_LOC_ID_OFFSET + 807, "North Zerg Rescue", SC2Mission.FIRE_IN_THE_SKY, LocationType.EXTRA
+    FIRE_IN_THE_SKY_WEST_QUEEN_RESCUE = SC2HOTS_LOC_ID_OFFSET + 808, "West Queen Rescue", SC2Mission.FIRE_IN_THE_SKY, LocationType.EXTRA
+    FIRE_IN_THE_SKY_EAST_QUEEN_RESCUE = SC2HOTS_LOC_ID_OFFSET + 809, "East Queen Rescue", SC2Mission.FIRE_IN_THE_SKY, LocationType.EXTRA
+    FIRE_IN_THE_SKY_SOUTH_ORBITAL_COMMAND_CENTER = SC2HOTS_LOC_ID_OFFSET + 810, "South Orbital Command Center", SC2Mission.FIRE_IN_THE_SKY, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    FIRE_IN_THE_SKY_NORTHWEST_ORBITAL_COMMAND_CENTER = SC2HOTS_LOC_ID_OFFSET + 811, "Northwest Orbital Command Center", SC2Mission.FIRE_IN_THE_SKY, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    FIRE_IN_THE_SKY_SOUTHEAST_ORBITAL_COMMAND_CENTER = SC2HOTS_LOC_ID_OFFSET + 812, "Southeast Orbital Command Center", SC2Mission.FIRE_IN_THE_SKY, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    OLD_SOLDIERS_VICTORY = SC2HOTS_LOC_ID_OFFSET + 900, "Victory", SC2Mission.OLD_SOLDIERS, LocationType.VICTORY
+    OLD_SOLDIERS_EAST_SCIENCE_LAB = SC2HOTS_LOC_ID_OFFSET + 901, "East Science Lab", SC2Mission.OLD_SOLDIERS, LocationType.VANILLA
+    OLD_SOLDIERS_NORTH_SCIENCE_LAB = SC2HOTS_LOC_ID_OFFSET + 902, "North Science Lab", SC2Mission.OLD_SOLDIERS, LocationType.VANILLA
+    OLD_SOLDIERS_GET_NUKED = SC2HOTS_LOC_ID_OFFSET + 903, "Get Nuked", SC2Mission.OLD_SOLDIERS, LocationType.EXTRA
+    OLD_SOLDIERS_ENTRANCE_GATE = SC2HOTS_LOC_ID_OFFSET + 904, "Entrance Gate", SC2Mission.OLD_SOLDIERS, LocationType.EXTRA
+    OLD_SOLDIERS_CITADEL_GATE = SC2HOTS_LOC_ID_OFFSET + 905, "Citadel Gate", SC2Mission.OLD_SOLDIERS, LocationType.EXTRA
+    OLD_SOLDIERS_SOUTH_EXPANSION = SC2HOTS_LOC_ID_OFFSET + 906, "South Expansion", SC2Mission.OLD_SOLDIERS, LocationType.EXTRA
+    OLD_SOLDIERS_RICH_MINERAL_EXPANSION = SC2HOTS_LOC_ID_OFFSET + 907, "Rich Mineral Expansion", SC2Mission.OLD_SOLDIERS, LocationType.EXTRA
+
+    WAKING_THE_ANCIENT_VICTORY = SC2HOTS_LOC_ID_OFFSET + 1000, "Victory", SC2Mission.WAKING_THE_ANCIENT, LocationType.VICTORY
+    WAKING_THE_ANCIENT_CENTER_ESSENCE_POOL = SC2HOTS_LOC_ID_OFFSET + 1001, "Center Essence Pool", SC2Mission.WAKING_THE_ANCIENT, LocationType.VANILLA
+    WAKING_THE_ANCIENT_EAST_ESSENCE_POOL = SC2HOTS_LOC_ID_OFFSET + 1002, "East Essence Pool", SC2Mission.WAKING_THE_ANCIENT, LocationType.VANILLA
+    WAKING_THE_ANCIENT_SOUTH_ESSENCE_POOL = SC2HOTS_LOC_ID_OFFSET + 1003, "South Essence Pool", SC2Mission.WAKING_THE_ANCIENT, LocationType.VANILLA
+    WAKING_THE_ANCIENT_FINISH_FEEDING = SC2HOTS_LOC_ID_OFFSET + 1004, "Finish Feeding", SC2Mission.WAKING_THE_ANCIENT, LocationType.EXTRA
+    WAKING_THE_ANCIENT_SOUTH_PROXY_PRIMAL_HIVE = SC2HOTS_LOC_ID_OFFSET + 1005, "South Proxy Primal Hive", SC2Mission.WAKING_THE_ANCIENT, LocationType.CHALLENGE
+    WAKING_THE_ANCIENT_EAST_PROXY_PRIMAL_HIVE = SC2HOTS_LOC_ID_OFFSET + 1006, "East Proxy Primal Hive", SC2Mission.WAKING_THE_ANCIENT, LocationType.CHALLENGE
+    WAKING_THE_ANCIENT_SOUTH_MAIN_PRIMAL_HIVE = SC2HOTS_LOC_ID_OFFSET + 1007, "South Main Primal Hive", SC2Mission.WAKING_THE_ANCIENT, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    WAKING_THE_ANCIENT_EAST_MAIN_PRIMAL_HIVE = SC2HOTS_LOC_ID_OFFSET + 1008, "East Main Primal Hive", SC2Mission.WAKING_THE_ANCIENT, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    WAKING_THE_ANCIENT_FLAWLESS = SC2HOTS_LOC_ID_OFFSET + 1009, "Flawless", SC2Mission.WAKING_THE_ANCIENT, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+
+    THE_CRUCIBLE_VICTORY = SC2HOTS_LOC_ID_OFFSET + 1100, "Victory", SC2Mission.THE_CRUCIBLE, LocationType.VICTORY
+    THE_CRUCIBLE_TYRANNOZOR = SC2HOTS_LOC_ID_OFFSET + 1101, "Tyrannozor", SC2Mission.THE_CRUCIBLE, LocationType.VANILLA
+    THE_CRUCIBLE_REACH_THE_POOL = SC2HOTS_LOC_ID_OFFSET + 1102, "Reach the Pool", SC2Mission.THE_CRUCIBLE, LocationType.VANILLA
+    THE_CRUCIBLE_15_MINUTES_REMAINING = SC2HOTS_LOC_ID_OFFSET + 1103, "15 Minutes Remaining", SC2Mission.THE_CRUCIBLE, LocationType.EXTRA
+    THE_CRUCIBLE_5_MINUTES_REMAINING = SC2HOTS_LOC_ID_OFFSET + 1104, "5 Minutes Remaining", SC2Mission.THE_CRUCIBLE, LocationType.EXTRA
+    THE_CRUCIBLE_PINCER_ATTACK = SC2HOTS_LOC_ID_OFFSET + 1105, "Pincer Attack", SC2Mission.THE_CRUCIBLE, LocationType.EXTRA
+    THE_CRUCIBLE_YAGDRA_CLAIMS_BRAKKS_PACK = SC2HOTS_LOC_ID_OFFSET + 1106, "Yagdra Claims Brakk's Pack", SC2Mission.THE_CRUCIBLE, LocationType.EXTRA
+
+    SUPREME_VICTORY = SC2HOTS_LOC_ID_OFFSET + 1200, "Victory", SC2Mission.SUPREME, LocationType.VICTORY
+    SUPREME_FIRST_RELIC = SC2HOTS_LOC_ID_OFFSET + 1201, "First Relic", SC2Mission.SUPREME, LocationType.VANILLA
+    SUPREME_SECOND_RELIC = SC2HOTS_LOC_ID_OFFSET + 1202, "Second Relic", SC2Mission.SUPREME, LocationType.VANILLA
+    SUPREME_THIRD_RELIC = SC2HOTS_LOC_ID_OFFSET + 1203, "Third Relic", SC2Mission.SUPREME, LocationType.VANILLA
+    SUPREME_FOURTH_RELIC = SC2HOTS_LOC_ID_OFFSET + 1204, "Fourth Relic", SC2Mission.SUPREME, LocationType.VANILLA
+    SUPREME_YAGDRA = SC2HOTS_LOC_ID_OFFSET + 1205, "Yagdra", SC2Mission.SUPREME, LocationType.EXTRA
+    SUPREME_KRAITH = SC2HOTS_LOC_ID_OFFSET + 1206, "Kraith", SC2Mission.SUPREME, LocationType.EXTRA
+    SUPREME_SLIVAN = SC2HOTS_LOC_ID_OFFSET + 1207, "Slivan", SC2Mission.SUPREME, LocationType.EXTRA
+
+    INFESTED_VICTORY = SC2HOTS_LOC_ID_OFFSET + 1300, "Victory", SC2Mission.INFESTED, LocationType.VICTORY
+    INFESTED_EAST_SCIENCE_FACILITY = SC2HOTS_LOC_ID_OFFSET + 1301, "East Science Facility", SC2Mission.INFESTED, LocationType.VANILLA
+    INFESTED_CENTER_SCIENCE_FACILITY = SC2HOTS_LOC_ID_OFFSET + 1302, "Center Science Facility", SC2Mission.INFESTED, LocationType.VANILLA
+    INFESTED_WEST_SCIENCE_FACILITY = SC2HOTS_LOC_ID_OFFSET + 1303, "West Science Facility", SC2Mission.INFESTED, LocationType.VANILLA
+    INFESTED_FIRST_INTRO_GARRISON = SC2HOTS_LOC_ID_OFFSET + 1304, "First Intro Garrison", SC2Mission.INFESTED, LocationType.EXTRA
+    INFESTED_SECOND_INTRO_GARRISON = SC2HOTS_LOC_ID_OFFSET + 1305, "Second Intro Garrison", SC2Mission.INFESTED, LocationType.EXTRA
+    INFESTED_BASE_GARRISON = SC2HOTS_LOC_ID_OFFSET + 1306, "Base Garrison", SC2Mission.INFESTED, LocationType.EXTRA
+    INFESTED_EAST_GARRISON = SC2HOTS_LOC_ID_OFFSET + 1307, "East Garrison", SC2Mission.INFESTED, LocationType.EXTRA
+    INFESTED_MID_GARRISON = SC2HOTS_LOC_ID_OFFSET + 1308, "Mid Garrison", SC2Mission.INFESTED, LocationType.EXTRA
+    INFESTED_NORTH_GARRISON = SC2HOTS_LOC_ID_OFFSET + 1309, "North Garrison", SC2Mission.INFESTED, LocationType.EXTRA
+    INFESTED_CLOSE_SOUTHWEST_GARRISON = SC2HOTS_LOC_ID_OFFSET + 1310, "Close Southwest Garrison", SC2Mission.INFESTED, LocationType.EXTRA
+    INFESTED_FAR_SOUTHWEST_GARRISON = SC2HOTS_LOC_ID_OFFSET + 1311, "Far Southwest Garrison", SC2Mission.INFESTED, LocationType.EXTRA
+
+    HAND_OF_DARKNESS_VICTORY = SC2HOTS_LOC_ID_OFFSET + 1400, "Victory", SC2Mission.HAND_OF_DARKNESS, LocationType.VICTORY
+    HAND_OF_DARKNESS_NORTH_BRUTALISK = SC2HOTS_LOC_ID_OFFSET + 1401, "North Brutalisk", SC2Mission.HAND_OF_DARKNESS, LocationType.VANILLA
+    HAND_OF_DARKNESS_SOUTH_BRUTALISK = SC2HOTS_LOC_ID_OFFSET + 1402, "South Brutalisk", SC2Mission.HAND_OF_DARKNESS, LocationType.VANILLA
+    HAND_OF_DARKNESS_KILL_1_HYBRID = SC2HOTS_LOC_ID_OFFSET + 1403, "Kill 1 Hybrid", SC2Mission.HAND_OF_DARKNESS, LocationType.EXTRA
+    HAND_OF_DARKNESS_KILL_2_HYBRID = SC2HOTS_LOC_ID_OFFSET + 1404, "Kill 2 Hybrid", SC2Mission.HAND_OF_DARKNESS, LocationType.EXTRA
+    HAND_OF_DARKNESS_KILL_3_HYBRID = SC2HOTS_LOC_ID_OFFSET + 1405, "Kill 3 Hybrid", SC2Mission.HAND_OF_DARKNESS, LocationType.EXTRA
+    HAND_OF_DARKNESS_KILL_4_HYBRID = SC2HOTS_LOC_ID_OFFSET + 1406, "Kill 4 Hybrid", SC2Mission.HAND_OF_DARKNESS, LocationType.EXTRA
+    HAND_OF_DARKNESS_KILL_5_HYBRID = SC2HOTS_LOC_ID_OFFSET + 1407, "Kill 5 Hybrid", SC2Mission.HAND_OF_DARKNESS, LocationType.EXTRA
+    HAND_OF_DARKNESS_KILL_6_HYBRID = SC2HOTS_LOC_ID_OFFSET + 1408, "Kill 6 Hybrid", SC2Mission.HAND_OF_DARKNESS, LocationType.EXTRA
+    HAND_OF_DARKNESS_KILL_7_HYBRID = SC2HOTS_LOC_ID_OFFSET + 1409, "Kill 7 Hybrid", SC2Mission.HAND_OF_DARKNESS, LocationType.EXTRA
+
+    PHANTOMS_OF_THE_VOID_VICTORY = SC2HOTS_LOC_ID_OFFSET + 1500, "Victory", SC2Mission.PHANTOMS_OF_THE_VOID, LocationType.VICTORY
+    PHANTOMS_OF_THE_VOID_NORTHWEST_CRYSTAL = SC2HOTS_LOC_ID_OFFSET + 1501, "Northwest Crystal", SC2Mission.PHANTOMS_OF_THE_VOID, LocationType.VANILLA
+    PHANTOMS_OF_THE_VOID_NORTHEAST_CRYSTAL = SC2HOTS_LOC_ID_OFFSET + 1502, "Northeast Crystal", SC2Mission.PHANTOMS_OF_THE_VOID, LocationType.VANILLA
+    PHANTOMS_OF_THE_VOID_SOUTH_CRYSTAL = SC2HOTS_LOC_ID_OFFSET + 1503, "South Crystal", SC2Mission.PHANTOMS_OF_THE_VOID, LocationType.VANILLA
+    PHANTOMS_OF_THE_VOID_BASE_ESTABLISHED = SC2HOTS_LOC_ID_OFFSET + 1504, "Base Established", SC2Mission.PHANTOMS_OF_THE_VOID, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_CLOSE_TEMPLE = SC2HOTS_LOC_ID_OFFSET + 1505, "Close Temple", SC2Mission.PHANTOMS_OF_THE_VOID, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_MID_TEMPLE = SC2HOTS_LOC_ID_OFFSET + 1506, "Mid Temple", SC2Mission.PHANTOMS_OF_THE_VOID, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_SOUTHEAST_TEMPLE = SC2HOTS_LOC_ID_OFFSET + 1507, "Southeast Temple", SC2Mission.PHANTOMS_OF_THE_VOID, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_NORTHEAST_TEMPLE = SC2HOTS_LOC_ID_OFFSET + 1508, "Northeast Temple", SC2Mission.PHANTOMS_OF_THE_VOID, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_NORTHWEST_TEMPLE = SC2HOTS_LOC_ID_OFFSET + 1509, "Northwest Temple", SC2Mission.PHANTOMS_OF_THE_VOID, LocationType.EXTRA
+
+    WITH_FRIENDS_LIKE_THESE_VICTORY = SC2HOTS_LOC_ID_OFFSET + 1600, "Victory", SC2Mission.WITH_FRIENDS_LIKE_THESE, LocationType.VICTORY
+    WITH_FRIENDS_LIKE_THESE_PIRATE_CAPITAL_SHIP = SC2HOTS_LOC_ID_OFFSET + 1601, "Pirate Capital Ship", SC2Mission.WITH_FRIENDS_LIKE_THESE, LocationType.VANILLA
+    WITH_FRIENDS_LIKE_THESE_FIRST_MINERAL_PATCH = SC2HOTS_LOC_ID_OFFSET + 1602, "First Mineral Patch", SC2Mission.WITH_FRIENDS_LIKE_THESE, LocationType.VANILLA
+    WITH_FRIENDS_LIKE_THESE_SECOND_MINERAL_PATCH = SC2HOTS_LOC_ID_OFFSET + 1603, "Second Mineral Patch", SC2Mission.WITH_FRIENDS_LIKE_THESE, LocationType.VANILLA
+    WITH_FRIENDS_LIKE_THESE_THIRD_MINERAL_PATCH = SC2HOTS_LOC_ID_OFFSET + 1604, "Third Mineral Patch", SC2Mission.WITH_FRIENDS_LIKE_THESE, LocationType.VANILLA
+
+    CONVICTION_VICTORY = SC2HOTS_LOC_ID_OFFSET + 1700, "Victory", SC2Mission.CONVICTION, LocationType.VICTORY
+    CONVICTION_FIRST_SECRET_DOCUMENTS = SC2HOTS_LOC_ID_OFFSET + 1701, "First Secret Documents", SC2Mission.CONVICTION, LocationType.VANILLA
+    CONVICTION_SECOND_SECRET_DOCUMENTS = SC2HOTS_LOC_ID_OFFSET + 1702, "Second Secret Documents", SC2Mission.CONVICTION, LocationType.VANILLA
+    CONVICTION_POWER_COUPLING = SC2HOTS_LOC_ID_OFFSET + 1703, "Power Coupling", SC2Mission.CONVICTION, LocationType.EXTRA
+    CONVICTION_DOOR_BLASTED = SC2HOTS_LOC_ID_OFFSET + 1704, "Door Blasted", SC2Mission.CONVICTION, LocationType.EXTRA
+
+    PLANETFALL_VICTORY = SC2HOTS_LOC_ID_OFFSET + 1800, "Victory", SC2Mission.PLANETFALL, LocationType.VICTORY
+    PLANETFALL_EAST_GATE = SC2HOTS_LOC_ID_OFFSET + 1801, "East Gate", SC2Mission.PLANETFALL, LocationType.VANILLA
+    PLANETFALL_NORTHWEST_GATE = SC2HOTS_LOC_ID_OFFSET + 1802, "Northwest Gate", SC2Mission.PLANETFALL, LocationType.VANILLA
+    PLANETFALL_NORTH_GATE = SC2HOTS_LOC_ID_OFFSET + 1803, "North Gate", SC2Mission.PLANETFALL, LocationType.VANILLA
+    PLANETFALL_1_BILE_LAUNCHER_DEPLOYED = SC2HOTS_LOC_ID_OFFSET + 1804, "1 Bile Launcher Deployed", SC2Mission.PLANETFALL, LocationType.EXTRA
+    PLANETFALL_2_BILE_LAUNCHERS_DEPLOYED = SC2HOTS_LOC_ID_OFFSET + 1805, "2 Bile Launchers Deployed", SC2Mission.PLANETFALL, LocationType.EXTRA
+    PLANETFALL_3_BILE_LAUNCHERS_DEPLOYED = SC2HOTS_LOC_ID_OFFSET + 1806, "3 Bile Launchers Deployed", SC2Mission.PLANETFALL, LocationType.EXTRA
+    PLANETFALL_4_BILE_LAUNCHERS_DEPLOYED = SC2HOTS_LOC_ID_OFFSET + 1807, "4 Bile Launchers Deployed", SC2Mission.PLANETFALL, LocationType.EXTRA
+    PLANETFALL_5_BILE_LAUNCHERS_DEPLOYED = SC2HOTS_LOC_ID_OFFSET + 1808, "5 Bile Launchers Deployed", SC2Mission.PLANETFALL, LocationType.EXTRA
+    PLANETFALL_SONS_OF_KORHAL = SC2HOTS_LOC_ID_OFFSET + 1809, "Sons of Korhal", SC2Mission.PLANETFALL, LocationType.EXTRA
+    PLANETFALL_NIGHT_WOLVES = SC2HOTS_LOC_ID_OFFSET + 1810, "Night Wolves", SC2Mission.PLANETFALL, LocationType.EXTRA
+    PLANETFALL_WEST_EXPANSION = SC2HOTS_LOC_ID_OFFSET + 1811, "West Expansion", SC2Mission.PLANETFALL, LocationType.EXTRA
+    PLANETFALL_MID_EXPANSION = SC2HOTS_LOC_ID_OFFSET + 1812, "Mid Expansion", SC2Mission.PLANETFALL, LocationType.EXTRA
+
+    DEATH_FROM_ABOVE_VICTORY = SC2HOTS_LOC_ID_OFFSET + 1900, "Victory", SC2Mission.DEATH_FROM_ABOVE, LocationType.VICTORY
+    DEATH_FROM_ABOVE_FIRST_POWER_LINK = SC2HOTS_LOC_ID_OFFSET + 1901, "First Power Link", SC2Mission.DEATH_FROM_ABOVE, LocationType.VANILLA
+    DEATH_FROM_ABOVE_SECOND_POWER_LINK = SC2HOTS_LOC_ID_OFFSET + 1902, "Second Power Link", SC2Mission.DEATH_FROM_ABOVE, LocationType.VANILLA
+    DEATH_FROM_ABOVE_THIRD_POWER_LINK = SC2HOTS_LOC_ID_OFFSET + 1903, "Third Power Link", SC2Mission.DEATH_FROM_ABOVE, LocationType.VANILLA
+    DEATH_FROM_ABOVE_EXPANSION_COMMAND_CENTER = SC2HOTS_LOC_ID_OFFSET + 1904, "Expansion Command Center", SC2Mission.DEATH_FROM_ABOVE, LocationType.EXTRA
+    DEATH_FROM_ABOVE_MAIN_PATH_COMMAND_CENTER = SC2HOTS_LOC_ID_OFFSET + 1905, "Main Path Command Center", SC2Mission.DEATH_FROM_ABOVE, LocationType.EXTRA
+
+    THE_RECKONING_VICTORY = SC2HOTS_LOC_ID_OFFSET + 2000, "Victory", SC2Mission.THE_RECKONING, LocationType.VICTORY
+    THE_RECKONING_SOUTH_LANE = SC2HOTS_LOC_ID_OFFSET + 2001, "South Lane", SC2Mission.THE_RECKONING, LocationType.VANILLA
+    THE_RECKONING_NORTH_LANE = SC2HOTS_LOC_ID_OFFSET + 2002, "North Lane", SC2Mission.THE_RECKONING, LocationType.VANILLA
+    THE_RECKONING_EAST_LANE = SC2HOTS_LOC_ID_OFFSET + 2003, "East Lane", SC2Mission.THE_RECKONING, LocationType.VANILLA
+    THE_RECKONING_ODIN = SC2HOTS_LOC_ID_OFFSET + 2004, "Odin", SC2Mission.THE_RECKONING, LocationType.EXTRA
+    THE_RECKONING_TRASH_THE_ODIN_EARLY = SC2HOTS_LOC_ID_OFFSET + 2005, "Trash the Odin Early", SC2Mission.THE_RECKONING, LocationType.MASTERY, LocationFlag.SPEEDRUN
+
+    DARK_WHISPERS_VICTORY = SC2LOTV_LOC_ID_OFFSET + 100, "Victory", SC2Mission.DARK_WHISPERS, LocationType.VICTORY
+    DARK_WHISPERS_FIRST_PRISONER_GROUP = SC2LOTV_LOC_ID_OFFSET + 101, "First Prisoner Group", SC2Mission.DARK_WHISPERS, LocationType.VANILLA
+    DARK_WHISPERS_SECOND_PRISONER_GROUP = SC2LOTV_LOC_ID_OFFSET + 102, "Second Prisoner Group", SC2Mission.DARK_WHISPERS, LocationType.VANILLA
+    DARK_WHISPERS_FIRST_PYLON = SC2LOTV_LOC_ID_OFFSET + 103, "First Pylon", SC2Mission.DARK_WHISPERS, LocationType.VANILLA
+    DARK_WHISPERS_SECOND_PYLON = SC2LOTV_LOC_ID_OFFSET + 104, "Second Pylon", SC2Mission.DARK_WHISPERS, LocationType.VANILLA
+    DARK_WHISPERS_ZERG_BASE = SC2LOTV_LOC_ID_OFFSET + 105, "Zerg Base", SC2Mission.DARK_WHISPERS, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    GHOSTS_IN_THE_FOG_VICTORY = SC2LOTV_LOC_ID_OFFSET + 200, "Victory", SC2Mission.GHOSTS_IN_THE_FOG, LocationType.VICTORY
+    GHOSTS_IN_THE_FOG_SOUTH_ROCK_FORMATION = SC2LOTV_LOC_ID_OFFSET + 201, "South Rock Formation", SC2Mission.GHOSTS_IN_THE_FOG, LocationType.VANILLA
+    GHOSTS_IN_THE_FOG_WEST_ROCK_FORMATION = SC2LOTV_LOC_ID_OFFSET + 202, "West Rock Formation", SC2Mission.GHOSTS_IN_THE_FOG, LocationType.VANILLA
+    GHOSTS_IN_THE_FOG_EAST_ROCK_FORMATION = SC2LOTV_LOC_ID_OFFSET + 203, "East Rock Formation", SC2Mission.GHOSTS_IN_THE_FOG, LocationType.VANILLA
+    GHOSTS_IN_THE_FOG_ALL_ROCK_FORMATIONS_IN_UNDER_10_MINUTES = SC2LOTV_LOC_ID_OFFSET + 204, "All Rock Formations In Under 10 Minutes", SC2Mission.GHOSTS_IN_THE_FOG, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    EVIL_AWOKEN_VICTORY = SC2LOTV_LOC_ID_OFFSET + 300, "Victory", SC2Mission.EVIL_AWOKEN, LocationType.VICTORY
+    EVIL_AWOKEN_TEMPLE_INVESTIGATED = SC2LOTV_LOC_ID_OFFSET + 301, "Temple Investigated", SC2Mission.EVIL_AWOKEN, LocationType.EXTRA
+    EVIL_AWOKEN_VOID_CATALYST = SC2LOTV_LOC_ID_OFFSET + 302, "Void Catalyst", SC2Mission.EVIL_AWOKEN, LocationType.EXTRA
+    EVIL_AWOKEN_FIRST_PARTICLE_CANNON = SC2LOTV_LOC_ID_OFFSET + 303, "First Particle Cannon", SC2Mission.EVIL_AWOKEN, LocationType.VANILLA
+    EVIL_AWOKEN_SECOND_PARTICLE_CANNON = SC2LOTV_LOC_ID_OFFSET + 304, "Second Particle Cannon", SC2Mission.EVIL_AWOKEN, LocationType.VANILLA
+    EVIL_AWOKEN_THIRD_PARTICLE_CANNON = SC2LOTV_LOC_ID_OFFSET + 305, "Third Particle Cannon", SC2Mission.EVIL_AWOKEN, LocationType.VANILLA
+
+    FOR_AIUR_VICTORY = SC2LOTV_LOC_ID_OFFSET + 400, "Victory", SC2Mission.FOR_AIUR, LocationType.VICTORY
+    FOR_AIUR_SOUTHWEST_HIVE = SC2LOTV_LOC_ID_OFFSET + 401, "Southwest Hive", SC2Mission.FOR_AIUR, LocationType.VANILLA
+    FOR_AIUR_NORTHWEST_HIVE = SC2LOTV_LOC_ID_OFFSET + 402, "Northwest Hive", SC2Mission.FOR_AIUR, LocationType.VANILLA
+    FOR_AIUR_NORTHEAST_HIVE = SC2LOTV_LOC_ID_OFFSET + 403, "Northeast Hive", SC2Mission.FOR_AIUR, LocationType.VANILLA
+    FOR_AIUR_EAST_HIVE = SC2LOTV_LOC_ID_OFFSET + 404, "East Hive", SC2Mission.FOR_AIUR, LocationType.VANILLA
+    FOR_AIUR_WEST_CONDUIT = SC2LOTV_LOC_ID_OFFSET + 405, "West Conduit", SC2Mission.FOR_AIUR, LocationType.EXTRA
+    FOR_AIUR_MIDDLE_CONDUIT = SC2LOTV_LOC_ID_OFFSET + 406, "Middle Conduit", SC2Mission.FOR_AIUR, LocationType.EXTRA
+    FOR_AIUR_NORTHEAST_CONDUIT = SC2LOTV_LOC_ID_OFFSET + 407, "Northeast Conduit", SC2Mission.FOR_AIUR, LocationType.EXTRA
+
+    THE_GROWING_SHADOW_VICTORY = SC2LOTV_LOC_ID_OFFSET + 500, "Victory", SC2Mission.THE_GROWING_SHADOW, LocationType.VICTORY
+    THE_GROWING_SHADOW_CLOSE_PYLON = SC2LOTV_LOC_ID_OFFSET + 501, "Close Pylon", SC2Mission.THE_GROWING_SHADOW, LocationType.VANILLA
+    THE_GROWING_SHADOW_EAST_PYLON = SC2LOTV_LOC_ID_OFFSET + 502, "East Pylon", SC2Mission.THE_GROWING_SHADOW, LocationType.VANILLA
+    THE_GROWING_SHADOW_WEST_PYLON = SC2LOTV_LOC_ID_OFFSET + 503, "West Pylon", SC2Mission.THE_GROWING_SHADOW, LocationType.VANILLA
+    THE_GROWING_SHADOW_NEXUS = SC2LOTV_LOC_ID_OFFSET + 504, "Nexus", SC2Mission.THE_GROWING_SHADOW, LocationType.EXTRA
+    THE_GROWING_SHADOW_TEMPLAR_BASE = SC2LOTV_LOC_ID_OFFSET + 505, "Templar Base", SC2Mission.THE_GROWING_SHADOW, LocationType.EXTRA
+
+    THE_SPEAR_OF_ADUN_VICTORY = SC2LOTV_LOC_ID_OFFSET + 600, "Victory", SC2Mission.THE_SPEAR_OF_ADUN, LocationType.VICTORY
+    THE_SPEAR_OF_ADUN_CLOSE_WARP_GATE = SC2LOTV_LOC_ID_OFFSET + 601, "Close Warp Gate", SC2Mission.THE_SPEAR_OF_ADUN, LocationType.VANILLA
+    THE_SPEAR_OF_ADUN_WEST_WARP_GATE = SC2LOTV_LOC_ID_OFFSET + 602, "West Warp Gate", SC2Mission.THE_SPEAR_OF_ADUN, LocationType.VANILLA
+    THE_SPEAR_OF_ADUN_NORTH_WARP_GATE = SC2LOTV_LOC_ID_OFFSET + 603, "North Warp Gate", SC2Mission.THE_SPEAR_OF_ADUN, LocationType.VANILLA
+    THE_SPEAR_OF_ADUN_NORTH_POWER_CELL = SC2LOTV_LOC_ID_OFFSET + 604, "North Power Cell", SC2Mission.THE_SPEAR_OF_ADUN, LocationType.EXTRA
+    THE_SPEAR_OF_ADUN_EAST_POWER_CELL = SC2LOTV_LOC_ID_OFFSET + 605, "East Power Cell", SC2Mission.THE_SPEAR_OF_ADUN, LocationType.EXTRA
+    THE_SPEAR_OF_ADUN_SOUTH_POWER_CELL = SC2LOTV_LOC_ID_OFFSET + 606, "South Power Cell", SC2Mission.THE_SPEAR_OF_ADUN, LocationType.EXTRA
+    THE_SPEAR_OF_ADUN_SOUTHEAST_POWER_CELL = SC2LOTV_LOC_ID_OFFSET + 607, "Southeast Power Cell", SC2Mission.THE_SPEAR_OF_ADUN, LocationType.EXTRA
+
+    SKY_SHIELD_VICTORY = SC2LOTV_LOC_ID_OFFSET + 700, "Victory", SC2Mission.SKY_SHIELD, LocationType.VICTORY
+    SKY_SHIELD_MID_EMP_SCRAMBLER = SC2LOTV_LOC_ID_OFFSET + 701, "Mid EMP Scrambler", SC2Mission.SKY_SHIELD, LocationType.VANILLA
+    SKY_SHIELD_SOUTHEAST_EMP_SCRAMBLER = SC2LOTV_LOC_ID_OFFSET + 702, "Southeast EMP Scrambler", SC2Mission.SKY_SHIELD, LocationType.VANILLA
+    SKY_SHIELD_NORTH_EMP_SCRAMBLER = SC2LOTV_LOC_ID_OFFSET + 703, "North EMP Scrambler", SC2Mission.SKY_SHIELD, LocationType.VANILLA
+    SKY_SHIELD_MID_STABILIZER = SC2LOTV_LOC_ID_OFFSET + 704, "Mid Stabilizer", SC2Mission.SKY_SHIELD, LocationType.EXTRA
+    SKY_SHIELD_SOUTHWEST_STABILIZER = SC2LOTV_LOC_ID_OFFSET + 705, "Southwest Stabilizer", SC2Mission.SKY_SHIELD, LocationType.EXTRA
+    SKY_SHIELD_NORTHWEST_STABILIZER = SC2LOTV_LOC_ID_OFFSET + 706, "Northwest Stabilizer", SC2Mission.SKY_SHIELD, LocationType.EXTRA
+    SKY_SHIELD_NORTHEAST_STABILIZER = SC2LOTV_LOC_ID_OFFSET + 707, "Northeast Stabilizer", SC2Mission.SKY_SHIELD, LocationType.EXTRA
+    SKY_SHIELD_SOUTHEAST_STABILIZER = SC2LOTV_LOC_ID_OFFSET + 708, "Southeast Stabilizer", SC2Mission.SKY_SHIELD, LocationType.EXTRA
+    SKY_SHIELD_WEST_RAYNOR_BASE = SC2LOTV_LOC_ID_OFFSET + 709, "West Raynor Base", SC2Mission.SKY_SHIELD, LocationType.EXTRA
+    SKY_SHIELD_EAST_RAYNOR_BASE = SC2LOTV_LOC_ID_OFFSET + 710, "East Raynor Base", SC2Mission.SKY_SHIELD, LocationType.EXTRA
+
+    BROTHERS_IN_ARMS_VICTORY = SC2LOTV_LOC_ID_OFFSET + 800, "Victory", SC2Mission.BROTHERS_IN_ARMS, LocationType.VICTORY
+    BROTHERS_IN_ARMS_MID_SCIENCE_FACILITY = SC2LOTV_LOC_ID_OFFSET + 801, "Mid Science Facility", SC2Mission.BROTHERS_IN_ARMS, LocationType.VANILLA
+    BROTHERS_IN_ARMS_NORTH_SCIENCE_FACILITY = SC2LOTV_LOC_ID_OFFSET + 802, "North Science Facility", SC2Mission.BROTHERS_IN_ARMS, LocationType.VANILLA
+    BROTHERS_IN_ARMS_SOUTH_SCIENCE_FACILITY = SC2LOTV_LOC_ID_OFFSET + 803, "South Science Facility", SC2Mission.BROTHERS_IN_ARMS, LocationType.VANILLA
+    BROTHERS_IN_ARMS_RAYNOR_FORWARD_POSITIONS = SC2LOTV_LOC_ID_OFFSET + 804, "Raynor Forward Positions", SC2Mission.BROTHERS_IN_ARMS, LocationType.EXTRA
+    BROTHERS_IN_ARMS_VALERIAN_FORWARD_POSITIONS = SC2LOTV_LOC_ID_OFFSET + 805, "Valerian Forward Positions", SC2Mission.BROTHERS_IN_ARMS, LocationType.EXTRA
+    BROTHERS_IN_ARMS_WIN_IN_UNDER_15_MINUTES = SC2LOTV_LOC_ID_OFFSET + 806, "Win In Under 15 Minutes", SC2Mission.BROTHERS_IN_ARMS, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    AMON_S_REACH_VICTORY = SC2LOTV_LOC_ID_OFFSET + 900, "Victory", SC2Mission.AMON_S_REACH, LocationType.VICTORY
+    AMON_S_REACH_CLOSE_SOLARITE_RESERVE = SC2LOTV_LOC_ID_OFFSET + 901, "Close Solarite Reserve", SC2Mission.AMON_S_REACH, LocationType.VANILLA
+    AMON_S_REACH_NORTH_SOLARITE_RESERVE = SC2LOTV_LOC_ID_OFFSET + 902, "North Solarite Reserve", SC2Mission.AMON_S_REACH, LocationType.VANILLA
+    AMON_S_REACH_EAST_SOLARITE_RESERVE = SC2LOTV_LOC_ID_OFFSET + 903, "East Solarite Reserve", SC2Mission.AMON_S_REACH, LocationType.VANILLA
+    AMON_S_REACH_WEST_LAUNCH_BAY = SC2LOTV_LOC_ID_OFFSET + 904, "West Launch Bay", SC2Mission.AMON_S_REACH, LocationType.EXTRA
+    AMON_S_REACH_SOUTH_LAUNCH_BAY = SC2LOTV_LOC_ID_OFFSET + 905, "South Launch Bay", SC2Mission.AMON_S_REACH, LocationType.EXTRA
+    AMON_S_REACH_NORTHWEST_LAUNCH_BAY = SC2LOTV_LOC_ID_OFFSET + 906, "Northwest Launch Bay", SC2Mission.AMON_S_REACH, LocationType.EXTRA
+    AMON_S_REACH_EAST_LAUNCH_BAY = SC2LOTV_LOC_ID_OFFSET + 907, "East Launch Bay", SC2Mission.AMON_S_REACH, LocationType.EXTRA
+
+    LAST_STAND_VICTORY = SC2LOTV_LOC_ID_OFFSET + 1000, "Victory", SC2Mission.LAST_STAND, LocationType.VICTORY
+    LAST_STAND_WEST_ZENITH_STONE = SC2LOTV_LOC_ID_OFFSET + 1001, "West Zenith Stone", SC2Mission.LAST_STAND, LocationType.VANILLA
+    LAST_STAND_NORTH_ZENITH_STONE = SC2LOTV_LOC_ID_OFFSET + 1002, "North Zenith Stone", SC2Mission.LAST_STAND, LocationType.VANILLA
+    LAST_STAND_EAST_ZENITH_STONE = SC2LOTV_LOC_ID_OFFSET + 1003, "East Zenith Stone", SC2Mission.LAST_STAND, LocationType.VANILLA
+    LAST_STAND_1_BILLION_ZERG = SC2LOTV_LOC_ID_OFFSET + 1004, "1 Billion Zerg", SC2Mission.LAST_STAND, LocationType.EXTRA
+    LAST_STAND_1_5_BILLION_ZERG = SC2LOTV_LOC_ID_OFFSET + 1005, "1.5 Billion Zerg", SC2Mission.LAST_STAND, LocationType.VANILLA
+    LAST_STAND_ALL_ZENITH_STONES_IN_UNDER_10_MINUTES = SC2LOTV_LOC_ID_OFFSET + 1006, "All Zenith Stones In Under 10 Minutes", SC2Mission.LAST_STAND, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    FORBIDDEN_WEAPON_VICTORY = SC2LOTV_LOC_ID_OFFSET + 1100, "Victory", SC2Mission.FORBIDDEN_WEAPON, LocationType.VICTORY
+    FORBIDDEN_WEAPON_SOUTH_SOLARITE = SC2LOTV_LOC_ID_OFFSET + 1101, "South Solarite", SC2Mission.FORBIDDEN_WEAPON, LocationType.VANILLA
+    FORBIDDEN_WEAPON_NORTH_SOLARITE = SC2LOTV_LOC_ID_OFFSET + 1102, "North Solarite", SC2Mission.FORBIDDEN_WEAPON, LocationType.VANILLA
+    FORBIDDEN_WEAPON_NORTHWEST_SOLARITE = SC2LOTV_LOC_ID_OFFSET + 1103, "Northwest Solarite", SC2Mission.FORBIDDEN_WEAPON, LocationType.VANILLA
+    FORBIDDEN_WEAPON_RESCUE_SENTRIES = SC2LOTV_LOC_ID_OFFSET + 1104, "Rescue Sentries", SC2Mission.FORBIDDEN_WEAPON, LocationType.EXTRA
+    FORBIDDEN_WEAPON_DESTROY_GATEWAYS = SC2LOTV_LOC_ID_OFFSET + 1105, "Destroy Gateways", SC2Mission.FORBIDDEN_WEAPON, LocationType.CHALLENGE
+
+    TEMPLE_OF_UNIFICATION_VICTORY = SC2LOTV_LOC_ID_OFFSET + 1200, "Victory", SC2Mission.TEMPLE_OF_UNIFICATION, LocationType.VICTORY
+    TEMPLE_OF_UNIFICATION_MID_CELESTIAL_LOCK = SC2LOTV_LOC_ID_OFFSET + 1201, "Mid Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_WEST_CELESTIAL_LOCK = SC2LOTV_LOC_ID_OFFSET + 1202, "West Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_SOUTH_CELESTIAL_LOCK = SC2LOTV_LOC_ID_OFFSET + 1203, "South Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_EAST_CELESTIAL_LOCK = SC2LOTV_LOC_ID_OFFSET + 1204, "East Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_NORTH_CELESTIAL_LOCK = SC2LOTV_LOC_ID_OFFSET + 1205, "North Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_TITANIC_WARP_PRISM = SC2LOTV_LOC_ID_OFFSET + 1206, "Titanic Warp Prism", SC2Mission.TEMPLE_OF_UNIFICATION, LocationType.VANILLA
+    TEMPLE_OF_UNIFICATION_TERRAN_MAIN_BASE = SC2LOTV_LOC_ID_OFFSET + 1207, "Terran Main Base", SC2Mission.TEMPLE_OF_UNIFICATION, LocationType.MASTERY, LocationFlag.BASEBUST
+    TEMPLE_OF_UNIFICATION_PROTOSS_MAIN_BASE = SC2LOTV_LOC_ID_OFFSET + 1208, "Protoss Main Base", SC2Mission.TEMPLE_OF_UNIFICATION, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    THE_INFINITE_CYCLE_VICTORY = SC2LOTV_LOC_ID_OFFSET + 1300, "Victory", SC2Mission.THE_INFINITE_CYCLE, LocationType.VICTORY
+    THE_INFINITE_CYCLE_FIRST_HALL_OF_REVELATION = SC2LOTV_LOC_ID_OFFSET + 1301, "First Hall of Revelation", SC2Mission.THE_INFINITE_CYCLE, LocationType.EXTRA
+    THE_INFINITE_CYCLE_SECOND_HALL_OF_REVELATION = SC2LOTV_LOC_ID_OFFSET + 1302, "Second Hall of Revelation", SC2Mission.THE_INFINITE_CYCLE, LocationType.EXTRA
+    THE_INFINITE_CYCLE_FIRST_XELNAGA_DEVICE = SC2LOTV_LOC_ID_OFFSET + 1303, "First Xel'Naga Device", SC2Mission.THE_INFINITE_CYCLE, LocationType.VANILLA
+    THE_INFINITE_CYCLE_SECOND_XELNAGA_DEVICE = SC2LOTV_LOC_ID_OFFSET + 1304, "Second Xel'Naga Device", SC2Mission.THE_INFINITE_CYCLE, LocationType.VANILLA
+    THE_INFINITE_CYCLE_THIRD_XELNAGA_DEVICE = SC2LOTV_LOC_ID_OFFSET + 1305, "Third Xel'Naga Device", SC2Mission.THE_INFINITE_CYCLE, LocationType.VANILLA
+
+    HARBINGER_OF_OBLIVION_VICTORY = SC2LOTV_LOC_ID_OFFSET + 1400, "Victory", SC2Mission.HARBINGER_OF_OBLIVION, LocationType.VICTORY
+    HARBINGER_OF_OBLIVION_ARTANIS = SC2LOTV_LOC_ID_OFFSET + 1401, "Artanis", SC2Mission.HARBINGER_OF_OBLIVION, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_NORTHWEST_VOID_CRYSTAL = SC2LOTV_LOC_ID_OFFSET + 1402, "Northwest Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_NORTHEAST_VOID_CRYSTAL = SC2LOTV_LOC_ID_OFFSET + 1403, "Northeast Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_SOUTHWEST_VOID_CRYSTAL = SC2LOTV_LOC_ID_OFFSET + 1404, "Southwest Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_SOUTHEAST_VOID_CRYSTAL = SC2LOTV_LOC_ID_OFFSET + 1405, "Southeast Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_SOUTH_XELNAGA_VESSEL = SC2LOTV_LOC_ID_OFFSET + 1406, "South Xel'Naga Vessel", SC2Mission.HARBINGER_OF_OBLIVION, LocationType.VANILLA
+    HARBINGER_OF_OBLIVION_MID_XELNAGA_VESSEL = SC2LOTV_LOC_ID_OFFSET + 1407, "Mid Xel'Naga Vessel", SC2Mission.HARBINGER_OF_OBLIVION, LocationType.VANILLA
+    HARBINGER_OF_OBLIVION_NORTH_XELNAGA_VESSEL = SC2LOTV_LOC_ID_OFFSET + 1408, "North Xel'Naga Vessel", SC2Mission.HARBINGER_OF_OBLIVION, LocationType.VANILLA
+
+    UNSEALING_THE_PAST_VICTORY = SC2LOTV_LOC_ID_OFFSET + 1500, "Victory", SC2Mission.UNSEALING_THE_PAST, LocationType.VICTORY
+    UNSEALING_THE_PAST_ZERG_CLEARED = SC2LOTV_LOC_ID_OFFSET + 1501, "Zerg Cleared", SC2Mission.UNSEALING_THE_PAST, LocationType.EXTRA
+    UNSEALING_THE_PAST_FIRST_STASIS_LOCK = SC2LOTV_LOC_ID_OFFSET + 1502, "First Stasis Lock", SC2Mission.UNSEALING_THE_PAST, LocationType.EXTRA
+    UNSEALING_THE_PAST_SECOND_STASIS_LOCK = SC2LOTV_LOC_ID_OFFSET + 1503, "Second Stasis Lock", SC2Mission.UNSEALING_THE_PAST, LocationType.EXTRA
+    UNSEALING_THE_PAST_THIRD_STASIS_LOCK = SC2LOTV_LOC_ID_OFFSET + 1504, "Third Stasis Lock", SC2Mission.UNSEALING_THE_PAST, LocationType.EXTRA
+    UNSEALING_THE_PAST_FOURTH_STASIS_LOCK = SC2LOTV_LOC_ID_OFFSET + 1505, "Fourth Stasis Lock", SC2Mission.UNSEALING_THE_PAST, LocationType.EXTRA
+    UNSEALING_THE_PAST_SOUTH_POWER_CORE = SC2LOTV_LOC_ID_OFFSET + 1506, "South Power Core", SC2Mission.UNSEALING_THE_PAST, LocationType.VANILLA
+    UNSEALING_THE_PAST_EAST_POWER_CORE = SC2LOTV_LOC_ID_OFFSET + 1507, "East Power Core", SC2Mission.UNSEALING_THE_PAST, LocationType.VANILLA
+
+    PURIFICATION_VICTORY = SC2LOTV_LOC_ID_OFFSET + 1600, "Victory", SC2Mission.PURIFICATION, LocationType.VICTORY
+    PURIFICATION_NORTH_SECTOR_WEST_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1601, "North Sector: West Null Circuit", SC2Mission.PURIFICATION, LocationType.VANILLA
+    PURIFICATION_NORTH_SECTOR_NORTHEAST_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1602, "North Sector: Northeast Null Circuit", SC2Mission.PURIFICATION, LocationType.EXTRA
+    PURIFICATION_NORTH_SECTOR_SOUTHEAST_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1603, "North Sector: Southeast Null Circuit", SC2Mission.PURIFICATION, LocationType.EXTRA
+    PURIFICATION_SOUTH_SECTOR_WEST_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1604, "South Sector: West Null Circuit", SC2Mission.PURIFICATION, LocationType.VANILLA
+    PURIFICATION_SOUTH_SECTOR_NORTH_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1605, "South Sector: North Null Circuit", SC2Mission.PURIFICATION, LocationType.EXTRA
+    PURIFICATION_SOUTH_SECTOR_EAST_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1606, "South Sector: East Null Circuit", SC2Mission.PURIFICATION, LocationType.EXTRA
+    PURIFICATION_WEST_SECTOR_WEST_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1607, "West Sector: West Null Circuit", SC2Mission.PURIFICATION, LocationType.VANILLA
+    PURIFICATION_WEST_SECTOR_MID_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1608, "West Sector: Mid Null Circuit", SC2Mission.PURIFICATION, LocationType.EXTRA
+    PURIFICATION_WEST_SECTOR_EAST_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1609, "West Sector: East Null Circuit", SC2Mission.PURIFICATION, LocationType.EXTRA
+    PURIFICATION_EAST_SECTOR_NORTH_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1610, "East Sector: North Null Circuit", SC2Mission.PURIFICATION, LocationType.VANILLA
+    PURIFICATION_EAST_SECTOR_WEST_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1611, "East Sector: West Null Circuit", SC2Mission.PURIFICATION, LocationType.EXTRA
+    PURIFICATION_EAST_SECTOR_SOUTH_NULL_CIRCUIT = SC2LOTV_LOC_ID_OFFSET + 1612, "East Sector: South Null Circuit", SC2Mission.PURIFICATION, LocationType.EXTRA
+    PURIFICATION_PURIFIER_WARDEN = SC2LOTV_LOC_ID_OFFSET + 1613, "Purifier Warden", SC2Mission.PURIFICATION, LocationType.VANILLA
+
+    STEPS_OF_THE_RITE_VICTORY = SC2LOTV_LOC_ID_OFFSET + 1700, "Victory", SC2Mission.STEPS_OF_THE_RITE, LocationType.VICTORY
+    STEPS_OF_THE_RITE_FIRST_TERRAZINE_FOG = SC2LOTV_LOC_ID_OFFSET + 1701, "First Terrazine Fog", SC2Mission.STEPS_OF_THE_RITE, LocationType.EXTRA
+    STEPS_OF_THE_RITE_SOUTHWEST_GUARDIAN = SC2LOTV_LOC_ID_OFFSET + 1702, "Southwest Guardian", SC2Mission.STEPS_OF_THE_RITE, LocationType.EXTRA
+    STEPS_OF_THE_RITE_WEST_GUARDIAN = SC2LOTV_LOC_ID_OFFSET + 1703, "West Guardian", SC2Mission.STEPS_OF_THE_RITE, LocationType.EXTRA
+    STEPS_OF_THE_RITE_NORTHWEST_GUARDIAN = SC2LOTV_LOC_ID_OFFSET + 1704, "Northwest Guardian", SC2Mission.STEPS_OF_THE_RITE, LocationType.EXTRA
+    STEPS_OF_THE_RITE_NORTHEAST_GUARDIAN = SC2LOTV_LOC_ID_OFFSET + 1705, "Northeast Guardian", SC2Mission.STEPS_OF_THE_RITE, LocationType.EXTRA
+    STEPS_OF_THE_RITE_NORTH_MOTHERSHIP = SC2LOTV_LOC_ID_OFFSET + 1706, "North Mothership", SC2Mission.STEPS_OF_THE_RITE, LocationType.VANILLA
+    STEPS_OF_THE_RITE_SOUTH_MOTHERSHIP = SC2LOTV_LOC_ID_OFFSET + 1707, "South Mothership", SC2Mission.STEPS_OF_THE_RITE, LocationType.VANILLA
+
+    RAK_SHIR_VICTORY = SC2LOTV_LOC_ID_OFFSET + 1800, "Victory", SC2Mission.RAK_SHIR, LocationType.VICTORY
+    RAK_SHIR_NORTH_SLAYN_ELEMENTAL = SC2LOTV_LOC_ID_OFFSET + 1801, "North Slayn Elemental", SC2Mission.RAK_SHIR, LocationType.VANILLA
+    RAK_SHIR_SOUTHWEST_SLAYN_ELEMENTAL = SC2LOTV_LOC_ID_OFFSET + 1802, "Southwest Slayn Elemental", SC2Mission.RAK_SHIR, LocationType.VANILLA
+    RAK_SHIR_EAST_SLAYN_ELEMENTAL = SC2LOTV_LOC_ID_OFFSET + 1803, "East Slayn Elemental", SC2Mission.RAK_SHIR, LocationType.VANILLA
+    RAK_SHIR_RESOURCE_PICKUPS = SC2LOTV_LOC_ID_OFFSET + 1804, "Resource Pickups", SC2Mission.RAK_SHIR, LocationType.EXTRA
+    RAK_SHIR_DESTROY_NEXUSES = SC2LOTV_LOC_ID_OFFSET + 1805, "Destroy Nexuses", SC2Mission.RAK_SHIR, LocationType.CHALLENGE
+    RAK_SHIR_WIN_IN_UNDER_15_MINUTES = SC2LOTV_LOC_ID_OFFSET + 1806, "Win In Under 15 Minutes", SC2Mission.RAK_SHIR, LocationType.MASTERY, LocationFlag.SPEEDRUN
+
+    TEMPLAR_S_CHARGE_VICTORY = SC2LOTV_LOC_ID_OFFSET + 1900, "Victory", SC2Mission.TEMPLAR_S_CHARGE, LocationType.VICTORY
+    TEMPLAR_S_CHARGE_NORTHWEST_POWER_CORE = SC2LOTV_LOC_ID_OFFSET + 1901, "Northwest Power Core", SC2Mission.TEMPLAR_S_CHARGE, LocationType.EXTRA
+    TEMPLAR_S_CHARGE_NORTHEAST_POWER_CORE = SC2LOTV_LOC_ID_OFFSET + 1902, "Northeast Power Core", SC2Mission.TEMPLAR_S_CHARGE, LocationType.EXTRA
+    TEMPLAR_S_CHARGE_SOUTHEAST_POWER_CORE = SC2LOTV_LOC_ID_OFFSET + 1903, "Southeast Power Core", SC2Mission.TEMPLAR_S_CHARGE, LocationType.EXTRA
+    TEMPLAR_S_CHARGE_WEST_HYBRID_STASIS_CHAMBER = SC2LOTV_LOC_ID_OFFSET + 1904, "West Hybrid Stasis Chamber", SC2Mission.TEMPLAR_S_CHARGE, LocationType.VANILLA
+    TEMPLAR_S_CHARGE_SOUTHEAST_HYBRID_STASIS_CHAMBER = SC2LOTV_LOC_ID_OFFSET + 1905, "Southeast Hybrid Stasis Chamber", SC2Mission.TEMPLAR_S_CHARGE, LocationType.VANILLA
+
+    TEMPLAR_S_RETURN_VICTORY = SC2LOTV_LOC_ID_OFFSET + 2000, "Victory", SC2Mission.TEMPLAR_S_RETURN, LocationType.VICTORY
+    TEMPLAR_S_RETURN_CITADEL_FIRST_GATE = SC2LOTV_LOC_ID_OFFSET + 2001, "Citadel: First Gate", SC2Mission.TEMPLAR_S_RETURN, LocationType.EXTRA
+    TEMPLAR_S_RETURN_CITADEL_SECOND_GATE = SC2LOTV_LOC_ID_OFFSET + 2002, "Citadel: Second Gate", SC2Mission.TEMPLAR_S_RETURN, LocationType.EXTRA
+    TEMPLAR_S_RETURN_CITADEL_POWER_STRUCTURE = SC2LOTV_LOC_ID_OFFSET + 2003, "Citadel: Power Structure", SC2Mission.TEMPLAR_S_RETURN, LocationType.VANILLA
+    TEMPLAR_S_RETURN_TEMPLE_GROUNDS_GATHER_ARMY = SC2LOTV_LOC_ID_OFFSET + 2004, "Temple Grounds: Gather Army", SC2Mission.TEMPLAR_S_RETURN, LocationType.VANILLA
+    TEMPLAR_S_RETURN_TEMPLE_GROUNDS_POWER_STRUCTURE = SC2LOTV_LOC_ID_OFFSET + 2005, "Temple Grounds: Power Structure", SC2Mission.TEMPLAR_S_RETURN, LocationType.VANILLA
+    TEMPLAR_S_RETURN_CAVERNS_PURIFIER = SC2LOTV_LOC_ID_OFFSET + 2006, "Caverns: Purifier", SC2Mission.TEMPLAR_S_RETURN, LocationType.EXTRA
+    TEMPLAR_S_RETURN_CAVERNS_DARK_TEMPLAR = SC2LOTV_LOC_ID_OFFSET + 2007, "Caverns: Dark Templar", SC2Mission.TEMPLAR_S_RETURN, LocationType.EXTRA
+
+    THE_HOST_VICTORY = SC2LOTV_LOC_ID_OFFSET + 2100, "Victory", SC2Mission.THE_HOST, LocationType.VICTORY
+    THE_HOST_SOUTHEAST_VOID_SHARD = SC2LOTV_LOC_ID_OFFSET + 2101, "Southeast Void Shard", SC2Mission.THE_HOST, LocationType.EXTRA
+    THE_HOST_SOUTH_VOID_SHARD = SC2LOTV_LOC_ID_OFFSET + 2102, "South Void Shard", SC2Mission.THE_HOST, LocationType.EXTRA
+    THE_HOST_SOUTHWEST_VOID_SHARD = SC2LOTV_LOC_ID_OFFSET + 2103, "Southwest Void Shard", SC2Mission.THE_HOST, LocationType.EXTRA
+    THE_HOST_NORTH_VOID_SHARD = SC2LOTV_LOC_ID_OFFSET + 2104, "North Void Shard", SC2Mission.THE_HOST, LocationType.EXTRA
+    THE_HOST_NORTHWEST_VOID_SHARD = SC2LOTV_LOC_ID_OFFSET + 2105, "Northwest Void Shard", SC2Mission.THE_HOST, LocationType.EXTRA
+    THE_HOST_NERAZIM_WARP_IN_ZONE = SC2LOTV_LOC_ID_OFFSET + 2106, "Nerazim Warp in Zone", SC2Mission.THE_HOST, LocationType.VANILLA
+    THE_HOST_TALDARIM_WARP_IN_ZONE = SC2LOTV_LOC_ID_OFFSET + 2107, "Tal'darim Warp in Zone", SC2Mission.THE_HOST, LocationType.VANILLA
+    THE_HOST_PURIFIER_WARP_IN_ZONE = SC2LOTV_LOC_ID_OFFSET + 2108, "Purifier Warp in Zone", SC2Mission.THE_HOST, LocationType.VANILLA
+
+    SALVATION_VICTORY = SC2LOTV_LOC_ID_OFFSET + 2200, "Victory", SC2Mission.SALVATION, LocationType.VICTORY
+    SALVATION_FABRICATION_MATRIX = SC2LOTV_LOC_ID_OFFSET + 2201, "Fabrication Matrix", SC2Mission.SALVATION, LocationType.EXTRA
+    SALVATION_ASSAULT_CLUSTER = SC2LOTV_LOC_ID_OFFSET + 2202, "Assault Cluster", SC2Mission.SALVATION, LocationType.EXTRA
+    SALVATION_HULL_BREACH = SC2LOTV_LOC_ID_OFFSET + 2203, "Hull Breach", SC2Mission.SALVATION, LocationType.EXTRA
+    SALVATION_CORE_CRITICAL = SC2LOTV_LOC_ID_OFFSET + 2204, "Core Critical", SC2Mission.SALVATION, LocationType.EXTRA
+    SALVATION_KILL_BRUTALISK = SC2LOTV_LOC_ID_OFFSET + 2205, "Kill Brutalisk", SC2Mission.SALVATION, LocationType.MASTERY
+
+    INTO_THE_VOID_VICTORY = SC2LOTV_LOC_ID_OFFSET + 2300, "Victory", SC2Mission.INTO_THE_VOID, LocationType.VICTORY
+    INTO_THE_VOID_CORRUPTION_SOURCE = SC2LOTV_LOC_ID_OFFSET + 2301, "Corruption Source", SC2Mission.INTO_THE_VOID, LocationType.EXTRA
+    INTO_THE_VOID_SOUTHWEST_FORWARD_POSITION = SC2LOTV_LOC_ID_OFFSET + 2302, "Southwest Forward Position", SC2Mission.INTO_THE_VOID, LocationType.VANILLA
+    INTO_THE_VOID_NORTHWEST_FORWARD_POSITION = SC2LOTV_LOC_ID_OFFSET + 2303, "Northwest Forward Position", SC2Mission.INTO_THE_VOID, LocationType.VANILLA
+    INTO_THE_VOID_SOUTHEAST_FORWARD_POSITION = SC2LOTV_LOC_ID_OFFSET + 2304, "Southeast Forward Position", SC2Mission.INTO_THE_VOID, LocationType.VANILLA
+    INTO_THE_VOID_NORTHEAST_FORWARD_POSITION = SC2LOTV_LOC_ID_OFFSET + 2305, "Northeast Forward Position", SC2Mission.INTO_THE_VOID, LocationType.VANILLA
+
+    THE_ESSENCE_OF_ETERNITY_VICTORY = SC2LOTV_LOC_ID_OFFSET + 2400, "Victory", SC2Mission.THE_ESSENCE_OF_ETERNITY, LocationType.VICTORY
+    THE_ESSENCE_OF_ETERNITY_INITIAL_VOID_THRASHERS = SC2LOTV_LOC_ID_OFFSET + 2401, "Initial Void Thrashers", SC2Mission.THE_ESSENCE_OF_ETERNITY, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_VOID_THRASHER_WAVE_1 = SC2LOTV_LOC_ID_OFFSET + 2402, "Void Thrasher Wave 1", SC2Mission.THE_ESSENCE_OF_ETERNITY, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_VOID_THRASHER_WAVE_2 = SC2LOTV_LOC_ID_OFFSET + 2403, "Void Thrasher Wave 2", SC2Mission.THE_ESSENCE_OF_ETERNITY, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_VOID_THRASHER_WAVE_3 = SC2LOTV_LOC_ID_OFFSET + 2404, "Void Thrasher Wave 3", SC2Mission.THE_ESSENCE_OF_ETERNITY, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_VOID_THRASHER_WAVE_4 = SC2LOTV_LOC_ID_OFFSET + 2405, "Void Thrasher Wave 4", SC2Mission.THE_ESSENCE_OF_ETERNITY, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_NO_MORE_THAN_15_KERRIGAN_KILLS = SC2LOTV_LOC_ID_OFFSET + 2406, "No more than 15 Kerrigan Kills", SC2Mission.THE_ESSENCE_OF_ETERNITY, LocationType.MASTERY, LocationFlag.PREVENTATIVE
+
+    AMON_S_FALL_VICTORY = SC2LOTV_LOC_ID_OFFSET + 2500, "Victory", SC2Mission.AMON_S_FALL, LocationType.VICTORY
+    AMON_S_FALL_DESTROY_1_CRYSTAL = SC2LOTV_LOC_ID_OFFSET + 2501, "Destroy 1 Crystal", SC2Mission.AMON_S_FALL, LocationType.EXTRA
+    AMON_S_FALL_DESTROY_2_CRYSTALS = SC2LOTV_LOC_ID_OFFSET + 2502, "Destroy 2 Crystals", SC2Mission.AMON_S_FALL, LocationType.EXTRA
+    AMON_S_FALL_DESTROY_3_CRYSTALS = SC2LOTV_LOC_ID_OFFSET + 2503, "Destroy 3 Crystals", SC2Mission.AMON_S_FALL, LocationType.EXTRA
+    AMON_S_FALL_DESTROY_4_CRYSTALS = SC2LOTV_LOC_ID_OFFSET + 2504, "Destroy 4 Crystals", SC2Mission.AMON_S_FALL, LocationType.EXTRA
+    AMON_S_FALL_DESTROY_5_CRYSTALS = SC2LOTV_LOC_ID_OFFSET + 2505, "Destroy 5 Crystals", SC2Mission.AMON_S_FALL, LocationType.EXTRA
+    AMON_S_FALL_DESTROY_6_CRYSTALS = SC2LOTV_LOC_ID_OFFSET + 2506, "Destroy 6 Crystals", SC2Mission.AMON_S_FALL, LocationType.EXTRA
+    AMON_S_FALL_CLEAR_VOID_CHASMS = SC2LOTV_LOC_ID_OFFSET + 2507, "Clear Void Chasms", SC2Mission.AMON_S_FALL, LocationType.MASTERY
+
+    THE_ESCAPE_VICTORY = SC2NCO_LOC_ID_OFFSET + 100, "Victory", SC2Mission.THE_ESCAPE, LocationType.VICTORY
+    THE_ESCAPE_RIFLE = SC2NCO_LOC_ID_OFFSET + 101, "Rifle", SC2Mission.THE_ESCAPE, LocationType.VANILLA
+    THE_ESCAPE_GRENADES = SC2NCO_LOC_ID_OFFSET + 102, "Grenades", SC2Mission.THE_ESCAPE, LocationType.VANILLA
+    THE_ESCAPE_AGENT_DELTA = SC2NCO_LOC_ID_OFFSET + 103, "Agent Delta", SC2Mission.THE_ESCAPE, LocationType.VANILLA
+    THE_ESCAPE_AGENT_PIERCE = SC2NCO_LOC_ID_OFFSET + 104, "Agent Pierce", SC2Mission.THE_ESCAPE, LocationType.VANILLA
+    THE_ESCAPE_AGENT_STONE = SC2NCO_LOC_ID_OFFSET + 105, "Agent Stone", SC2Mission.THE_ESCAPE, LocationType.VANILLA
+
+    SUDDEN_STRIKE_VICTORY = SC2NCO_LOC_ID_OFFSET + 200, "Victory", SC2Mission.SUDDEN_STRIKE, LocationType.VICTORY
+    SUDDEN_STRIKE_RESEARCH_CENTER = SC2NCO_LOC_ID_OFFSET + 201, "Research Center", SC2Mission.SUDDEN_STRIKE, LocationType.VANILLA
+    SUDDEN_STRIKE_WEAPONRY_LABS = SC2NCO_LOC_ID_OFFSET + 202, "Weaponry Labs", SC2Mission.SUDDEN_STRIKE, LocationType.VANILLA
+    SUDDEN_STRIKE_BRUTALISK = SC2NCO_LOC_ID_OFFSET + 203, "Brutalisk", SC2Mission.SUDDEN_STRIKE, LocationType.EXTRA
+    SUDDEN_STRIKE_GAS_PICKUPS = SC2NCO_LOC_ID_OFFSET + 204, "Gas Pickups", SC2Mission.SUDDEN_STRIKE, LocationType.EXTRA
+    SUDDEN_STRIKE_PROTECT_BUILDINGS = SC2NCO_LOC_ID_OFFSET + 205, "Protect Buildings", SC2Mission.SUDDEN_STRIKE, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    SUDDEN_STRIKE_ZERG_BASE = SC2NCO_LOC_ID_OFFSET + 206, "Zerg Base", SC2Mission.SUDDEN_STRIKE, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    ENEMY_INTELLIGENCE_VICTORY = SC2NCO_LOC_ID_OFFSET + 300, "Victory", SC2Mission.ENEMY_INTELLIGENCE, LocationType.VICTORY
+    ENEMY_INTELLIGENCE_WEST_GARRISON = SC2NCO_LOC_ID_OFFSET + 301, "West Garrison", SC2Mission.ENEMY_INTELLIGENCE, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_CLOSE_GARRISON = SC2NCO_LOC_ID_OFFSET + 302, "Close Garrison", SC2Mission.ENEMY_INTELLIGENCE, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_NORTHEAST_GARRISON = SC2NCO_LOC_ID_OFFSET + 303, "Northeast Garrison", SC2Mission.ENEMY_INTELLIGENCE, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_SOUTHEAST_GARRISON = SC2NCO_LOC_ID_OFFSET + 304, "Southeast Garrison", SC2Mission.ENEMY_INTELLIGENCE, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_SOUTH_GARRISON = SC2NCO_LOC_ID_OFFSET + 305, "South Garrison", SC2Mission.ENEMY_INTELLIGENCE, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_ALL_GARRISONS = SC2NCO_LOC_ID_OFFSET + 306, "All Garrisons", SC2Mission.ENEMY_INTELLIGENCE, LocationType.VANILLA
+    ENEMY_INTELLIGENCE_FORCES_RESCUED = SC2NCO_LOC_ID_OFFSET + 307, "Forces Rescued", SC2Mission.ENEMY_INTELLIGENCE, LocationType.VANILLA
+    ENEMY_INTELLIGENCE_COMMUNICATIONS_HUB = SC2NCO_LOC_ID_OFFSET + 308, "Communications Hub", SC2Mission.ENEMY_INTELLIGENCE, LocationType.VANILLA
+
+    TROUBLE_IN_PARADISE_VICTORY = SC2NCO_LOC_ID_OFFSET + 400, "Victory", SC2Mission.TROUBLE_IN_PARADISE, LocationType.VICTORY
+    TROUBLE_IN_PARADISE_NORTH_BASE_WEST_HATCHERY = SC2NCO_LOC_ID_OFFSET + 401, "North Base: West Hatchery", SC2Mission.TROUBLE_IN_PARADISE, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_NORTH_BASE_NORTH_HATCHERY = SC2NCO_LOC_ID_OFFSET + 402, "North Base: North Hatchery", SC2Mission.TROUBLE_IN_PARADISE, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_NORTH_BASE_EAST_HATCHERY = SC2NCO_LOC_ID_OFFSET + 403, "North Base: East Hatchery", SC2Mission.TROUBLE_IN_PARADISE, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_SOUTH_BASE_NORTHWEST_HATCHERY = SC2NCO_LOC_ID_OFFSET + 404, "South Base: Northwest Hatchery", SC2Mission.TROUBLE_IN_PARADISE, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_SOUTH_BASE_SOUTHWEST_HATCHERY = SC2NCO_LOC_ID_OFFSET + 405, "South Base: Southwest Hatchery", SC2Mission.TROUBLE_IN_PARADISE, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_SOUTH_BASE_EAST_HATCHERY = SC2NCO_LOC_ID_OFFSET + 406, "South Base: East Hatchery", SC2Mission.TROUBLE_IN_PARADISE, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_NORTH_SHIELD_PROJECTOR = SC2NCO_LOC_ID_OFFSET + 407, "North Shield Projector", SC2Mission.TROUBLE_IN_PARADISE, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_EAST_SHIELD_PROJECTOR = SC2NCO_LOC_ID_OFFSET + 408, "East Shield Projector", SC2Mission.TROUBLE_IN_PARADISE, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_SOUTH_SHIELD_PROJECTOR = SC2NCO_LOC_ID_OFFSET + 409, "South Shield Projector", SC2Mission.TROUBLE_IN_PARADISE, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_WEST_SHIELD_PROJECTOR = SC2NCO_LOC_ID_OFFSET + 410, "West Shield Projector", SC2Mission.TROUBLE_IN_PARADISE, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_FLEET_BEACON = SC2NCO_LOC_ID_OFFSET + 411, "Fleet Beacon", SC2Mission.TROUBLE_IN_PARADISE, LocationType.VANILLA
+
+    NIGHT_TERRORS_VICTORY = SC2NCO_LOC_ID_OFFSET + 500, "Victory", SC2Mission.NIGHT_TERRORS, LocationType.VICTORY
+    NIGHT_TERRORS_1_TERRAZINE_NODE_COLLECTED = SC2NCO_LOC_ID_OFFSET + 501, "1 Terrazine Node Collected", SC2Mission.NIGHT_TERRORS, LocationType.EXTRA
+    NIGHT_TERRORS_2_TERRAZINE_NODES_COLLECTED = SC2NCO_LOC_ID_OFFSET + 502, "2 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS, LocationType.EXTRA
+    NIGHT_TERRORS_3_TERRAZINE_NODES_COLLECTED = SC2NCO_LOC_ID_OFFSET + 503, "3 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS, LocationType.EXTRA
+    NIGHT_TERRORS_4_TERRAZINE_NODES_COLLECTED = SC2NCO_LOC_ID_OFFSET + 504, "4 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS, LocationType.EXTRA
+    NIGHT_TERRORS_5_TERRAZINE_NODES_COLLECTED = SC2NCO_LOC_ID_OFFSET + 505, "5 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS, LocationType.EXTRA
+    NIGHT_TERRORS_HERC_OUTPOST = SC2NCO_LOC_ID_OFFSET + 506, "HERC Outpost", SC2Mission.NIGHT_TERRORS, LocationType.VANILLA
+    NIGHT_TERRORS_UMOJAN_MINE = SC2NCO_LOC_ID_OFFSET + 507, "Umojan Mine", SC2Mission.NIGHT_TERRORS, LocationType.EXTRA
+    NIGHT_TERRORS_BLIGHTBRINGER = SC2NCO_LOC_ID_OFFSET + 508, "Blightbringer", SC2Mission.NIGHT_TERRORS, LocationType.VANILLA
+    NIGHT_TERRORS_SCIENCE_FACILITY = SC2NCO_LOC_ID_OFFSET + 509, "Science Facility", SC2Mission.NIGHT_TERRORS, LocationType.EXTRA
+    NIGHT_TERRORS_ERADICATORS = SC2NCO_LOC_ID_OFFSET + 510, "Eradicators", SC2Mission.NIGHT_TERRORS, LocationType.VANILLA
+
+    FLASHPOINT_VICTORY = SC2NCO_LOC_ID_OFFSET + 600, "Victory", SC2Mission.FLASHPOINT, LocationType.VICTORY
+    FLASHPOINT_CLOSE_NORTH_EVIDENCE_COORDINATES = SC2NCO_LOC_ID_OFFSET + 601, "Close North Evidence Coordinates", SC2Mission.FLASHPOINT, LocationType.EXTRA
+    FLASHPOINT_CLOSE_EAST_EVIDENCE_COORDINATES = SC2NCO_LOC_ID_OFFSET + 602, "Close East Evidence Coordinates", SC2Mission.FLASHPOINT, LocationType.EXTRA
+    FLASHPOINT_FAR_NORTH_EVIDENCE_COORDINATES = SC2NCO_LOC_ID_OFFSET + 603, "Far North Evidence Coordinates", SC2Mission.FLASHPOINT, LocationType.EXTRA
+    FLASHPOINT_FAR_EAST_EVIDENCE_COORDINATES = SC2NCO_LOC_ID_OFFSET + 604, "Far East Evidence Coordinates", SC2Mission.FLASHPOINT, LocationType.EXTRA
+    FLASHPOINT_EXPERIMENTAL_WEAPON = SC2NCO_LOC_ID_OFFSET + 605, "Experimental Weapon", SC2Mission.FLASHPOINT, LocationType.VANILLA
+    FLASHPOINT_NORTHWEST_SUBWAY_ENTRANCE = SC2NCO_LOC_ID_OFFSET + 606, "Northwest Subway Entrance", SC2Mission.FLASHPOINT, LocationType.VANILLA
+    FLASHPOINT_SOUTHEAST_SUBWAY_ENTRANCE = SC2NCO_LOC_ID_OFFSET + 607, "Southeast Subway Entrance", SC2Mission.FLASHPOINT, LocationType.VANILLA
+    FLASHPOINT_NORTHEAST_SUBWAY_ENTRANCE = SC2NCO_LOC_ID_OFFSET + 608, "Northeast Subway Entrance", SC2Mission.FLASHPOINT, LocationType.VANILLA
+    FLASHPOINT_EXPANSION_HATCHERY = SC2NCO_LOC_ID_OFFSET + 609, "Expansion Hatchery", SC2Mission.FLASHPOINT, LocationType.EXTRA
+    FLASHPOINT_BANELING_SPAWNS = SC2NCO_LOC_ID_OFFSET + 610, "Baneling Spawns", SC2Mission.FLASHPOINT, LocationType.EXTRA
+    FLASHPOINT_MUTALISK_SPAWNS = SC2NCO_LOC_ID_OFFSET + 611, "Mutalisk Spawns", SC2Mission.FLASHPOINT, LocationType.EXTRA
+    FLASHPOINT_NYDUS_WORM_SPAWNS = SC2NCO_LOC_ID_OFFSET + 612, "Nydus Worm Spawns", SC2Mission.FLASHPOINT, LocationType.EXTRA
+    FLASHPOINT_LURKER_SPAWNS = SC2NCO_LOC_ID_OFFSET + 613, "Lurker Spawns", SC2Mission.FLASHPOINT, LocationType.EXTRA
+    FLASHPOINT_BROOD_LORD_SPAWNS = SC2NCO_LOC_ID_OFFSET + 614, "Brood Lord Spawns", SC2Mission.FLASHPOINT, LocationType.EXTRA
+    FLASHPOINT_ULTRALISK_SPAWNS = SC2NCO_LOC_ID_OFFSET + 615, "Ultralisk Spawns", SC2Mission.FLASHPOINT, LocationType.EXTRA
+
+    IN_THE_ENEMY_S_SHADOW_VICTORY = SC2NCO_LOC_ID_OFFSET + 700, "Victory", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.VICTORY
+    IN_THE_ENEMY_S_SHADOW_SEWERS_DOMINATION_VISOR = SC2NCO_LOC_ID_OFFSET + 701, "Sewers: Domination Visor", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.VANILLA
+    IN_THE_ENEMY_S_SHADOW_SEWERS_RESUPPLY_CRATE = SC2NCO_LOC_ID_OFFSET + 702, "Sewers: Resupply Crate", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.EXTRA
+    IN_THE_ENEMY_S_SHADOW_SEWERS_FACILITY_ACCESS = SC2NCO_LOC_ID_OFFSET + 703, "Sewers: Facility Access", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.VANILLA
+    IN_THE_ENEMY_S_SHADOW_FACILITY_NORTHWEST_DOOR_LOCK = SC2NCO_LOC_ID_OFFSET + 704, "Facility: Northwest Door Lock", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.VANILLA
+    IN_THE_ENEMY_S_SHADOW_FACILITY_SOUTHEAST_DOOR_LOCK = SC2NCO_LOC_ID_OFFSET + 705, "Facility: Southeast Door Lock", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.VANILLA
+    IN_THE_ENEMY_S_SHADOW_FACILITY_BLAZEFIRE_GUNBLADE = SC2NCO_LOC_ID_OFFSET + 706, "Facility: Blazefire Gunblade", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.VANILLA
+    IN_THE_ENEMY_S_SHADOW_FACILITY_BLINK_SUIT = SC2NCO_LOC_ID_OFFSET + 707, "Facility: Blink Suit", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.VANILLA
+    IN_THE_ENEMY_S_SHADOW_FACILITY_ADVANCED_WEAPONRY = SC2NCO_LOC_ID_OFFSET + 708, "Facility: Advanced Weaponry", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.VANILLA
+    IN_THE_ENEMY_S_SHADOW_FACILITY_ENTRANCE_RESUPPLY_CRATE = SC2NCO_LOC_ID_OFFSET + 709, "Facility: Entrance Resupply Crate", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.EXTRA
+    IN_THE_ENEMY_S_SHADOW_FACILITY_WEST_RESUPPLY_CRATE = SC2NCO_LOC_ID_OFFSET + 710, "Facility: West Resupply Crate", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.EXTRA
+    IN_THE_ENEMY_S_SHADOW_FACILITY_NORTH_RESUPPLY_CRATE = SC2NCO_LOC_ID_OFFSET + 711, "Facility: North Resupply Crate", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.EXTRA
+    IN_THE_ENEMY_S_SHADOW_FACILITY_EAST_RESUPPLY_CRATE = SC2NCO_LOC_ID_OFFSET + 712, "Facility: East Resupply Crate", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.EXTRA
+    IN_THE_ENEMY_S_SHADOW_FACILITY_SOUTH_RESUPPLY_CRATE = SC2NCO_LOC_ID_OFFSET + 713, "Facility: South Resupply Crate", SC2Mission.IN_THE_ENEMY_S_SHADOW, LocationType.EXTRA
+
+    DARK_SKIES_VICTORY = SC2NCO_LOC_ID_OFFSET + 800, "Victory", SC2Mission.DARK_SKIES, LocationType.VICTORY
+    DARK_SKIES_FIRST_SQUADRON_OF_DOMINION_FLEET = SC2NCO_LOC_ID_OFFSET + 801, "First Squadron of Dominion Fleet", SC2Mission.DARK_SKIES, LocationType.EXTRA
+    DARK_SKIES_REMAINDER_OF_DOMINION_FLEET = SC2NCO_LOC_ID_OFFSET + 802, "Remainder of Dominion Fleet", SC2Mission.DARK_SKIES, LocationType.EXTRA
+    DARK_SKIES_JINARA = SC2NCO_LOC_ID_OFFSET + 803, "Ji'nara", SC2Mission.DARK_SKIES, LocationType.EXTRA
+    DARK_SKIES_SCIENCE_FACILITY = SC2NCO_LOC_ID_OFFSET + 804, "Science Facility", SC2Mission.DARK_SKIES, LocationType.VANILLA
+
+    END_GAME_VICTORY = SC2NCO_LOC_ID_OFFSET + 900, "Victory", SC2Mission.END_GAME, LocationType.VICTORY
+    END_GAME_DESTROY_THE_XANTHOS = SC2NCO_LOC_ID_OFFSET + 901, "Destroy the Xanthos", SC2Mission.END_GAME, LocationType.VANILLA
+    END_GAME_DISABLE_XANTHOS_RAILGUN = SC2NCO_LOC_ID_OFFSET + 902, "Disable Xanthos Railgun", SC2Mission.END_GAME, LocationType.EXTRA
+    END_GAME_DISABLE_XANTHOS_FLAMETHROWER = SC2NCO_LOC_ID_OFFSET + 903, "Disable Xanthos Flamethrower", SC2Mission.END_GAME, LocationType.EXTRA
+    END_GAME_DISABLE_XANTHOS_FIGHTER_BAY = SC2NCO_LOC_ID_OFFSET + 904, "Disable Xanthos Fighter Bay", SC2Mission.END_GAME, LocationType.EXTRA
+    END_GAME_DISABLE_XANTHOS_MISSILE_PODS = SC2NCO_LOC_ID_OFFSET + 905, "Disable Xanthos Missile Pods", SC2Mission.END_GAME, LocationType.EXTRA
+    END_GAME_PROTECT_HYPERION = SC2NCO_LOC_ID_OFFSET + 906, "Protect Hyperion", SC2Mission.END_GAME, LocationType.CHALLENGE
+    END_GAME_DESTROY_ORBITAL_COMMANDS = SC2NCO_LOC_ID_OFFSET + 907, "Destroy Orbital Commands", SC2Mission.END_GAME, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    LIBERATION_DAY_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 100, "Victory", SC2Mission.LIBERATION_DAY_Z, LocationType.VICTORY
+    LIBERATION_DAY_Z_FIRST_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 101, "First Statue", SC2Mission.LIBERATION_DAY_Z, LocationType.VANILLA
+    LIBERATION_DAY_Z_SECOND_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 102, "Second Statue", SC2Mission.LIBERATION_DAY_Z, LocationType.VANILLA
+    LIBERATION_DAY_Z_THIRD_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 103, "Third Statue", SC2Mission.LIBERATION_DAY_Z, LocationType.VANILLA
+    LIBERATION_DAY_Z_FOURTH_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 104, "Fourth Statue", SC2Mission.LIBERATION_DAY_Z, LocationType.VANILLA
+    LIBERATION_DAY_Z_FIFTH_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 105, "Fifth Statue", SC2Mission.LIBERATION_DAY_Z, LocationType.VANILLA
+    LIBERATION_DAY_Z_SIXTH_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 106, "Sixth Statue", SC2Mission.LIBERATION_DAY_Z, LocationType.VANILLA
+    LIBERATION_DAY_Z_SPECIAL_DELIVERY = SC2_RACESWAP_LOC_ID_OFFSET + 107, "Special Delivery", SC2Mission.LIBERATION_DAY_Z, LocationType.EXTRA
+    LIBERATION_DAY_Z_TRANSPORT = SC2_RACESWAP_LOC_ID_OFFSET + 108, "Transport", SC2Mission.LIBERATION_DAY_Z, LocationType.EXTRA
+
+    LIBERATION_DAY_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 200, "Victory", SC2Mission.LIBERATION_DAY_P, LocationType.VICTORY
+    LIBERATION_DAY_P_FIRST_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 201, "First Statue", SC2Mission.LIBERATION_DAY_P, LocationType.VANILLA
+    LIBERATION_DAY_P_SECOND_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 202, "Second Statue", SC2Mission.LIBERATION_DAY_P, LocationType.VANILLA
+    LIBERATION_DAY_P_THIRD_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 203, "Third Statue", SC2Mission.LIBERATION_DAY_P, LocationType.VANILLA
+    LIBERATION_DAY_P_FOURTH_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 204, "Fourth Statue", SC2Mission.LIBERATION_DAY_P, LocationType.VANILLA
+    LIBERATION_DAY_P_FIFTH_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 205, "Fifth Statue", SC2Mission.LIBERATION_DAY_P, LocationType.VANILLA
+    LIBERATION_DAY_P_SIXTH_STATUE = SC2_RACESWAP_LOC_ID_OFFSET + 206, "Sixth Statue", SC2Mission.LIBERATION_DAY_P, LocationType.VANILLA
+    LIBERATION_DAY_P_SPECIAL_DELIVERY = SC2_RACESWAP_LOC_ID_OFFSET + 207, "Special Delivery", SC2Mission.LIBERATION_DAY_P, LocationType.EXTRA
+    LIBERATION_DAY_P_TRANSPORT = SC2_RACESWAP_LOC_ID_OFFSET + 208, "Transport", SC2Mission.LIBERATION_DAY_P, LocationType.EXTRA
+
+    THE_OUTLAWS_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 300, "Victory", SC2Mission.THE_OUTLAWS_Z, LocationType.VICTORY
+    THE_OUTLAWS_Z_REBEL_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 301, "Rebel Base", SC2Mission.THE_OUTLAWS_Z, LocationType.VANILLA
+    THE_OUTLAWS_Z_NORTH_RESOURCE_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 302, "North Resource Pickups", SC2Mission.THE_OUTLAWS_Z, LocationType.EXTRA
+    THE_OUTLAWS_Z_BUNKER = SC2_RACESWAP_LOC_ID_OFFSET + 303, "Bunker", SC2Mission.THE_OUTLAWS_Z, LocationType.VANILLA
+    THE_OUTLAWS_Z_CLOSE_RESOURCE_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 304, "Close Resource Pickups", SC2Mission.THE_OUTLAWS_Z, LocationType.EXTRA
+    THE_OUTLAWS_Z_WIN_IN_UNDER_10_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 305, "Win In Under 10 Minutes", SC2Mission.THE_OUTLAWS_Z, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    THE_OUTLAWS_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 400, "Victory", SC2Mission.THE_OUTLAWS_P, LocationType.VICTORY
+    THE_OUTLAWS_P_REBEL_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 401, "Rebel Base", SC2Mission.THE_OUTLAWS_P, LocationType.VANILLA
+    THE_OUTLAWS_P_NORTH_RESOURCE_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 402, "North Resource Pickups", SC2Mission.THE_OUTLAWS_P, LocationType.EXTRA
+    THE_OUTLAWS_P_BUNKER = SC2_RACESWAP_LOC_ID_OFFSET + 403, "Bunker", SC2Mission.THE_OUTLAWS_P, LocationType.VANILLA
+    THE_OUTLAWS_P_CLOSE_RESOURCE_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 404, "Close Resource Pickups", SC2Mission.THE_OUTLAWS_P, LocationType.EXTRA
+    THE_OUTLAWS_P_WIN_IN_UNDER_10_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 405, "Win In Under 10 Minutes", SC2Mission.THE_OUTLAWS_P, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    ZERO_HOUR_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 500, "Victory", SC2Mission.ZERO_HOUR_Z, LocationType.VICTORY
+    ZERO_HOUR_Z_FIRST_GROUP_RESCUED = SC2_RACESWAP_LOC_ID_OFFSET + 501, "First Group Rescued", SC2Mission.ZERO_HOUR_Z, LocationType.VANILLA
+    ZERO_HOUR_Z_SECOND_GROUP_RESCUED = SC2_RACESWAP_LOC_ID_OFFSET + 502, "Second Group Rescued", SC2Mission.ZERO_HOUR_Z, LocationType.VANILLA
+    ZERO_HOUR_Z_THIRD_GROUP_RESCUED = SC2_RACESWAP_LOC_ID_OFFSET + 503, "Third Group Rescued", SC2Mission.ZERO_HOUR_Z, LocationType.VANILLA
+    ZERO_HOUR_Z_FIRST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 504, "First Hatchery", SC2Mission.ZERO_HOUR_Z, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_Z_SECOND_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 505, "Second Hatchery", SC2Mission.ZERO_HOUR_Z, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_Z_THIRD_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 506, "Third Hatchery", SC2Mission.ZERO_HOUR_Z, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_Z_FOURTH_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 507, "Fourth Hatchery", SC2Mission.ZERO_HOUR_Z, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_Z_RIDES_ON_ITS_WAY = SC2_RACESWAP_LOC_ID_OFFSET + 508, "Ride's on its Way", SC2Mission.ZERO_HOUR_Z, LocationType.EXTRA
+    ZERO_HOUR_Z_HOLD_JUST_A_LITTLE_LONGER = SC2_RACESWAP_LOC_ID_OFFSET + 509, "Hold Just a Little Longer", SC2Mission.ZERO_HOUR_Z, LocationType.EXTRA
+    ZERO_HOUR_Z_CAVALRYS_ON_THE_WAY = SC2_RACESWAP_LOC_ID_OFFSET + 510, "Cavalry's on the Way", SC2Mission.ZERO_HOUR_Z, LocationType.EXTRA
+
+    ZERO_HOUR_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 600, "Victory", SC2Mission.ZERO_HOUR_P, LocationType.VICTORY
+    ZERO_HOUR_P_FIRST_GROUP_RESCUED = SC2_RACESWAP_LOC_ID_OFFSET + 601, "First Group Rescued", SC2Mission.ZERO_HOUR_P, LocationType.VANILLA
+    ZERO_HOUR_P_SECOND_GROUP_RESCUED = SC2_RACESWAP_LOC_ID_OFFSET + 602, "Second Group Rescued", SC2Mission.ZERO_HOUR_P, LocationType.VANILLA
+    ZERO_HOUR_P_THIRD_GROUP_RESCUED = SC2_RACESWAP_LOC_ID_OFFSET + 603, "Third Group Rescued", SC2Mission.ZERO_HOUR_P, LocationType.VANILLA
+    ZERO_HOUR_P_FIRST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 604, "First Hatchery", SC2Mission.ZERO_HOUR_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_P_SECOND_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 605, "Second Hatchery", SC2Mission.ZERO_HOUR_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_P_THIRD_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 606, "Third Hatchery", SC2Mission.ZERO_HOUR_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_P_FOURTH_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 607, "Fourth Hatchery", SC2Mission.ZERO_HOUR_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    ZERO_HOUR_P_RIDES_ON_ITS_WAY = SC2_RACESWAP_LOC_ID_OFFSET + 608, "Ride's on its Way", SC2Mission.ZERO_HOUR_P, LocationType.EXTRA
+    ZERO_HOUR_P_HOLD_JUST_A_LITTLE_LONGER = SC2_RACESWAP_LOC_ID_OFFSET + 609, "Hold Just a Little Longer", SC2Mission.ZERO_HOUR_P, LocationType.EXTRA
+    ZERO_HOUR_P_CAVALRYS_ON_THE_WAY = SC2_RACESWAP_LOC_ID_OFFSET + 610, "Cavalry's on the Way", SC2Mission.ZERO_HOUR_P, LocationType.EXTRA
+
+    EVACUATION_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 700, "Victory", SC2Mission.EVACUATION_Z, LocationType.VICTORY
+    EVACUATION_Z_NORTH_CHRYSALIS = SC2_RACESWAP_LOC_ID_OFFSET + 701, "North Chrysalis", SC2Mission.EVACUATION_Z, LocationType.VANILLA
+    EVACUATION_Z_WEST_CHRYSALIS = SC2_RACESWAP_LOC_ID_OFFSET + 702, "West Chrysalis", SC2Mission.EVACUATION_Z, LocationType.VANILLA
+    EVACUATION_Z_EAST_CHRYSALIS = SC2_RACESWAP_LOC_ID_OFFSET + 703, "East Chrysalis", SC2Mission.EVACUATION_Z, LocationType.VANILLA
+    EVACUATION_Z_REACH_HANSON = SC2_RACESWAP_LOC_ID_OFFSET + 704, "Reach Hanson", SC2Mission.EVACUATION_Z, LocationType.EXTRA
+    EVACUATION_Z_SECRET_RESOURCE_STASH = SC2_RACESWAP_LOC_ID_OFFSET + 705, "Secret Resource Stash", SC2Mission.EVACUATION_Z, LocationType.EXTRA
+    EVACUATION_Z_FLAWLESS = SC2_RACESWAP_LOC_ID_OFFSET + 706, "Flawless", SC2Mission.EVACUATION_Z, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    EVACUATION_Z_WESTERN_ZERG_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 707, "Western Zerg Base", SC2Mission.EVACUATION_Z, LocationType.MASTERY, LocationFlag.BASEBUST
+    EVACUATION_Z_EASTERN_ZERG_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 708, "Eastern Zerg Base", SC2Mission.EVACUATION_Z, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    EVACUATION_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 800, "Victory", SC2Mission.EVACUATION_P, LocationType.VICTORY
+    EVACUATION_P_NORTH_CHRYSALIS = SC2_RACESWAP_LOC_ID_OFFSET + 801, "North Chrysalis", SC2Mission.EVACUATION_P, LocationType.VANILLA
+    EVACUATION_P_WEST_CHRYSALIS = SC2_RACESWAP_LOC_ID_OFFSET + 802, "West Chrysalis", SC2Mission.EVACUATION_P, LocationType.VANILLA
+    EVACUATION_P_EAST_CHRYSALIS = SC2_RACESWAP_LOC_ID_OFFSET + 803, "East Chrysalis", SC2Mission.EVACUATION_P, LocationType.VANILLA
+    EVACUATION_P_REACH_HANSON = SC2_RACESWAP_LOC_ID_OFFSET + 804, "Reach Hanson", SC2Mission.EVACUATION_P, LocationType.EXTRA
+    EVACUATION_P_SECRET_RESOURCE_STASH = SC2_RACESWAP_LOC_ID_OFFSET + 805, "Secret Resource Stash", SC2Mission.EVACUATION_P, LocationType.EXTRA
+    EVACUATION_P_FLAWLESS = SC2_RACESWAP_LOC_ID_OFFSET + 806, "Flawless", SC2Mission.EVACUATION_P, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    EVACUATION_P_WESTERN_ZERG_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 807, "Western Zerg Base", SC2Mission.EVACUATION_P, LocationType.MASTERY, LocationFlag.BASEBUST
+    EVACUATION_P_EASTERN_ZERG_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 808, "Eastern Zerg Base", SC2Mission.EVACUATION_P, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    OUTBREAK_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 900, "Victory", SC2Mission.OUTBREAK_Z, LocationType.VICTORY
+    OUTBREAK_Z_LEFT_INFESTOR = SC2_RACESWAP_LOC_ID_OFFSET + 901, "Left Infestor", SC2Mission.OUTBREAK_Z, LocationType.VANILLA
+    OUTBREAK_Z_RIGHT_INFESTOR = SC2_RACESWAP_LOC_ID_OFFSET + 902, "Right Infestor", SC2Mission.OUTBREAK_Z, LocationType.VANILLA
+    OUTBREAK_Z_NORTH_INFESTED_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 903, "North Infested Command Center", SC2Mission.OUTBREAK_Z, LocationType.EXTRA
+    OUTBREAK_Z_SOUTH_INFESTED_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 904, "South Infested Command Center", SC2Mission.OUTBREAK_Z, LocationType.EXTRA
+    OUTBREAK_Z_NORTHWEST_BAR = SC2_RACESWAP_LOC_ID_OFFSET + 905, "Northwest Bar", SC2Mission.OUTBREAK_Z, LocationType.EXTRA
+    OUTBREAK_Z_NORTH_BAR = SC2_RACESWAP_LOC_ID_OFFSET + 906, "North Bar", SC2Mission.OUTBREAK_Z, LocationType.EXTRA
+    OUTBREAK_Z_SOUTH_BAR = SC2_RACESWAP_LOC_ID_OFFSET + 907, "South Bar", SC2Mission.OUTBREAK_Z, LocationType.EXTRA
+
+    OUTBREAK_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 1000, "Victory", SC2Mission.OUTBREAK_P, LocationType.VICTORY
+    OUTBREAK_P_LEFT_INFESTOR = SC2_RACESWAP_LOC_ID_OFFSET + 1001, "Left Infestor", SC2Mission.OUTBREAK_P, LocationType.VANILLA
+    OUTBREAK_P_RIGHT_INFESTOR = SC2_RACESWAP_LOC_ID_OFFSET + 1002, "Right Infestor", SC2Mission.OUTBREAK_P, LocationType.VANILLA
+    OUTBREAK_P_NORTH_INFESTED_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 1003, "North Infested Command Center", SC2Mission.OUTBREAK_P, LocationType.EXTRA
+    OUTBREAK_P_SOUTH_INFESTED_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 1004, "South Infested Command Center", SC2Mission.OUTBREAK_P, LocationType.EXTRA
+    OUTBREAK_P_NORTHWEST_BAR = SC2_RACESWAP_LOC_ID_OFFSET + 1005, "Northwest Bar", SC2Mission.OUTBREAK_P, LocationType.EXTRA
+    OUTBREAK_P_NORTH_BAR = SC2_RACESWAP_LOC_ID_OFFSET + 1006, "North Bar", SC2Mission.OUTBREAK_P, LocationType.EXTRA
+    OUTBREAK_P_SOUTH_BAR = SC2_RACESWAP_LOC_ID_OFFSET + 1007, "South Bar", SC2Mission.OUTBREAK_P, LocationType.EXTRA
+
+    SAFE_HAVEN_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 1100, "Victory", SC2Mission.SAFE_HAVEN_Z, LocationType.VICTORY
+    SAFE_HAVEN_Z_NORTH_NEXUS = SC2_RACESWAP_LOC_ID_OFFSET + 1101, "North Nexus", SC2Mission.SAFE_HAVEN_Z, LocationType.EXTRA
+    SAFE_HAVEN_Z_EAST_NEXUS = SC2_RACESWAP_LOC_ID_OFFSET + 1102, "East Nexus", SC2Mission.SAFE_HAVEN_Z, LocationType.EXTRA
+    SAFE_HAVEN_Z_SOUTH_NEXUS = SC2_RACESWAP_LOC_ID_OFFSET + 1103, "South Nexus", SC2Mission.SAFE_HAVEN_Z, LocationType.EXTRA
+    SAFE_HAVEN_Z_FIRST_TERROR_FLEET = SC2_RACESWAP_LOC_ID_OFFSET + 1104, "First Terror Fleet", SC2Mission.SAFE_HAVEN_Z, LocationType.VANILLA
+    SAFE_HAVEN_Z_SECOND_TERROR_FLEET = SC2_RACESWAP_LOC_ID_OFFSET + 1105, "Second Terror Fleet", SC2Mission.SAFE_HAVEN_Z, LocationType.VANILLA
+    SAFE_HAVEN_Z_THIRD_TERROR_FLEET = SC2_RACESWAP_LOC_ID_OFFSET + 1106, "Third Terror Fleet", SC2Mission.SAFE_HAVEN_Z, LocationType.VANILLA
+
+    SAFE_HAVEN_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 1200, "Victory", SC2Mission.SAFE_HAVEN_P, LocationType.VICTORY
+    SAFE_HAVEN_P_NORTH_NEXUS = SC2_RACESWAP_LOC_ID_OFFSET + 1201, "North Nexus", SC2Mission.SAFE_HAVEN_P, LocationType.EXTRA
+    SAFE_HAVEN_P_EAST_NEXUS = SC2_RACESWAP_LOC_ID_OFFSET + 1202, "East Nexus", SC2Mission.SAFE_HAVEN_P, LocationType.EXTRA
+    SAFE_HAVEN_P_SOUTH_NEXUS = SC2_RACESWAP_LOC_ID_OFFSET + 1203, "South Nexus", SC2Mission.SAFE_HAVEN_P, LocationType.EXTRA
+    SAFE_HAVEN_P_FIRST_TERROR_FLEET = SC2_RACESWAP_LOC_ID_OFFSET + 1204, "First Terror Fleet", SC2Mission.SAFE_HAVEN_P, LocationType.VANILLA
+    SAFE_HAVEN_P_SECOND_TERROR_FLEET = SC2_RACESWAP_LOC_ID_OFFSET + 1205, "Second Terror Fleet", SC2Mission.SAFE_HAVEN_P, LocationType.VANILLA
+    SAFE_HAVEN_P_THIRD_TERROR_FLEET = SC2_RACESWAP_LOC_ID_OFFSET + 1206, "Third Terror Fleet", SC2Mission.SAFE_HAVEN_P, LocationType.VANILLA
+
+    HAVENS_FALL_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 1300, "Victory", SC2Mission.HAVENS_FALL_Z, LocationType.VICTORY
+    HAVENS_FALL_Z_NORTH_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 1301, "North Hive", SC2Mission.HAVENS_FALL_Z, LocationType.VANILLA
+    HAVENS_FALL_Z_EAST_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 1302, "East Hive", SC2Mission.HAVENS_FALL_Z, LocationType.VANILLA
+    HAVENS_FALL_Z_SOUTH_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 1303, "South Hive", SC2Mission.HAVENS_FALL_Z, LocationType.VANILLA
+    HAVENS_FALL_Z_NORTHEAST_COLONY_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1304, "Northeast Colony Base", SC2Mission.HAVENS_FALL_Z, LocationType.CHALLENGE
+    HAVENS_FALL_Z_EAST_COLONY_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1305, "East Colony Base", SC2Mission.HAVENS_FALL_Z, LocationType.CHALLENGE
+    HAVENS_FALL_Z_MIDDLE_COLONY_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1306, "Middle Colony Base", SC2Mission.HAVENS_FALL_Z, LocationType.CHALLENGE
+    HAVENS_FALL_Z_SOUTHEAST_COLONY_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1307, "Southeast Colony Base", SC2Mission.HAVENS_FALL_Z, LocationType.CHALLENGE
+    HAVENS_FALL_Z_SOUTHWEST_COLONY_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1308, "Southwest Colony Base", SC2Mission.HAVENS_FALL_Z, LocationType.CHALLENGE
+    HAVENS_FALL_Z_SOUTHWEST_GAS_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 1309, "Southwest Gas Pickups", SC2Mission.HAVENS_FALL_Z, LocationType.EXTRA
+    HAVENS_FALL_Z_EAST_GAS_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 1310, "East Gas Pickups", SC2Mission.HAVENS_FALL_Z, LocationType.EXTRA
+    HAVENS_FALL_Z_SOUTHEAST_GAS_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 1311, "Southeast Gas Pickups", SC2Mission.HAVENS_FALL_Z, LocationType.EXTRA
+
+    HAVENS_FALL_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 1400, "Victory", SC2Mission.HAVENS_FALL_P, LocationType.VICTORY
+    HAVENS_FALL_P_NORTH_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 1401, "North Hive", SC2Mission.HAVENS_FALL_P, LocationType.VANILLA
+    HAVENS_FALL_P_EAST_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 1402, "East Hive", SC2Mission.HAVENS_FALL_P, LocationType.VANILLA
+    HAVENS_FALL_P_SOUTH_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 1403, "South Hive", SC2Mission.HAVENS_FALL_P, LocationType.VANILLA
+    HAVENS_FALL_P_NORTHEAST_COLONY_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1404, "Northeast Colony Base", SC2Mission.HAVENS_FALL_P, LocationType.CHALLENGE
+    HAVENS_FALL_P_EAST_COLONY_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1405, "East Colony Base", SC2Mission.HAVENS_FALL_P, LocationType.CHALLENGE
+    HAVENS_FALL_P_MIDDLE_COLONY_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1406, "Middle Colony Base", SC2Mission.HAVENS_FALL_P, LocationType.CHALLENGE
+    HAVENS_FALL_P_SOUTHEAST_COLONY_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1407, "Southeast Colony Base", SC2Mission.HAVENS_FALL_P, LocationType.CHALLENGE
+    HAVENS_FALL_P_SOUTHWEST_COLONY_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1408, "Southwest Colony Base", SC2Mission.HAVENS_FALL_P, LocationType.CHALLENGE
+    HAVENS_FALL_P_SOUTHWEST_GAS_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 1409, "Southwest Gas Pickups", SC2Mission.HAVENS_FALL_P, LocationType.EXTRA
+    HAVENS_FALL_P_EAST_GAS_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 1410, "East Gas Pickups", SC2Mission.HAVENS_FALL_P, LocationType.EXTRA
+    HAVENS_FALL_P_SOUTHEAST_GAS_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 1411, "Southeast Gas Pickups", SC2Mission.HAVENS_FALL_P, LocationType.EXTRA
+
+    SMASH_AND_GRAB_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 1500, "Victory", SC2Mission.SMASH_AND_GRAB_Z, LocationType.VICTORY
+    SMASH_AND_GRAB_Z_FIRST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1501, "First Relic", SC2Mission.SMASH_AND_GRAB_Z, LocationType.VANILLA
+    SMASH_AND_GRAB_Z_SECOND_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1502, "Second Relic", SC2Mission.SMASH_AND_GRAB_Z, LocationType.VANILLA
+    SMASH_AND_GRAB_Z_THIRD_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1503, "Third Relic", SC2Mission.SMASH_AND_GRAB_Z, LocationType.VANILLA
+    SMASH_AND_GRAB_Z_FOURTH_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1504, "Fourth Relic", SC2Mission.SMASH_AND_GRAB_Z, LocationType.VANILLA
+    SMASH_AND_GRAB_Z_FIRST_FORCEFIELD_AREA_BUSTED = SC2_RACESWAP_LOC_ID_OFFSET + 1505, "First Forcefield Area Busted", SC2Mission.SMASH_AND_GRAB_Z, LocationType.EXTRA
+    SMASH_AND_GRAB_Z_SECOND_FORCEFIELD_AREA_BUSTED = SC2_RACESWAP_LOC_ID_OFFSET + 1506, "Second Forcefield Area Busted", SC2Mission.SMASH_AND_GRAB_Z, LocationType.EXTRA
+    SMASH_AND_GRAB_Z_DEFEAT_KERRIGAN = SC2_RACESWAP_LOC_ID_OFFSET + 1507, "Defeat Kerrigan", SC2Mission.SMASH_AND_GRAB_Z, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    SMASH_AND_GRAB_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 1600, "Victory", SC2Mission.SMASH_AND_GRAB_P, LocationType.VICTORY
+    SMASH_AND_GRAB_P_FIRST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1601, "First Relic", SC2Mission.SMASH_AND_GRAB_P, LocationType.VANILLA
+    SMASH_AND_GRAB_P_SECOND_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1602, "Second Relic", SC2Mission.SMASH_AND_GRAB_P, LocationType.VANILLA
+    SMASH_AND_GRAB_P_THIRD_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1603, "Third Relic", SC2Mission.SMASH_AND_GRAB_P, LocationType.VANILLA
+    SMASH_AND_GRAB_P_FOURTH_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1604, "Fourth Relic", SC2Mission.SMASH_AND_GRAB_P, LocationType.VANILLA
+    SMASH_AND_GRAB_P_FIRST_FORCEFIELD_AREA_BUSTED = SC2_RACESWAP_LOC_ID_OFFSET + 1605, "First Forcefield Area Busted", SC2Mission.SMASH_AND_GRAB_P, LocationType.EXTRA
+    SMASH_AND_GRAB_P_SECOND_FORCEFIELD_AREA_BUSTED = SC2_RACESWAP_LOC_ID_OFFSET + 1606, "Second Forcefield Area Busted", SC2Mission.SMASH_AND_GRAB_P, LocationType.EXTRA
+    SMASH_AND_GRAB_P_DEFEAT_KERRIGAN = SC2_RACESWAP_LOC_ID_OFFSET + 1607, "Defeat Kerrigan", SC2Mission.SMASH_AND_GRAB_P, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    THE_DIG_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 1700, "Victory", SC2Mission.THE_DIG_Z, LocationType.VICTORY
+    THE_DIG_Z_LEFT_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1701, "Left Relic", SC2Mission.THE_DIG_Z, LocationType.VANILLA
+    THE_DIG_Z_RIGHT_GROUND_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1702, "Right Ground Relic", SC2Mission.THE_DIG_Z, LocationType.VANILLA
+    THE_DIG_Z_RIGHT_CLIFF_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1703, "Right Cliff Relic", SC2Mission.THE_DIG_Z, LocationType.VANILLA
+    THE_DIG_Z_MOEBIUS_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1704, "Moebius Base", SC2Mission.THE_DIG_Z, LocationType.EXTRA
+    THE_DIG_Z_DOOR_OUTER_LAYER = SC2_RACESWAP_LOC_ID_OFFSET + 1705, "Door Outer Layer", SC2Mission.THE_DIG_Z, LocationType.EXTRA
+    THE_DIG_Z_DOOR_THERMAL_BARRIER = SC2_RACESWAP_LOC_ID_OFFSET + 1706, "Door Thermal Barrier", SC2Mission.THE_DIG_Z, LocationType.EXTRA
+    THE_DIG_Z_CUTTING_THROUGH_THE_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 1707, "Cutting Through the Core", SC2Mission.THE_DIG_Z, LocationType.EXTRA
+    THE_DIG_Z_STRUCTURE_ACCESS_IMMINENT = SC2_RACESWAP_LOC_ID_OFFSET + 1708, "Structure Access Imminent", SC2Mission.THE_DIG_Z, LocationType.EXTRA
+    THE_DIG_Z_NORTHWESTERN_PROTOSS_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1709, "Northwestern Protoss Base", SC2Mission.THE_DIG_Z, LocationType.MASTERY, LocationFlag.BASEBUST
+    THE_DIG_Z_NORTHEASTERN_PROTOSS_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1710, "Northeastern Protoss Base", SC2Mission.THE_DIG_Z, LocationType.MASTERY, LocationFlag.BASEBUST
+    THE_DIG_Z_EASTERN_PROTOSS_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1711, "Eastern Protoss Base", SC2Mission.THE_DIG_Z, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    THE_DIG_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 1800, "Victory", SC2Mission.THE_DIG_P, LocationType.VICTORY
+    THE_DIG_P_LEFT_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1801, "Left Relic", SC2Mission.THE_DIG_P, LocationType.VANILLA
+    THE_DIG_P_RIGHT_GROUND_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1802, "Right Ground Relic", SC2Mission.THE_DIG_P, LocationType.VANILLA
+    THE_DIG_P_RIGHT_CLIFF_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 1803, "Right Cliff Relic", SC2Mission.THE_DIG_P, LocationType.VANILLA
+    THE_DIG_P_MOEBIUS_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1804, "Moebius Base", SC2Mission.THE_DIG_P, LocationType.EXTRA
+    THE_DIG_P_DOOR_OUTER_LAYER = SC2_RACESWAP_LOC_ID_OFFSET + 1805, "Door Outer Layer", SC2Mission.THE_DIG_P, LocationType.EXTRA
+    THE_DIG_P_DOOR_THERMAL_BARRIER = SC2_RACESWAP_LOC_ID_OFFSET + 1806, "Door Thermal Barrier", SC2Mission.THE_DIG_P, LocationType.EXTRA
+    THE_DIG_P_CUTTING_THROUGH_THE_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 1807, "Cutting Through the Core", SC2Mission.THE_DIG_P, LocationType.EXTRA
+    THE_DIG_P_STRUCTURE_ACCESS_IMMINENT = SC2_RACESWAP_LOC_ID_OFFSET + 1808, "Structure Access Imminent", SC2Mission.THE_DIG_P, LocationType.EXTRA
+    THE_DIG_P_NORTHWESTERN_PROTOSS_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1809, "Northwestern Protoss Base", SC2Mission.THE_DIG_P, LocationType.MASTERY, LocationFlag.BASEBUST
+    THE_DIG_P_NORTHEASTERN_PROTOSS_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1810, "Northeastern Protoss Base", SC2Mission.THE_DIG_P, LocationType.MASTERY, LocationFlag.BASEBUST
+    THE_DIG_P_EASTERN_PROTOSS_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 1811, "Eastern Protoss Base", SC2Mission.THE_DIG_P, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    THE_MOEBIUS_FACTOR_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 1900, "Victory", SC2Mission.THE_MOEBIUS_FACTOR_Z, LocationType.VICTORY
+    THE_MOEBIUS_FACTOR_Z_1ST_DATA_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 1901, "1st Data Core", SC2Mission.THE_MOEBIUS_FACTOR_Z, LocationType.VANILLA
+    THE_MOEBIUS_FACTOR_Z_2ND_DATA_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 1902, "2nd Data Core", SC2Mission.THE_MOEBIUS_FACTOR_Z, LocationType.VANILLA
+    THE_MOEBIUS_FACTOR_Z_SOUTH_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 1903, "South Rescue", SC2Mission.THE_MOEBIUS_FACTOR_Z, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_Z_WALL_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 1904, "Wall Rescue", SC2Mission.THE_MOEBIUS_FACTOR_Z, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_Z_MID_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 1905, "Mid Rescue", SC2Mission.THE_MOEBIUS_FACTOR_Z, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_Z_NYDUS_ROOF_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 1906, "Nydus Roof Rescue", SC2Mission.THE_MOEBIUS_FACTOR_Z, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_Z_ALIVE_INSIDE_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 1907, "Alive Inside Rescue", SC2Mission.THE_MOEBIUS_FACTOR_Z, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_Z_BRUTALISK = SC2_RACESWAP_LOC_ID_OFFSET + 1908, "Brutalisk", SC2Mission.THE_MOEBIUS_FACTOR_Z, LocationType.VANILLA
+    THE_MOEBIUS_FACTOR_Z_3RD_DATA_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 1909, "3rd Data Core", SC2Mission.THE_MOEBIUS_FACTOR_Z, LocationType.VANILLA
+
+    THE_MOEBIUS_FACTOR_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 2000, "Victory", SC2Mission.THE_MOEBIUS_FACTOR_P, LocationType.VICTORY
+    THE_MOEBIUS_FACTOR_P_1ST_DATA_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 2001, "1st Data Core", SC2Mission.THE_MOEBIUS_FACTOR_P, LocationType.VANILLA
+    THE_MOEBIUS_FACTOR_P_2ND_DATA_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 2002, "2nd Data Core", SC2Mission.THE_MOEBIUS_FACTOR_P, LocationType.VANILLA
+    THE_MOEBIUS_FACTOR_P_SOUTH_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 2003, "South Rescue", SC2Mission.THE_MOEBIUS_FACTOR_P, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_P_WALL_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 2004, "Wall Rescue", SC2Mission.THE_MOEBIUS_FACTOR_P, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_P_MID_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 2005, "Mid Rescue", SC2Mission.THE_MOEBIUS_FACTOR_P, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_P_NYDUS_ROOF_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 2006, "Nydus Roof Rescue", SC2Mission.THE_MOEBIUS_FACTOR_P, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_P_ALIVE_INSIDE_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 2007, "Alive Inside Rescue", SC2Mission.THE_MOEBIUS_FACTOR_P, LocationType.EXTRA
+    THE_MOEBIUS_FACTOR_P_BRUTALISK = SC2_RACESWAP_LOC_ID_OFFSET + 2008, "Brutalisk", SC2Mission.THE_MOEBIUS_FACTOR_P, LocationType.VANILLA
+    THE_MOEBIUS_FACTOR_P_3RD_DATA_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 2009, "3rd Data Core", SC2Mission.THE_MOEBIUS_FACTOR_P, LocationType.VANILLA
+
+    SUPERNOVA_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 2100, "Victory", SC2Mission.SUPERNOVA_Z, LocationType.VICTORY
+    SUPERNOVA_Z_WEST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2101, "West Relic", SC2Mission.SUPERNOVA_Z, LocationType.VANILLA
+    SUPERNOVA_Z_NORTH_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2102, "North Relic", SC2Mission.SUPERNOVA_Z, LocationType.VANILLA
+    SUPERNOVA_Z_SOUTH_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2103, "South Relic", SC2Mission.SUPERNOVA_Z, LocationType.VANILLA
+    SUPERNOVA_Z_EAST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2104, "East Relic", SC2Mission.SUPERNOVA_Z, LocationType.VANILLA
+    SUPERNOVA_Z_LANDING_ZONE_CLEARED = SC2_RACESWAP_LOC_ID_OFFSET + 2105, "Landing Zone Cleared", SC2Mission.SUPERNOVA_Z, LocationType.EXTRA
+    SUPERNOVA_Z_MIDDLE_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 2106, "Middle Base", SC2Mission.SUPERNOVA_Z, LocationType.EXTRA
+    SUPERNOVA_Z_SOUTHEAST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 2107, "Southeast Base", SC2Mission.SUPERNOVA_Z, LocationType.EXTRA
+
+    SUPERNOVA_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 2200, "Victory", SC2Mission.SUPERNOVA_P, LocationType.VICTORY
+    SUPERNOVA_P_WEST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2201, "West Relic", SC2Mission.SUPERNOVA_P, LocationType.VANILLA
+    SUPERNOVA_P_NORTH_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2202, "North Relic", SC2Mission.SUPERNOVA_P, LocationType.VANILLA
+    SUPERNOVA_P_SOUTH_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2203, "South Relic", SC2Mission.SUPERNOVA_P, LocationType.VANILLA
+    SUPERNOVA_P_EAST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2204, "East Relic", SC2Mission.SUPERNOVA_P, LocationType.VANILLA
+    SUPERNOVA_P_LANDING_ZONE_CLEARED = SC2_RACESWAP_LOC_ID_OFFSET + 2205, "Landing Zone Cleared", SC2Mission.SUPERNOVA_P, LocationType.EXTRA
+    SUPERNOVA_P_MIDDLE_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 2206, "Middle Base", SC2Mission.SUPERNOVA_P, LocationType.EXTRA
+    SUPERNOVA_P_SOUTHEAST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 2207, "Southeast Base", SC2Mission.SUPERNOVA_P, LocationType.EXTRA
+
+    MAW_OF_THE_VOID_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 2300, "Victory", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.VICTORY
+    MAW_OF_THE_VOID_Z_LANDING_ZONE_CLEARED = SC2_RACESWAP_LOC_ID_OFFSET + 2301, "Landing Zone Cleared", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.EXTRA
+    MAW_OF_THE_VOID_Z_EXPANSION_PRISONERS = SC2_RACESWAP_LOC_ID_OFFSET + 2302, "Expansion Prisoners", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.VANILLA
+    MAW_OF_THE_VOID_Z_SOUTH_CLOSE_PRISONERS = SC2_RACESWAP_LOC_ID_OFFSET + 2303, "South Close Prisoners", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.VANILLA
+    MAW_OF_THE_VOID_Z_SOUTH_FAR_PRISONERS = SC2_RACESWAP_LOC_ID_OFFSET + 2304, "South Far Prisoners", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.VANILLA
+    MAW_OF_THE_VOID_Z_NORTH_PRISONERS = SC2_RACESWAP_LOC_ID_OFFSET + 2305, "North Prisoners", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.VANILLA
+    MAW_OF_THE_VOID_Z_MOTHERSHIP = SC2_RACESWAP_LOC_ID_OFFSET + 2306, "Mothership", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.EXTRA
+    MAW_OF_THE_VOID_Z_EXPANSION_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2307, "Expansion Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.EXTRA
+    MAW_OF_THE_VOID_Z_MIDDLE_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2308, "Middle Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.EXTRA
+    MAW_OF_THE_VOID_Z_SOUTHEAST_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2309, "Southeast Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.EXTRA
+    MAW_OF_THE_VOID_Z_STARGATE_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2310, "Stargate Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.EXTRA
+    MAW_OF_THE_VOID_Z_NORTHWEST_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2311, "Northwest Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.CHALLENGE
+    MAW_OF_THE_VOID_Z_WEST_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2312, "West Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.CHALLENGE
+    MAW_OF_THE_VOID_Z_SOUTHWEST_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2313, "Southwest Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_Z, LocationType.CHALLENGE
+
+    MAW_OF_THE_VOID_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 2400, "Victory", SC2Mission.MAW_OF_THE_VOID_P, LocationType.VICTORY
+    MAW_OF_THE_VOID_P_LANDING_ZONE_CLEARED = SC2_RACESWAP_LOC_ID_OFFSET + 2401, "Landing Zone Cleared", SC2Mission.MAW_OF_THE_VOID_P, LocationType.EXTRA
+    MAW_OF_THE_VOID_P_EXPANSION_PRISONERS = SC2_RACESWAP_LOC_ID_OFFSET + 2402, "Expansion Prisoners", SC2Mission.MAW_OF_THE_VOID_P, LocationType.VANILLA
+    MAW_OF_THE_VOID_P_SOUTH_CLOSE_PRISONERS = SC2_RACESWAP_LOC_ID_OFFSET + 2403, "South Close Prisoners", SC2Mission.MAW_OF_THE_VOID_P, LocationType.VANILLA
+    MAW_OF_THE_VOID_P_SOUTH_FAR_PRISONERS = SC2_RACESWAP_LOC_ID_OFFSET + 2404, "South Far Prisoners", SC2Mission.MAW_OF_THE_VOID_P, LocationType.VANILLA
+    MAW_OF_THE_VOID_P_NORTH_PRISONERS = SC2_RACESWAP_LOC_ID_OFFSET + 2405, "North Prisoners", SC2Mission.MAW_OF_THE_VOID_P, LocationType.VANILLA
+    MAW_OF_THE_VOID_P_MOTHERSHIP = SC2_RACESWAP_LOC_ID_OFFSET + 2406, "Mothership", SC2Mission.MAW_OF_THE_VOID_P, LocationType.EXTRA
+    MAW_OF_THE_VOID_P_EXPANSION_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2407, "Expansion Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_P, LocationType.EXTRA
+    MAW_OF_THE_VOID_P_MIDDLE_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2408, "Middle Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_P, LocationType.EXTRA
+    MAW_OF_THE_VOID_P_SOUTHEAST_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2409, "Southeast Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_P, LocationType.EXTRA
+    MAW_OF_THE_VOID_P_STARGATE_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2410, "Stargate Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_P, LocationType.EXTRA
+    MAW_OF_THE_VOID_P_NORTHWEST_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2411, "Northwest Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_P, LocationType.CHALLENGE
+    MAW_OF_THE_VOID_P_WEST_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2412, "West Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_P, LocationType.CHALLENGE
+    MAW_OF_THE_VOID_P_SOUTHWEST_RIP_FIELD_GENERATOR = SC2_RACESWAP_LOC_ID_OFFSET + 2413, "Southwest Rip Field Generator", SC2Mission.MAW_OF_THE_VOID_P, LocationType.CHALLENGE
+
+    DEVILS_PLAYGROUND_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 2500, "Victory", SC2Mission.DEVILS_PLAYGROUND_Z, LocationType.VICTORY
+    DEVILS_PLAYGROUND_Z_TOSHS_MINERS = SC2_RACESWAP_LOC_ID_OFFSET + 2501, "Tosh's Miners", SC2Mission.DEVILS_PLAYGROUND_Z, LocationType.VANILLA
+    DEVILS_PLAYGROUND_Z_BRUTALISK = SC2_RACESWAP_LOC_ID_OFFSET + 2502, "Brutalisk", SC2Mission.DEVILS_PLAYGROUND_Z, LocationType.VANILLA
+    DEVILS_PLAYGROUND_Z_NORTH_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 2503, "North Reinforcements", SC2Mission.DEVILS_PLAYGROUND_Z, LocationType.EXTRA
+    DEVILS_PLAYGROUND_Z_MIDDLE_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 2504, "Middle Reinforcements", SC2Mission.DEVILS_PLAYGROUND_Z, LocationType.EXTRA
+    DEVILS_PLAYGROUND_Z_SOUTHWEST_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 2505, "Southwest Reinforcements", SC2Mission.DEVILS_PLAYGROUND_Z, LocationType.EXTRA
+    DEVILS_PLAYGROUND_Z_SOUTHEAST_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 2506, "Southeast Reinforcements", SC2Mission.DEVILS_PLAYGROUND_Z, LocationType.EXTRA
+    DEVILS_PLAYGROUND_Z_EAST_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 2507, "East Reinforcements", SC2Mission.DEVILS_PLAYGROUND_Z, LocationType.EXTRA
+    DEVILS_PLAYGROUND_Z_ZERG_CLEARED = SC2_RACESWAP_LOC_ID_OFFSET + 2508, "Zerg Cleared", SC2Mission.DEVILS_PLAYGROUND_Z, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    DEVILS_PLAYGROUND_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 2600, "Victory", SC2Mission.DEVILS_PLAYGROUND_P, LocationType.VICTORY
+    DEVILS_PLAYGROUND_P_TOSHS_MINERS = SC2_RACESWAP_LOC_ID_OFFSET + 2601, "Tosh's Miners", SC2Mission.DEVILS_PLAYGROUND_P, LocationType.VANILLA
+    DEVILS_PLAYGROUND_P_BRUTALISK = SC2_RACESWAP_LOC_ID_OFFSET + 2602, "Brutalisk", SC2Mission.DEVILS_PLAYGROUND_P, LocationType.VANILLA
+    DEVILS_PLAYGROUND_P_NORTH_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 2603, "North Reinforcements", SC2Mission.DEVILS_PLAYGROUND_P, LocationType.EXTRA
+    DEVILS_PLAYGROUND_P_MIDDLE_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 2604, "Middle Reinforcements", SC2Mission.DEVILS_PLAYGROUND_P, LocationType.EXTRA
+    DEVILS_PLAYGROUND_P_SOUTHWEST_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 2605, "Southwest Reinforcements", SC2Mission.DEVILS_PLAYGROUND_P, LocationType.EXTRA
+    DEVILS_PLAYGROUND_P_SOUTHEAST_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 2606, "Southeast Reinforcements", SC2Mission.DEVILS_PLAYGROUND_P, LocationType.EXTRA
+    DEVILS_PLAYGROUND_P_EAST_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 2607, "East Reinforcements", SC2Mission.DEVILS_PLAYGROUND_P, LocationType.EXTRA
+    DEVILS_PLAYGROUND_P_ZERG_CLEARED = SC2_RACESWAP_LOC_ID_OFFSET + 2608, "Zerg Cleared", SC2Mission.DEVILS_PLAYGROUND_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    WELCOME_TO_THE_JUNGLE_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 2700, "Victory", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.VICTORY
+    WELCOME_TO_THE_JUNGLE_Z_CLOSE_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2701, "Close Relic", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.VANILLA
+    WELCOME_TO_THE_JUNGLE_Z_WEST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2702, "West Relic", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.VANILLA
+    WELCOME_TO_THE_JUNGLE_Z_NORTH_EAST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2703, "North-East Relic", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.VANILLA
+    WELCOME_TO_THE_JUNGLE_Z_MIDDLE_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 2704, "Middle Base", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.EXTRA
+    WELCOME_TO_THE_JUNGLE_Z_PROTOSS_CLEARED = SC2_RACESWAP_LOC_ID_OFFSET + 2705, "Protoss Cleared", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.MASTERY, LocationFlag.BASEBUST
+    WELCOME_TO_THE_JUNGLE_Z_NO_TERRAZINE_NODES_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2706, "No Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_Z_UP_TO_1_TERRAZINE_NODE_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2707, "Up to 1 Terrazine Node Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_Z_UP_TO_2_TERRAZINE_NODES_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2708, "Up to 2 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_Z_UP_TO_3_TERRAZINE_NODES_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2709, "Up to 3 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_Z_UP_TO_4_TERRAZINE_NODES_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2710, "Up to 4 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.EXTRA, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_Z_UP_TO_5_TERRAZINE_NODES_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2711, "Up to 5 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_Z, LocationType.EXTRA, LocationFlag.PREVENTATIVE
+
+    WELCOME_TO_THE_JUNGLE_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 2800, "Victory", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.VICTORY
+    WELCOME_TO_THE_JUNGLE_P_CLOSE_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2801, "Close Relic", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.VANILLA
+    WELCOME_TO_THE_JUNGLE_P_WEST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2802, "West Relic", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.VANILLA
+    WELCOME_TO_THE_JUNGLE_P_NORTH_EAST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 2803, "North-East Relic", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.VANILLA
+    WELCOME_TO_THE_JUNGLE_P_MIDDLE_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 2804, "Middle Base", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.EXTRA
+    WELCOME_TO_THE_JUNGLE_P_PROTOSS_CLEARED = SC2_RACESWAP_LOC_ID_OFFSET + 2805, "Protoss Cleared", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.MASTERY, LocationFlag.BASEBUST
+    WELCOME_TO_THE_JUNGLE_P_NO_TERRAZINE_NODES_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2806, "No Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_P_UP_TO_1_TERRAZINE_NODE_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2807, "Up to 1 Terrazine Node Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_P_UP_TO_2_TERRAZINE_NODES_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2808, "Up to 2 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_P_UP_TO_3_TERRAZINE_NODES_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2809, "Up to 3 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_P_UP_TO_4_TERRAZINE_NODES_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2810, "Up to 4 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.EXTRA, LocationFlag.PREVENTATIVE
+    WELCOME_TO_THE_JUNGLE_P_UP_TO_5_TERRAZINE_NODES_SEALED = SC2_RACESWAP_LOC_ID_OFFSET + 2811, "Up to 5 Terrazine Nodes Sealed", SC2Mission.WELCOME_TO_THE_JUNGLE_P, LocationType.EXTRA, LocationFlag.PREVENTATIVE
+
+    BREAKOUT_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 2900, "Victory", SC2Mission.BREAKOUT_Z, LocationType.VICTORY
+    BREAKOUT_Z_DIAMONDBACK_PRISON = SC2_RACESWAP_LOC_ID_OFFSET + 2901, "Diamondback Prison", SC2Mission.BREAKOUT_Z, LocationType.VANILLA
+    BREAKOUT_Z_SIEGE_TANK_PRISON = SC2_RACESWAP_LOC_ID_OFFSET + 2902, "Siege Tank Prison", SC2Mission.BREAKOUT_Z, LocationType.VANILLA
+    BREAKOUT_Z_FIRST_CHECKPOINT = SC2_RACESWAP_LOC_ID_OFFSET + 2903, "First Checkpoint", SC2Mission.BREAKOUT_Z, LocationType.EXTRA
+    BREAKOUT_Z_SECOND_CHECKPOINT = SC2_RACESWAP_LOC_ID_OFFSET + 2904, "Second Checkpoint", SC2Mission.BREAKOUT_Z, LocationType.EXTRA
+
+    BREAKOUT_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 3000, "Victory", SC2Mission.BREAKOUT_P, LocationType.VICTORY
+    BREAKOUT_P_DIAMONDBACK_PRISON = SC2_RACESWAP_LOC_ID_OFFSET + 3001, "Diamondback Prison", SC2Mission.BREAKOUT_P, LocationType.VANILLA
+    BREAKOUT_P_SIEGE_TANK_PRISON = SC2_RACESWAP_LOC_ID_OFFSET + 3002, "Siege Tank Prison", SC2Mission.BREAKOUT_P, LocationType.VANILLA
+    BREAKOUT_P_FIRST_CHECKPOINT = SC2_RACESWAP_LOC_ID_OFFSET + 3003, "First Checkpoint", SC2Mission.BREAKOUT_P, LocationType.EXTRA
+    BREAKOUT_P_SECOND_CHECKPOINT = SC2_RACESWAP_LOC_ID_OFFSET + 3004, "Second Checkpoint", SC2Mission.BREAKOUT_P, LocationType.EXTRA
+
+    THE_GREAT_TRAIN_ROBBERY_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 3300, "Victory", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.VICTORY
+    THE_GREAT_TRAIN_ROBBERY_Z_NORTH_DEFILER = SC2_RACESWAP_LOC_ID_OFFSET + 3301, "North Defiler", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.VANILLA
+    THE_GREAT_TRAIN_ROBBERY_Z_MID_DEFILER = SC2_RACESWAP_LOC_ID_OFFSET + 3302, "Mid Defiler", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.VANILLA
+    THE_GREAT_TRAIN_ROBBERY_Z_SOUTH_DEFILER = SC2_RACESWAP_LOC_ID_OFFSET + 3303, "South Defiler", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.VANILLA
+    THE_GREAT_TRAIN_ROBBERY_Z_CLOSE_INFESTED_DIAMONDBACK = SC2_RACESWAP_LOC_ID_OFFSET + 3304, "Close Infested Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_Z_NORTHWEST_INFESTED_DIAMONDBACK = SC2_RACESWAP_LOC_ID_OFFSET + 3305, "Northwest Infested Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_Z_NORTH_INFESTED_DIAMONDBACK = SC2_RACESWAP_LOC_ID_OFFSET + 3306, "North Infested Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_Z_NORTHEAST_INFESTED_DIAMONDBACK = SC2_RACESWAP_LOC_ID_OFFSET + 3307, "Northeast Infested Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_Z_SOUTHWEST_INFESTED_DIAMONDBACK = SC2_RACESWAP_LOC_ID_OFFSET + 3308, "Southwest Infested Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_Z_SOUTHEAST_INFESTED_DIAMONDBACK = SC2_RACESWAP_LOC_ID_OFFSET + 3309, "Southeast Infested Diamondback", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_Z_KILL_TEAM = SC2_RACESWAP_LOC_ID_OFFSET + 3310, "Kill Team", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.CHALLENGE
+    THE_GREAT_TRAIN_ROBBERY_Z_FLAWLESS = SC2_RACESWAP_LOC_ID_OFFSET + 3311, "Flawless", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    THE_GREAT_TRAIN_ROBBERY_Z_2_TRAINS_DESTROYED = SC2_RACESWAP_LOC_ID_OFFSET + 3312, "2 Trains Destroyed", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_Z_4_TRAINS_DESTROYED = SC2_RACESWAP_LOC_ID_OFFSET + 3313, "4 Trains Destroyed", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_Z_6_TRAINS_DESTROYED = SC2_RACESWAP_LOC_ID_OFFSET + 3314, "6 Trains Destroyed", SC2Mission.THE_GREAT_TRAIN_ROBBERY_Z, LocationType.EXTRA
+
+    THE_GREAT_TRAIN_ROBBERY_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 3400, "Victory", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.VICTORY
+    THE_GREAT_TRAIN_ROBBERY_P_NORTH_DEFILER = SC2_RACESWAP_LOC_ID_OFFSET + 3401, "North Defiler", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.VANILLA
+    THE_GREAT_TRAIN_ROBBERY_P_MID_DEFILER = SC2_RACESWAP_LOC_ID_OFFSET + 3402, "Mid Defiler", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.VANILLA
+    THE_GREAT_TRAIN_ROBBERY_P_SOUTH_DEFILER = SC2_RACESWAP_LOC_ID_OFFSET + 3403, "South Defiler", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.VANILLA
+    THE_GREAT_TRAIN_ROBBERY_P_CLOSE_IMMORTAL = SC2_RACESWAP_LOC_ID_OFFSET + 3404, "Close Immortal", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_P_NORTHWEST_IMMORTAL = SC2_RACESWAP_LOC_ID_OFFSET + 3405, "Northwest Immortal", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_P_NORTH_INSTIGATOR = SC2_RACESWAP_LOC_ID_OFFSET + 3406, "North Instigator", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_P_NORTHEAST_INSTIGATOR = SC2_RACESWAP_LOC_ID_OFFSET + 3407, "Northeast Instigator", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_P_SOUTHWEST_INSTIGATOR = SC2_RACESWAP_LOC_ID_OFFSET + 3408, "Southwest Instigator", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_P_SOUTHEAST_IMMORTAL = SC2_RACESWAP_LOC_ID_OFFSET + 3409, "Southeast Immortal", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_P_KILL_TEAM = SC2_RACESWAP_LOC_ID_OFFSET + 3410, "Kill Team", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.CHALLENGE
+    THE_GREAT_TRAIN_ROBBERY_P_FLAWLESS = SC2_RACESWAP_LOC_ID_OFFSET + 3411, "Flawless", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    THE_GREAT_TRAIN_ROBBERY_P_2_TRAINS_DESTROYED = SC2_RACESWAP_LOC_ID_OFFSET + 3412, "2 Trains Destroyed", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_P_4_TRAINS_DESTROYED = SC2_RACESWAP_LOC_ID_OFFSET + 3413, "4 Trains Destroyed", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.EXTRA
+    THE_GREAT_TRAIN_ROBBERY_P_6_TRAINS_DESTROYED = SC2_RACESWAP_LOC_ID_OFFSET + 3414, "6 Trains Destroyed", SC2Mission.THE_GREAT_TRAIN_ROBBERY_P, LocationType.EXTRA
+
+    CUTTHROAT_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 3500, "Victory", SC2Mission.CUTTHROAT_Z, LocationType.VICTORY
+    CUTTHROAT_Z_MIRA_HAN = SC2_RACESWAP_LOC_ID_OFFSET + 3501, "Mira Han", SC2Mission.CUTTHROAT_Z, LocationType.EXTRA
+    CUTTHROAT_Z_NORTH_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 3502, "North Relic", SC2Mission.CUTTHROAT_Z, LocationType.VANILLA
+    CUTTHROAT_Z_MID_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 3503, "Mid Relic", SC2Mission.CUTTHROAT_Z, LocationType.VANILLA
+    CUTTHROAT_Z_SOUTHWEST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 3504, "Southwest Relic", SC2Mission.CUTTHROAT_Z, LocationType.VANILLA
+    CUTTHROAT_Z_NORTH_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 3505, "North Command Center", SC2Mission.CUTTHROAT_Z, LocationType.EXTRA
+    CUTTHROAT_Z_SOUTH_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 3506, "South Command Center", SC2Mission.CUTTHROAT_Z, LocationType.EXTRA
+    CUTTHROAT_Z_WEST_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 3507, "West Command Center", SC2Mission.CUTTHROAT_Z, LocationType.EXTRA
+
+    CUTTHROAT_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 3600, "Victory", SC2Mission.CUTTHROAT_P, LocationType.VICTORY
+    CUTTHROAT_P_MIRA_HAN = SC2_RACESWAP_LOC_ID_OFFSET + 3601, "Mira Han", SC2Mission.CUTTHROAT_P, LocationType.EXTRA
+    CUTTHROAT_P_NORTH_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 3602, "North Relic", SC2Mission.CUTTHROAT_P, LocationType.VANILLA
+    CUTTHROAT_P_MID_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 3603, "Mid Relic", SC2Mission.CUTTHROAT_P, LocationType.VANILLA
+    CUTTHROAT_P_SOUTHWEST_RELIC = SC2_RACESWAP_LOC_ID_OFFSET + 3604, "Southwest Relic", SC2Mission.CUTTHROAT_P, LocationType.VANILLA
+    CUTTHROAT_P_NORTH_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 3605, "North Command Center", SC2Mission.CUTTHROAT_P, LocationType.EXTRA
+    CUTTHROAT_P_SOUTH_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 3606, "South Command Center", SC2Mission.CUTTHROAT_P, LocationType.EXTRA
+    CUTTHROAT_P_WEST_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 3607, "West Command Center", SC2Mission.CUTTHROAT_P, LocationType.EXTRA
+
+    ENGINE_OF_DESTRUCTION_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 3700, "Victory", SC2Mission.ENGINE_OF_DESTRUCTION_Z, LocationType.VICTORY
+    ENGINE_OF_DESTRUCTION_Z_ODIN = SC2_RACESWAP_LOC_ID_OFFSET + 3701, "Odin", SC2Mission.ENGINE_OF_DESTRUCTION_Z, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_Z_LOKI = SC2_RACESWAP_LOC_ID_OFFSET + 3702, "Loki", SC2Mission.ENGINE_OF_DESTRUCTION_Z, LocationType.CHALLENGE
+    ENGINE_OF_DESTRUCTION_Z_LAB_DEVOURER = SC2_RACESWAP_LOC_ID_OFFSET + 3703, "Lab Devourer", SC2Mission.ENGINE_OF_DESTRUCTION_Z, LocationType.VANILLA
+    ENGINE_OF_DESTRUCTION_Z_NORTH_DEVOURER = SC2_RACESWAP_LOC_ID_OFFSET + 3704, "North Devourer", SC2Mission.ENGINE_OF_DESTRUCTION_Z, LocationType.VANILLA
+    ENGINE_OF_DESTRUCTION_Z_SOUTHEAST_DEVOURER = SC2_RACESWAP_LOC_ID_OFFSET + 3705, "Southeast Devourer", SC2Mission.ENGINE_OF_DESTRUCTION_Z, LocationType.VANILLA
+    ENGINE_OF_DESTRUCTION_Z_WEST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 3706, "West Base", SC2Mission.ENGINE_OF_DESTRUCTION_Z, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_Z_NORTHWEST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 3707, "Northwest Base", SC2Mission.ENGINE_OF_DESTRUCTION_Z, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_Z_NORTHEAST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 3708, "Northeast Base", SC2Mission.ENGINE_OF_DESTRUCTION_Z, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_Z_SOUTHEAST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 3709, "Southeast Base", SC2Mission.ENGINE_OF_DESTRUCTION_Z, LocationType.EXTRA
+
+    ENGINE_OF_DESTRUCTION_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 3800, "Victory", SC2Mission.ENGINE_OF_DESTRUCTION_P, LocationType.VICTORY
+    ENGINE_OF_DESTRUCTION_P_ODIN = SC2_RACESWAP_LOC_ID_OFFSET + 3801, "Odin", SC2Mission.ENGINE_OF_DESTRUCTION_P, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_P_LOKI = SC2_RACESWAP_LOC_ID_OFFSET + 3802, "Loki", SC2Mission.ENGINE_OF_DESTRUCTION_P, LocationType.CHALLENGE
+    ENGINE_OF_DESTRUCTION_P_LAB_DEVOURER = SC2_RACESWAP_LOC_ID_OFFSET + 3803, "Lab Devourer", SC2Mission.ENGINE_OF_DESTRUCTION_P, LocationType.VANILLA
+    ENGINE_OF_DESTRUCTION_P_NORTH_DEVOURER = SC2_RACESWAP_LOC_ID_OFFSET + 3804, "North Devourer", SC2Mission.ENGINE_OF_DESTRUCTION_P, LocationType.VANILLA
+    ENGINE_OF_DESTRUCTION_P_SOUTHEAST_DEVOURER = SC2_RACESWAP_LOC_ID_OFFSET + 3805, "Southeast Devourer", SC2Mission.ENGINE_OF_DESTRUCTION_P, LocationType.VANILLA
+    ENGINE_OF_DESTRUCTION_P_WEST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 3806, "West Base", SC2Mission.ENGINE_OF_DESTRUCTION_P, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_P_NORTHWEST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 3807, "Northwest Base", SC2Mission.ENGINE_OF_DESTRUCTION_P, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_P_NORTHEAST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 3808, "Northeast Base", SC2Mission.ENGINE_OF_DESTRUCTION_P, LocationType.EXTRA
+    ENGINE_OF_DESTRUCTION_P_SOUTHEAST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 3809, "Southeast Base", SC2Mission.ENGINE_OF_DESTRUCTION_P, LocationType.EXTRA
+
+    MEDIA_BLITZ_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 3900, "Victory", SC2Mission.MEDIA_BLITZ_Z, LocationType.VICTORY
+    MEDIA_BLITZ_Z_TOWER_1 = SC2_RACESWAP_LOC_ID_OFFSET + 3901, "Tower 1", SC2Mission.MEDIA_BLITZ_Z, LocationType.VANILLA
+    MEDIA_BLITZ_Z_TOWER_2 = SC2_RACESWAP_LOC_ID_OFFSET + 3902, "Tower 2", SC2Mission.MEDIA_BLITZ_Z, LocationType.VANILLA
+    MEDIA_BLITZ_Z_TOWER_3 = SC2_RACESWAP_LOC_ID_OFFSET + 3903, "Tower 3", SC2Mission.MEDIA_BLITZ_Z, LocationType.VANILLA
+    MEDIA_BLITZ_Z_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 3904, "Science Facility", SC2Mission.MEDIA_BLITZ_Z, LocationType.VANILLA
+    MEDIA_BLITZ_Z_ALL_BARRACKS = SC2_RACESWAP_LOC_ID_OFFSET + 3905, "All Barracks", SC2Mission.MEDIA_BLITZ_Z, LocationType.EXTRA
+    MEDIA_BLITZ_Z_ALL_FACTORIES = SC2_RACESWAP_LOC_ID_OFFSET + 3906, "All Factories", SC2Mission.MEDIA_BLITZ_Z, LocationType.EXTRA
+    MEDIA_BLITZ_Z_ALL_STARPORTS = SC2_RACESWAP_LOC_ID_OFFSET + 3907, "All Starports", SC2Mission.MEDIA_BLITZ_Z, LocationType.EXTRA
+    MEDIA_BLITZ_Z_ODIN_NOT_TRASHED = SC2_RACESWAP_LOC_ID_OFFSET + 3908, "Odin Not Trashed", SC2Mission.MEDIA_BLITZ_Z, LocationType.CHALLENGE
+    MEDIA_BLITZ_Z_SURPRISE_ATTACK_ENDS = SC2_RACESWAP_LOC_ID_OFFSET + 3909, "Surprise Attack Ends", SC2Mission.MEDIA_BLITZ_Z, LocationType.EXTRA
+
+    MEDIA_BLITZ_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 4000, "Victory", SC2Mission.MEDIA_BLITZ_P, LocationType.VICTORY
+    MEDIA_BLITZ_P_TOWER_1 = SC2_RACESWAP_LOC_ID_OFFSET + 4001, "Tower 1", SC2Mission.MEDIA_BLITZ_P, LocationType.VANILLA
+    MEDIA_BLITZ_P_TOWER_2 = SC2_RACESWAP_LOC_ID_OFFSET + 4002, "Tower 2", SC2Mission.MEDIA_BLITZ_P, LocationType.VANILLA
+    MEDIA_BLITZ_P_TOWER_3 = SC2_RACESWAP_LOC_ID_OFFSET + 4003, "Tower 3", SC2Mission.MEDIA_BLITZ_P, LocationType.VANILLA
+    MEDIA_BLITZ_P_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 4004, "Science Facility", SC2Mission.MEDIA_BLITZ_P, LocationType.VANILLA
+    MEDIA_BLITZ_P_ALL_BARRACKS = SC2_RACESWAP_LOC_ID_OFFSET + 4005, "All Barracks", SC2Mission.MEDIA_BLITZ_P, LocationType.EXTRA
+    MEDIA_BLITZ_P_ALL_FACTORIES = SC2_RACESWAP_LOC_ID_OFFSET + 4006, "All Factories", SC2Mission.MEDIA_BLITZ_P, LocationType.EXTRA
+    MEDIA_BLITZ_P_ALL_STARPORTS = SC2_RACESWAP_LOC_ID_OFFSET + 4007, "All Starports", SC2Mission.MEDIA_BLITZ_P, LocationType.EXTRA
+    MEDIA_BLITZ_P_ODIN_NOT_TRASHED = SC2_RACESWAP_LOC_ID_OFFSET + 4008, "Odin Not Trashed", SC2Mission.MEDIA_BLITZ_P, LocationType.CHALLENGE
+    MEDIA_BLITZ_P_SURPRISE_ATTACK_ENDS = SC2_RACESWAP_LOC_ID_OFFSET + 4009, "Surprise Attack Ends", SC2Mission.MEDIA_BLITZ_P, LocationType.EXTRA
+
+    A_SINISTER_TURN_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 4500, "Victory", SC2Mission.A_SINISTER_TURN_T, LocationType.VICTORY
+    A_SINISTER_TURN_T_FACTORY = SC2_RACESWAP_LOC_ID_OFFSET + 4501, "Factory", SC2Mission.A_SINISTER_TURN_T, LocationType.VANILLA
+    A_SINISTER_TURN_T_ARMORY = SC2_RACESWAP_LOC_ID_OFFSET + 4502, "Armory", SC2Mission.A_SINISTER_TURN_T, LocationType.VANILLA
+    A_SINISTER_TURN_T_SHADOW_OPS = SC2_RACESWAP_LOC_ID_OFFSET + 4503, "Shadow Ops", SC2Mission.A_SINISTER_TURN_T, LocationType.VANILLA
+    A_SINISTER_TURN_T_NORTHEAST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 4504, "Northeast Base", SC2Mission.A_SINISTER_TURN_T, LocationType.EXTRA
+    A_SINISTER_TURN_T_SOUTHWEST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 4505, "Southwest Base", SC2Mission.A_SINISTER_TURN_T, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    A_SINISTER_TURN_T_MAAR = SC2_RACESWAP_LOC_ID_OFFSET + 4506, "Maar", SC2Mission.A_SINISTER_TURN_T, LocationType.EXTRA
+    A_SINISTER_TURN_T_NORTHWEST_PRESERVER = SC2_RACESWAP_LOC_ID_OFFSET + 4507, "Northwest Preserver", SC2Mission.A_SINISTER_TURN_T, LocationType.EXTRA
+    A_SINISTER_TURN_T_SOUTHWEST_PRESERVER = SC2_RACESWAP_LOC_ID_OFFSET + 4508, "Southwest Preserver", SC2Mission.A_SINISTER_TURN_T, LocationType.EXTRA
+    A_SINISTER_TURN_T_EAST_PRESERVER = SC2_RACESWAP_LOC_ID_OFFSET + 4509, "East Preserver", SC2Mission.A_SINISTER_TURN_T, LocationType.EXTRA
+
+    A_SINISTER_TURN_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 4600, "Victory", SC2Mission.A_SINISTER_TURN_Z, LocationType.VICTORY
+    A_SINISTER_TURN_Z_ULTRALISK_CAVERN = SC2_RACESWAP_LOC_ID_OFFSET + 4601, "Ultralisk Cavern", SC2Mission.A_SINISTER_TURN_Z, LocationType.VANILLA
+    A_SINISTER_TURN_Z_HYDRALISK_DEN = SC2_RACESWAP_LOC_ID_OFFSET + 4602, "Hydralisk Den", SC2Mission.A_SINISTER_TURN_Z, LocationType.VANILLA
+    A_SINISTER_TURN_Z_INFESTATION_PIT = SC2_RACESWAP_LOC_ID_OFFSET + 4603, "Infestation Pit", SC2Mission.A_SINISTER_TURN_Z, LocationType.VANILLA
+    A_SINISTER_TURN_Z_NORTHEAST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 4604, "Northeast Base", SC2Mission.A_SINISTER_TURN_Z, LocationType.EXTRA
+    A_SINISTER_TURN_Z_SOUTHWEST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 4605, "Southwest Base", SC2Mission.A_SINISTER_TURN_Z, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    A_SINISTER_TURN_Z_MAAR = SC2_RACESWAP_LOC_ID_OFFSET + 4606, "Maar", SC2Mission.A_SINISTER_TURN_Z, LocationType.EXTRA
+    A_SINISTER_TURN_Z_NORTHWEST_PRESERVER = SC2_RACESWAP_LOC_ID_OFFSET + 4607, "Northwest Preserver", SC2Mission.A_SINISTER_TURN_Z, LocationType.EXTRA
+    A_SINISTER_TURN_Z_SOUTHWEST_PRESERVER = SC2_RACESWAP_LOC_ID_OFFSET + 4608, "Southwest Preserver", SC2Mission.A_SINISTER_TURN_Z, LocationType.EXTRA
+    A_SINISTER_TURN_Z_EAST_PRESERVER = SC2_RACESWAP_LOC_ID_OFFSET + 4609, "East Preserver", SC2Mission.A_SINISTER_TURN_Z, LocationType.EXTRA
+
+    ECHOES_OF_THE_FUTURE_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 4700, "Victory", SC2Mission.ECHOES_OF_THE_FUTURE_T, LocationType.VICTORY
+    ECHOES_OF_THE_FUTURE_T_CLOSE_OBELISK = SC2_RACESWAP_LOC_ID_OFFSET + 4701, "Close Obelisk", SC2Mission.ECHOES_OF_THE_FUTURE_T, LocationType.VANILLA
+    ECHOES_OF_THE_FUTURE_T_WEST_OBELISK = SC2_RACESWAP_LOC_ID_OFFSET + 4702, "West Obelisk", SC2Mission.ECHOES_OF_THE_FUTURE_T, LocationType.VANILLA
+    ECHOES_OF_THE_FUTURE_T_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 4703, "Base", SC2Mission.ECHOES_OF_THE_FUTURE_T, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_T_SOUTHWEST_TENDRIL = SC2_RACESWAP_LOC_ID_OFFSET + 4704, "Southwest Tendril", SC2Mission.ECHOES_OF_THE_FUTURE_T, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_T_SOUTHEAST_TENDRIL = SC2_RACESWAP_LOC_ID_OFFSET + 4705, "Southeast Tendril", SC2Mission.ECHOES_OF_THE_FUTURE_T, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_T_NORTHEAST_TENDRIL = SC2_RACESWAP_LOC_ID_OFFSET + 4706, "Northeast Tendril", SC2Mission.ECHOES_OF_THE_FUTURE_T, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_T_NORTHWEST_TENDRIL = SC2_RACESWAP_LOC_ID_OFFSET + 4707, "Northwest Tendril", SC2Mission.ECHOES_OF_THE_FUTURE_T, LocationType.EXTRA
+
+    ECHOES_OF_THE_FUTURE_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 4800, "Victory", SC2Mission.ECHOES_OF_THE_FUTURE_Z, LocationType.VICTORY
+    ECHOES_OF_THE_FUTURE_Z_CLOSE_OBELISK = SC2_RACESWAP_LOC_ID_OFFSET + 4801, "Close Obelisk", SC2Mission.ECHOES_OF_THE_FUTURE_Z, LocationType.VANILLA
+    ECHOES_OF_THE_FUTURE_Z_WEST_OBELISK = SC2_RACESWAP_LOC_ID_OFFSET + 4802, "West Obelisk", SC2Mission.ECHOES_OF_THE_FUTURE_Z, LocationType.VANILLA
+    ECHOES_OF_THE_FUTURE_Z_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 4803, "Base", SC2Mission.ECHOES_OF_THE_FUTURE_Z, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_Z_SOUTHWEST_TENDRIL = SC2_RACESWAP_LOC_ID_OFFSET + 4804, "Southwest Tendril", SC2Mission.ECHOES_OF_THE_FUTURE_Z, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_Z_SOUTHEAST_TENDRIL = SC2_RACESWAP_LOC_ID_OFFSET + 4805, "Southeast Tendril", SC2Mission.ECHOES_OF_THE_FUTURE_Z, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_Z_NORTHEAST_TENDRIL = SC2_RACESWAP_LOC_ID_OFFSET + 4806, "Northeast Tendril", SC2Mission.ECHOES_OF_THE_FUTURE_Z, LocationType.EXTRA
+    ECHOES_OF_THE_FUTURE_Z_NORTHWEST_TENDRIL = SC2_RACESWAP_LOC_ID_OFFSET + 4807, "Northwest Tendril", SC2Mission.ECHOES_OF_THE_FUTURE_Z, LocationType.EXTRA
+
+    IN_UTTER_DARKNESS_T_DEFEAT = SC2_RACESWAP_LOC_ID_OFFSET + 4900, "Defeat", SC2Mission.IN_UTTER_DARKNESS_T, LocationType.VICTORY
+    IN_UTTER_DARKNESS_T_PROTOSS_ARCHIVE = SC2_RACESWAP_LOC_ID_OFFSET + 4901, "Protoss Archive", SC2Mission.IN_UTTER_DARKNESS_T, LocationType.VANILLA
+    IN_UTTER_DARKNESS_T_KILLS = SC2_RACESWAP_LOC_ID_OFFSET + 4902, "Kills", SC2Mission.IN_UTTER_DARKNESS_T, LocationType.VANILLA
+    IN_UTTER_DARKNESS_T_URUN = SC2_RACESWAP_LOC_ID_OFFSET + 4903, "Urun", SC2Mission.IN_UTTER_DARKNESS_T, LocationType.EXTRA
+    IN_UTTER_DARKNESS_T_MOHANDAR = SC2_RACESWAP_LOC_ID_OFFSET + 4904, "Mohandar", SC2Mission.IN_UTTER_DARKNESS_T, LocationType.EXTRA
+    IN_UTTER_DARKNESS_T_SELENDIS = SC2_RACESWAP_LOC_ID_OFFSET + 4905, "Selendis", SC2Mission.IN_UTTER_DARKNESS_T, LocationType.EXTRA
+    IN_UTTER_DARKNESS_T_ARTANIS = SC2_RACESWAP_LOC_ID_OFFSET + 4906, "Artanis", SC2Mission.IN_UTTER_DARKNESS_T, LocationType.EXTRA
+
+    IN_UTTER_DARKNESS_Z_DEFEAT = SC2_RACESWAP_LOC_ID_OFFSET + 5000, "Defeat", SC2Mission.IN_UTTER_DARKNESS_Z, LocationType.VICTORY
+    IN_UTTER_DARKNESS_Z_PROTOSS_ARCHIVE = SC2_RACESWAP_LOC_ID_OFFSET + 5001, "Protoss Archive", SC2Mission.IN_UTTER_DARKNESS_Z, LocationType.VANILLA
+    IN_UTTER_DARKNESS_Z_KILLS = SC2_RACESWAP_LOC_ID_OFFSET + 5002, "Kills", SC2Mission.IN_UTTER_DARKNESS_Z, LocationType.VANILLA
+    IN_UTTER_DARKNESS_Z_URUN = SC2_RACESWAP_LOC_ID_OFFSET + 5003, "Urun", SC2Mission.IN_UTTER_DARKNESS_Z, LocationType.EXTRA
+    IN_UTTER_DARKNESS_Z_MOHANDAR = SC2_RACESWAP_LOC_ID_OFFSET + 5004, "Mohandar", SC2Mission.IN_UTTER_DARKNESS_Z, LocationType.EXTRA
+    IN_UTTER_DARKNESS_Z_SELENDIS = SC2_RACESWAP_LOC_ID_OFFSET + 5005, "Selendis", SC2Mission.IN_UTTER_DARKNESS_Z, LocationType.EXTRA
+    IN_UTTER_DARKNESS_Z_ARTANIS = SC2_RACESWAP_LOC_ID_OFFSET + 5006, "Artanis", SC2Mission.IN_UTTER_DARKNESS_Z, LocationType.EXTRA
+
+    GATES_OF_HELL_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 5100, "Victory", SC2Mission.GATES_OF_HELL_Z, LocationType.VICTORY
+    GATES_OF_HELL_Z_LARGE_ARMY = SC2_RACESWAP_LOC_ID_OFFSET + 5101, "Large Army", SC2Mission.GATES_OF_HELL_Z, LocationType.VANILLA
+    GATES_OF_HELL_Z_2_DROP_PODS = SC2_RACESWAP_LOC_ID_OFFSET + 5102, "2 Drop Pods", SC2Mission.GATES_OF_HELL_Z, LocationType.VANILLA
+    GATES_OF_HELL_Z_4_DROP_PODS = SC2_RACESWAP_LOC_ID_OFFSET + 5103, "4 Drop Pods", SC2Mission.GATES_OF_HELL_Z, LocationType.VANILLA
+    GATES_OF_HELL_Z_6_DROP_PODS = SC2_RACESWAP_LOC_ID_OFFSET + 5104, "6 Drop Pods", SC2Mission.GATES_OF_HELL_Z, LocationType.EXTRA
+    GATES_OF_HELL_Z_8_DROP_PODS = SC2_RACESWAP_LOC_ID_OFFSET + 5105, "8 Drop Pods", SC2Mission.GATES_OF_HELL_Z, LocationType.CHALLENGE
+    GATES_OF_HELL_Z_SOUTHWEST_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5106, "Southwest Spore Cannon", SC2Mission.GATES_OF_HELL_Z, LocationType.EXTRA
+    GATES_OF_HELL_Z_NORTHWEST_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5107, "Northwest Spore Cannon", SC2Mission.GATES_OF_HELL_Z, LocationType.EXTRA
+    GATES_OF_HELL_Z_NORTHEAST_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5108, "Northeast Spore Cannon", SC2Mission.GATES_OF_HELL_Z, LocationType.EXTRA
+    GATES_OF_HELL_Z_EAST_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5109, "East Spore Cannon", SC2Mission.GATES_OF_HELL_Z, LocationType.EXTRA
+    GATES_OF_HELL_Z_SOUTHEAST_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5110, "Southeast Spore Cannon", SC2Mission.GATES_OF_HELL_Z, LocationType.EXTRA
+    GATES_OF_HELL_Z_EXPANSION_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5111, "Expansion Spore Cannon", SC2Mission.GATES_OF_HELL_Z, LocationType.EXTRA
+
+    GATES_OF_HELL_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 5200, "Victory", SC2Mission.GATES_OF_HELL_P, LocationType.VICTORY
+    GATES_OF_HELL_P_LARGE_ARMY = SC2_RACESWAP_LOC_ID_OFFSET + 5201, "Large Army", SC2Mission.GATES_OF_HELL_P, LocationType.VANILLA
+    GATES_OF_HELL_P_2_DROP_PODS = SC2_RACESWAP_LOC_ID_OFFSET + 5202, "2 Drop Pods", SC2Mission.GATES_OF_HELL_P, LocationType.VANILLA
+    GATES_OF_HELL_P_4_DROP_PODS = SC2_RACESWAP_LOC_ID_OFFSET + 5203, "4 Drop Pods", SC2Mission.GATES_OF_HELL_P, LocationType.VANILLA
+    GATES_OF_HELL_P_6_DROP_PODS = SC2_RACESWAP_LOC_ID_OFFSET + 5204, "6 Drop Pods", SC2Mission.GATES_OF_HELL_P, LocationType.EXTRA
+    GATES_OF_HELL_P_8_DROP_PODS = SC2_RACESWAP_LOC_ID_OFFSET + 5205, "8 Drop Pods", SC2Mission.GATES_OF_HELL_P, LocationType.CHALLENGE
+    GATES_OF_HELL_P_SOUTHWEST_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5206, "Southwest Spore Cannon", SC2Mission.GATES_OF_HELL_P, LocationType.EXTRA
+    GATES_OF_HELL_P_NORTHWEST_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5207, "Northwest Spore Cannon", SC2Mission.GATES_OF_HELL_P, LocationType.EXTRA
+    GATES_OF_HELL_P_NORTHEAST_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5208, "Northeast Spore Cannon", SC2Mission.GATES_OF_HELL_P, LocationType.EXTRA
+    GATES_OF_HELL_P_EAST_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5209, "East Spore Cannon", SC2Mission.GATES_OF_HELL_P, LocationType.EXTRA
+    GATES_OF_HELL_P_SOUTHEAST_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5210, "Southeast Spore Cannon", SC2Mission.GATES_OF_HELL_P, LocationType.EXTRA
+    GATES_OF_HELL_P_EXPANSION_SPORE_CANNON = SC2_RACESWAP_LOC_ID_OFFSET + 5211, "Expansion Spore Cannon", SC2Mission.GATES_OF_HELL_P, LocationType.EXTRA
+
+    SHATTER_THE_SKY_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 5500, "Victory", SC2Mission.SHATTER_THE_SKY_Z, LocationType.VICTORY
+    SHATTER_THE_SKY_Z_CLOSE_COOLANT_TOWER = SC2_RACESWAP_LOC_ID_OFFSET + 5501, "Close Coolant Tower", SC2Mission.SHATTER_THE_SKY_Z, LocationType.VANILLA
+    SHATTER_THE_SKY_Z_NORTHWEST_COOLANT_TOWER = SC2_RACESWAP_LOC_ID_OFFSET + 5502, "Northwest Coolant Tower", SC2Mission.SHATTER_THE_SKY_Z, LocationType.VANILLA
+    SHATTER_THE_SKY_Z_SOUTHEAST_COOLANT_TOWER = SC2_RACESWAP_LOC_ID_OFFSET + 5503, "Southeast Coolant Tower", SC2Mission.SHATTER_THE_SKY_Z, LocationType.VANILLA
+    SHATTER_THE_SKY_Z_SOUTHWEST_COOLANT_TOWER = SC2_RACESWAP_LOC_ID_OFFSET + 5504, "Southwest Coolant Tower", SC2Mission.SHATTER_THE_SKY_Z, LocationType.VANILLA
+    SHATTER_THE_SKY_Z_LEVIATHAN = SC2_RACESWAP_LOC_ID_OFFSET + 5505, "Leviathan", SC2Mission.SHATTER_THE_SKY_Z, LocationType.VANILLA
+    SHATTER_THE_SKY_Z_EAST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 5506, "East Hatchery", SC2Mission.SHATTER_THE_SKY_Z, LocationType.EXTRA
+    SHATTER_THE_SKY_Z_NORTH_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 5507, "North Hatchery", SC2Mission.SHATTER_THE_SKY_Z, LocationType.EXTRA
+    SHATTER_THE_SKY_Z_MID_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 5508, "Mid Hatchery", SC2Mission.SHATTER_THE_SKY_Z, LocationType.EXTRA
+
+    SHATTER_THE_SKY_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 5600, "Victory", SC2Mission.SHATTER_THE_SKY_P, LocationType.VICTORY
+    SHATTER_THE_SKY_P_CLOSE_COOLANT_TOWER = SC2_RACESWAP_LOC_ID_OFFSET + 5601, "Close Coolant Tower", SC2Mission.SHATTER_THE_SKY_P, LocationType.VANILLA
+    SHATTER_THE_SKY_P_NORTHWEST_COOLANT_TOWER = SC2_RACESWAP_LOC_ID_OFFSET + 5602, "Northwest Coolant Tower", SC2Mission.SHATTER_THE_SKY_P, LocationType.VANILLA
+    SHATTER_THE_SKY_P_SOUTHEAST_COOLANT_TOWER = SC2_RACESWAP_LOC_ID_OFFSET + 5603, "Southeast Coolant Tower", SC2Mission.SHATTER_THE_SKY_P, LocationType.VANILLA
+    SHATTER_THE_SKY_P_SOUTHWEST_COOLANT_TOWER = SC2_RACESWAP_LOC_ID_OFFSET + 5604, "Southwest Coolant Tower", SC2Mission.SHATTER_THE_SKY_P, LocationType.VANILLA
+    SHATTER_THE_SKY_P_LEVIATHAN = SC2_RACESWAP_LOC_ID_OFFSET + 5605, "Leviathan", SC2Mission.SHATTER_THE_SKY_P, LocationType.VANILLA
+    SHATTER_THE_SKY_P_EAST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 5606, "East Hatchery", SC2Mission.SHATTER_THE_SKY_P, LocationType.EXTRA
+    SHATTER_THE_SKY_P_NORTH_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 5607, "North Hatchery", SC2Mission.SHATTER_THE_SKY_P, LocationType.EXTRA
+    SHATTER_THE_SKY_P_MID_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 5608, "Mid Hatchery", SC2Mission.SHATTER_THE_SKY_P, LocationType.EXTRA
+
+    ALL_IN_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 5700, "Victory", SC2Mission.ALL_IN_Z, LocationType.VICTORY
+    ALL_IN_Z_FIRST_KERRIGAN_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 5701, "First Kerrigan Attack", SC2Mission.ALL_IN_Z, LocationType.EXTRA
+    ALL_IN_Z_SECOND_KERRIGAN_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 5702, "Second Kerrigan Attack", SC2Mission.ALL_IN_Z, LocationType.EXTRA
+    ALL_IN_Z_THIRD_KERRIGAN_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 5703, "Third Kerrigan Attack", SC2Mission.ALL_IN_Z, LocationType.EXTRA
+    ALL_IN_Z_FOURTH_KERRIGAN_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 5704, "Fourth Kerrigan Attack", SC2Mission.ALL_IN_Z, LocationType.EXTRA
+    ALL_IN_Z_FIFTH_KERRIGAN_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 5705, "Fifth Kerrigan Attack", SC2Mission.ALL_IN_Z, LocationType.EXTRA
+
+    ALL_IN_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 5800, "Victory", SC2Mission.ALL_IN_P, LocationType.VICTORY
+    ALL_IN_P_FIRST_KERRIGAN_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 5801, "First Kerrigan Attack", SC2Mission.ALL_IN_P, LocationType.EXTRA
+    ALL_IN_P_SECOND_KERRIGAN_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 5802, "Second Kerrigan Attack", SC2Mission.ALL_IN_P, LocationType.EXTRA
+    ALL_IN_P_THIRD_KERRIGAN_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 5803, "Third Kerrigan Attack", SC2Mission.ALL_IN_P, LocationType.EXTRA
+    ALL_IN_P_FOURTH_KERRIGAN_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 5804, "Fourth Kerrigan Attack", SC2Mission.ALL_IN_P, LocationType.EXTRA
+    ALL_IN_P_FIFTH_KERRIGAN_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 5805, "Fifth Kerrigan Attack", SC2Mission.ALL_IN_P, LocationType.EXTRA
+
+    LAB_RAT_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 5900, "Victory", SC2Mission.LAB_RAT_T, LocationType.VICTORY
+    LAB_RAT_T_GATHER_MINERALS = SC2_RACESWAP_LOC_ID_OFFSET + 5901, "Gather Minerals", SC2Mission.LAB_RAT_T, LocationType.VANILLA
+    LAB_RAT_T_SOUTH_MARINE_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 5902, "South Marine Group", SC2Mission.LAB_RAT_T, LocationType.VANILLA
+    LAB_RAT_T_EAST_MARINE_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 5903, "East Marine Group", SC2Mission.LAB_RAT_T, LocationType.VANILLA
+    LAB_RAT_T_WEST_MARINE_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 5904, "West Marine Group", SC2Mission.LAB_RAT_T, LocationType.VANILLA
+    LAB_RAT_T_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 5905, "Command Center", SC2Mission.LAB_RAT_T, LocationType.EXTRA
+    LAB_RAT_T_SUPPLY_DEPOT = SC2_RACESWAP_LOC_ID_OFFSET + 5906, "Supply Depot", SC2Mission.LAB_RAT_T, LocationType.EXTRA
+    LAB_RAT_T_GAS_TURRETS = SC2_RACESWAP_LOC_ID_OFFSET + 5907, "Gas Turrets", SC2Mission.LAB_RAT_T, LocationType.EXTRA
+    LAB_RAT_T_WIN_IN_UNDER_10_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 5908, "Win In Under 10 Minutes", SC2Mission.LAB_RAT_T, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    LAB_RAT_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 6000, "Victory", SC2Mission.LAB_RAT_P, LocationType.VICTORY
+    LAB_RAT_P_GATHER_MINERALS = SC2_RACESWAP_LOC_ID_OFFSET + 6001, "Gather Minerals", SC2Mission.LAB_RAT_P, LocationType.VANILLA
+    LAB_RAT_P_SOUTH_ZEALOT_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6002, "South Zealot Group", SC2Mission.LAB_RAT_P, LocationType.VANILLA
+    LAB_RAT_P_EAST_ZEALOT_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6003, "East Zealot Group", SC2Mission.LAB_RAT_P, LocationType.VANILLA
+    LAB_RAT_P_WEST_ZEALOT_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6004, "West Zealot Group", SC2Mission.LAB_RAT_P, LocationType.VANILLA
+    LAB_RAT_P_NEXUS = SC2_RACESWAP_LOC_ID_OFFSET + 6005, "Nexus", SC2Mission.LAB_RAT_P, LocationType.EXTRA
+    LAB_RAT_P_PYLON = SC2_RACESWAP_LOC_ID_OFFSET + 6006, "Pylon", SC2Mission.LAB_RAT_P, LocationType.EXTRA
+    LAB_RAT_P_GAS_TURRETS = SC2_RACESWAP_LOC_ID_OFFSET + 6007, "Gas Turrets", SC2Mission.LAB_RAT_P, LocationType.EXTRA
+    LAB_RAT_P_WIN_IN_UNDER_10_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 6008, "Win In Under 10 Minutes", SC2Mission.LAB_RAT_P, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    RENDEZVOUS_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 6300, "Victory", SC2Mission.RENDEZVOUS_T, LocationType.VICTORY
+    RENDEZVOUS_T_RIGHT_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6301, "Right Group", SC2Mission.RENDEZVOUS_T, LocationType.VANILLA
+    RENDEZVOUS_T_CENTER_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6302, "Center Group", SC2Mission.RENDEZVOUS_T, LocationType.VANILLA
+    RENDEZVOUS_T_LEFT_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6303, "Left Group", SC2Mission.RENDEZVOUS_T, LocationType.VANILLA
+    RENDEZVOUS_T_HOLD_OUT_FINISHED = SC2_RACESWAP_LOC_ID_OFFSET + 6304, "Hold Out Finished", SC2Mission.RENDEZVOUS_T, LocationType.EXTRA
+    RENDEZVOUS_T_KILL_ALL_BUILDINGS_BEFORE_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 6305, "Kill All Buildings Before Reinforcements", SC2Mission.RENDEZVOUS_T, LocationType.MASTERY, LocationFlag.SPEEDRUN
+
+    RENDEZVOUS_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 6400, "Victory", SC2Mission.RENDEZVOUS_P, LocationType.VICTORY
+    RENDEZVOUS_P_RIGHT_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6401, "Right Group", SC2Mission.RENDEZVOUS_P, LocationType.VANILLA
+    RENDEZVOUS_P_CENTER_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6402, "Center Group", SC2Mission.RENDEZVOUS_P, LocationType.VANILLA
+    RENDEZVOUS_P_LEFT_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6403, "Left Group", SC2Mission.RENDEZVOUS_P, LocationType.VANILLA
+    RENDEZVOUS_P_HOLD_OUT_FINISHED = SC2_RACESWAP_LOC_ID_OFFSET + 6404, "Hold Out Finished", SC2Mission.RENDEZVOUS_P, LocationType.EXTRA
+    RENDEZVOUS_P_KILL_ALL_BUILDINGS_BEFORE_REINFORCEMENTS = SC2_RACESWAP_LOC_ID_OFFSET + 6405, "Kill All Buildings Before Reinforcements", SC2Mission.RENDEZVOUS_P, LocationType.MASTERY, LocationFlag.SPEEDRUN
+
+    HARVEST_OF_SCREAMS_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 6500, "Victory", SC2Mission.HARVEST_OF_SCREAMS_T, LocationType.VICTORY
+    HARVEST_OF_SCREAMS_T_FIRST_URSADON_MATRIARCH = SC2_RACESWAP_LOC_ID_OFFSET + 6501, "First Ursadon Matriarch", SC2Mission.HARVEST_OF_SCREAMS_T, LocationType.VANILLA
+    HARVEST_OF_SCREAMS_T_NORTH_URSADON_MATRIARCH = SC2_RACESWAP_LOC_ID_OFFSET + 6502, "North Ursadon Matriarch", SC2Mission.HARVEST_OF_SCREAMS_T, LocationType.VANILLA
+    HARVEST_OF_SCREAMS_T_WEST_URSADON_MATRIARCH = SC2_RACESWAP_LOC_ID_OFFSET + 6503, "West Ursadon Matriarch", SC2Mission.HARVEST_OF_SCREAMS_T, LocationType.VANILLA
+    HARVEST_OF_SCREAMS_T_LOST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 6504, "Lost Base", SC2Mission.HARVEST_OF_SCREAMS_T, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_T_NORTHEAST_PSI_LINK_SPIRE = SC2_RACESWAP_LOC_ID_OFFSET + 6505, "Northeast Psi-link Spire", SC2Mission.HARVEST_OF_SCREAMS_T, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_T_NORTHWEST_PSI_LINK_SPIRE = SC2_RACESWAP_LOC_ID_OFFSET + 6506, "Northwest Psi-link Spire", SC2Mission.HARVEST_OF_SCREAMS_T, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_T_SOUTHWEST_PSI_LINK_SPIRE = SC2_RACESWAP_LOC_ID_OFFSET + 6507, "Southwest Psi-link Spire", SC2Mission.HARVEST_OF_SCREAMS_T, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_T_NAFASH = SC2_RACESWAP_LOC_ID_OFFSET + 6508, "Nafash", SC2Mission.HARVEST_OF_SCREAMS_T, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_T_20_UNFROZEN_STRUCTURES = SC2_RACESWAP_LOC_ID_OFFSET + 6509, "20 Unfrozen Structures", SC2Mission.HARVEST_OF_SCREAMS_T, LocationType.CHALLENGE
+
+    HARVEST_OF_SCREAMS_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 6600, "Victory", SC2Mission.HARVEST_OF_SCREAMS_P, LocationType.VICTORY
+    HARVEST_OF_SCREAMS_P_FIRST_URSADON_MATRIARCH = SC2_RACESWAP_LOC_ID_OFFSET + 6601, "First Ursadon Matriarch", SC2Mission.HARVEST_OF_SCREAMS_P, LocationType.VANILLA
+    HARVEST_OF_SCREAMS_P_NORTH_URSADON_MATRIARCH = SC2_RACESWAP_LOC_ID_OFFSET + 6602, "North Ursadon Matriarch", SC2Mission.HARVEST_OF_SCREAMS_P, LocationType.VANILLA
+    HARVEST_OF_SCREAMS_P_WEST_URSADON_MATRIARCH = SC2_RACESWAP_LOC_ID_OFFSET + 6603, "West Ursadon Matriarch", SC2Mission.HARVEST_OF_SCREAMS_P, LocationType.VANILLA
+    HARVEST_OF_SCREAMS_P_LOST_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 6604, "Lost Base", SC2Mission.HARVEST_OF_SCREAMS_P, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_P_NORTHEAST_PSI_LINK_SPIRE = SC2_RACESWAP_LOC_ID_OFFSET + 6605, "Northeast Psi-link Spire", SC2Mission.HARVEST_OF_SCREAMS_P, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_P_NORTHWEST_PSI_LINK_SPIRE = SC2_RACESWAP_LOC_ID_OFFSET + 6606, "Northwest Psi-link Spire", SC2Mission.HARVEST_OF_SCREAMS_P, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_P_SOUTHWEST_PSI_LINK_SPIRE = SC2_RACESWAP_LOC_ID_OFFSET + 6607, "Southwest Psi-link Spire", SC2Mission.HARVEST_OF_SCREAMS_P, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_P_NAFASH = SC2_RACESWAP_LOC_ID_OFFSET + 6608, "Nafash", SC2Mission.HARVEST_OF_SCREAMS_P, LocationType.EXTRA
+    HARVEST_OF_SCREAMS_P_20_UNFROZEN_STRUCTURES = SC2_RACESWAP_LOC_ID_OFFSET + 6609, "20 Unfrozen Structures", SC2Mission.HARVEST_OF_SCREAMS_P, LocationType.CHALLENGE
+
+    SHOOT_THE_MESSENGER_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 6700, "Victory", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.VICTORY
+    SHOOT_THE_MESSENGER_T_EAST_STASIS_CHAMBER = SC2_RACESWAP_LOC_ID_OFFSET + 6701, "East Stasis Chamber", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.VANILLA
+    SHOOT_THE_MESSENGER_T_CENTER_STASIS_CHAMBER = SC2_RACESWAP_LOC_ID_OFFSET + 6702, "Center Stasis Chamber", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.VANILLA
+    SHOOT_THE_MESSENGER_T_WEST_STASIS_CHAMBER = SC2_RACESWAP_LOC_ID_OFFSET + 6703, "West Stasis Chamber", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.VANILLA
+    SHOOT_THE_MESSENGER_T_DESTROY_4_SHUTTLES = SC2_RACESWAP_LOC_ID_OFFSET + 6704, "Destroy 4 Shuttles", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_T_FROZEN_EXPANSION = SC2_RACESWAP_LOC_ID_OFFSET + 6705, "Frozen Expansion", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_T_SOUTHWEST_FROZEN_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6706, "Southwest Frozen Group", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_T_SOUTHEAST_FROZEN_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6707, "Southeast Frozen Group", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_T_WEST_FROZEN_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6708, "West Frozen Group", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_T_EAST_FROZEN_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6709, "East Frozen Group", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_T_WEST_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 6710, "West Launch Bay", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    SHOOT_THE_MESSENGER_T_CENTER_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 6711, "Center Launch Bay", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    SHOOT_THE_MESSENGER_T_EAST_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 6712, "East Launch Bay", SC2Mission.SHOOT_THE_MESSENGER_T, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    SHOOT_THE_MESSENGER_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 6800, "Victory", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.VICTORY
+    SHOOT_THE_MESSENGER_P_EAST_STASIS_CHAMBER = SC2_RACESWAP_LOC_ID_OFFSET + 6801, "East Stasis Chamber", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.VANILLA
+    SHOOT_THE_MESSENGER_P_CENTER_STASIS_CHAMBER = SC2_RACESWAP_LOC_ID_OFFSET + 6802, "Center Stasis Chamber", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.VANILLA
+    SHOOT_THE_MESSENGER_P_WEST_STASIS_CHAMBER = SC2_RACESWAP_LOC_ID_OFFSET + 6803, "West Stasis Chamber", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.VANILLA
+    SHOOT_THE_MESSENGER_P_DESTROY_4_SHUTTLES = SC2_RACESWAP_LOC_ID_OFFSET + 6804, "Destroy 4 Shuttles", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_P_FROZEN_EXPANSION = SC2_RACESWAP_LOC_ID_OFFSET + 6805, "Frozen Expansion", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_P_SOUTHWEST_FROZEN_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6806, "Southwest Frozen Group", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_P_SOUTHEAST_FROZEN_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6807, "Southeast Frozen Group", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_P_WEST_FROZEN_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6808, "West Frozen Group", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_P_EAST_FROZEN_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 6809, "East Frozen Group", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.EXTRA
+    SHOOT_THE_MESSENGER_P_WEST_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 6810, "West Launch Bay", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    SHOOT_THE_MESSENGER_P_CENTER_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 6811, "Center Launch Bay", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    SHOOT_THE_MESSENGER_P_EAST_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 6812, "East Launch Bay", SC2Mission.SHOOT_THE_MESSENGER_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    ENEMY_WITHIN_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 6900, "Victory", SC2Mission.ENEMY_WITHIN_T, LocationType.VICTORY
+    ENEMY_WITHIN_T_GIANT_URSADON = SC2_RACESWAP_LOC_ID_OFFSET + 6901, "Giant Ursadon", SC2Mission.ENEMY_WITHIN_T, LocationType.VANILLA
+    ENEMY_WITHIN_T_FIRST_STETMANN_LEVELUP = SC2_RACESWAP_LOC_ID_OFFSET + 6902, "First Stetmann Levelup", SC2Mission.ENEMY_WITHIN_T, LocationType.VANILLA
+    ENEMY_WITHIN_T_SECOND_STETMANN_LEVELUP = SC2_RACESWAP_LOC_ID_OFFSET + 6903, "Second Stetmann Levelup", SC2Mission.ENEMY_WITHIN_T, LocationType.VANILLA
+    ENEMY_WITHIN_T_THIRD_STETMANN_LEVELUP = SC2_RACESWAP_LOC_ID_OFFSET + 6904, "Third Stetmann Levelup", SC2Mission.ENEMY_WITHIN_T, LocationType.VANILLA
+    ENEMY_WITHIN_T_WARP_DRIVE = SC2_RACESWAP_LOC_ID_OFFSET + 6905, "Warp Drive", SC2Mission.ENEMY_WITHIN_T, LocationType.EXTRA
+    ENEMY_WITHIN_T_STASIS_QUADRANT = SC2_RACESWAP_LOC_ID_OFFSET + 6906, "Stasis Quadrant", SC2Mission.ENEMY_WITHIN_T, LocationType.EXTRA
+
+    ENEMY_WITHIN_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 7000, "Victory", SC2Mission.ENEMY_WITHIN_P, LocationType.VICTORY
+    ENEMY_WITHIN_P_GIANT_URSADON = SC2_RACESWAP_LOC_ID_OFFSET + 7001, "Giant Ursadon", SC2Mission.ENEMY_WITHIN_P, LocationType.VANILLA
+    ENEMY_WITHIN_P_FIRST_PROBIUS_UPGRADE = SC2_RACESWAP_LOC_ID_OFFSET + 7002, "First Probius Upgrade", SC2Mission.ENEMY_WITHIN_P, LocationType.VANILLA
+    ENEMY_WITHIN_P_SECOND_PROBIUS_UPGRADE = SC2_RACESWAP_LOC_ID_OFFSET + 7003, "Second Probius Upgrade", SC2Mission.ENEMY_WITHIN_P, LocationType.VANILLA
+    ENEMY_WITHIN_P_THIRD_PROBIUS_UPGRADE = SC2_RACESWAP_LOC_ID_OFFSET + 7004, "Third Probius Upgrade", SC2Mission.ENEMY_WITHIN_P, LocationType.VANILLA
+    ENEMY_WITHIN_P_WARP_DRIVE = SC2_RACESWAP_LOC_ID_OFFSET + 7005, "Warp Drive", SC2Mission.ENEMY_WITHIN_P, LocationType.EXTRA
+    ENEMY_WITHIN_P_STASIS_QUADRANT = SC2_RACESWAP_LOC_ID_OFFSET + 7006, "Stasis Quadrant", SC2Mission.ENEMY_WITHIN_P, LocationType.EXTRA
+
+    DOMINATION_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 7100, "Victory", SC2Mission.DOMINATION_T, LocationType.VICTORY
+    DOMINATION_T_CENTER_INFESTED_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 7101, "Center Infested Command Center", SC2Mission.DOMINATION_T, LocationType.VANILLA
+    DOMINATION_T_NORTH_INFESTED_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 7102, "North Infested Command Center", SC2Mission.DOMINATION_T, LocationType.VANILLA
+    DOMINATION_T_REPEL_ZAGARA = SC2_RACESWAP_LOC_ID_OFFSET + 7103, "Repel Zagara", SC2Mission.DOMINATION_T, LocationType.EXTRA
+    DOMINATION_T_CLOSE_BUNKER = SC2_RACESWAP_LOC_ID_OFFSET + 7104, "Close Bunker", SC2Mission.DOMINATION_T, LocationType.EXTRA
+    DOMINATION_T_SOUTH_BUNKER = SC2_RACESWAP_LOC_ID_OFFSET + 7105, "South Bunker", SC2Mission.DOMINATION_T, LocationType.EXTRA
+    DOMINATION_T_SOUTHWEST_BUNKER = SC2_RACESWAP_LOC_ID_OFFSET + 7106, "Southwest Bunker", SC2Mission.DOMINATION_T, LocationType.EXTRA
+    DOMINATION_T_SOUTHEAST_BUNKER = SC2_RACESWAP_LOC_ID_OFFSET + 7107, "Southeast Bunker", SC2Mission.DOMINATION_T, LocationType.EXTRA
+    DOMINATION_T_NORTH_BUNKER = SC2_RACESWAP_LOC_ID_OFFSET + 7108, "North Bunker", SC2Mission.DOMINATION_T, LocationType.EXTRA
+    DOMINATION_T_NORTHEAST_BUNKER = SC2_RACESWAP_LOC_ID_OFFSET + 7109, "Northeast Bunker", SC2Mission.DOMINATION_T, LocationType.EXTRA
+    DOMINATION_T_WIN_WITHOUT_100_EGGS = SC2_RACESWAP_LOC_ID_OFFSET + 7110, "Win Without 100 Eggs", SC2Mission.DOMINATION_T, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    DOMINATION_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 7200, "Victory", SC2Mission.DOMINATION_P, LocationType.VICTORY
+    DOMINATION_P_CENTER_INFESTED_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 7201, "Center Infested Command Center", SC2Mission.DOMINATION_P, LocationType.VANILLA
+    DOMINATION_P_NORTH_INFESTED_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 7202, "North Infested Command Center", SC2Mission.DOMINATION_P, LocationType.VANILLA
+    DOMINATION_P_REPEL_ZAGARA = SC2_RACESWAP_LOC_ID_OFFSET + 7203, "Repel Zagara", SC2Mission.DOMINATION_P, LocationType.EXTRA
+    DOMINATION_P_CLOSE_TEMPLAR = SC2_RACESWAP_LOC_ID_OFFSET + 7204, "Close Templar", SC2Mission.DOMINATION_P, LocationType.EXTRA
+    DOMINATION_P_SOUTH_TEMPLAR = SC2_RACESWAP_LOC_ID_OFFSET + 7205, "South Templar", SC2Mission.DOMINATION_P, LocationType.EXTRA
+    DOMINATION_P_SOUTHWEST_TEMPLAR = SC2_RACESWAP_LOC_ID_OFFSET + 7206, "Southwest Templar", SC2Mission.DOMINATION_P, LocationType.EXTRA
+    DOMINATION_P_SOUTHEAST_TEMPLAR = SC2_RACESWAP_LOC_ID_OFFSET + 7207, "Southeast Templar", SC2Mission.DOMINATION_P, LocationType.EXTRA
+    DOMINATION_P_NORTH_TEMPLAR = SC2_RACESWAP_LOC_ID_OFFSET + 7208, "North Templar", SC2Mission.DOMINATION_P, LocationType.EXTRA
+    DOMINATION_P_NORTHEAST_TEMPLAR = SC2_RACESWAP_LOC_ID_OFFSET + 7209, "Northeast Templar", SC2Mission.DOMINATION_P, LocationType.EXTRA
+    DOMINATION_P_WIN_WITHOUT_100_EGGS = SC2_RACESWAP_LOC_ID_OFFSET + 7210, "Win Without 100 Eggs", SC2Mission.DOMINATION_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    FIRE_IN_THE_SKY_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 7300, "Victory", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.VICTORY
+    FIRE_IN_THE_SKY_T_WEST_BIOMASS = SC2_RACESWAP_LOC_ID_OFFSET + 7301, "West Biomass", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.VANILLA
+    FIRE_IN_THE_SKY_T_NORTH_BIOMASS = SC2_RACESWAP_LOC_ID_OFFSET + 7302, "North Biomass", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.VANILLA
+    FIRE_IN_THE_SKY_T_SOUTH_BIOMASS = SC2_RACESWAP_LOC_ID_OFFSET + 7303, "South Biomass", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.VANILLA
+    FIRE_IN_THE_SKY_T_DESTROY_3_GORGONS = SC2_RACESWAP_LOC_ID_OFFSET + 7304, "Destroy 3 Gorgons", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.EXTRA
+    FIRE_IN_THE_SKY_T_CLOSE_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 7305, "Close Rescue", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.EXTRA
+    FIRE_IN_THE_SKY_T_SOUTH_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 7306, "South Rescue", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.EXTRA
+    FIRE_IN_THE_SKY_T_NORTH_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 7307, "North Rescue", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.EXTRA
+    FIRE_IN_THE_SKY_T_WEST_MEDIC_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 7308, "West Medic Rescue", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.EXTRA
+    FIRE_IN_THE_SKY_T_EAST_MEDIC_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 7309, "East Medic Rescue", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.EXTRA
+    FIRE_IN_THE_SKY_T_SOUTH_ORBITAL_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 7310, "South Orbital Command Center", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    FIRE_IN_THE_SKY_T_NORTHWEST_ORBITAL_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 7311, "Northwest Orbital Command Center", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    FIRE_IN_THE_SKY_T_SOUTHEAST_ORBITAL_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 7312, "Southeast Orbital Command Center", SC2Mission.FIRE_IN_THE_SKY_T, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    FIRE_IN_THE_SKY_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 7400, "Victory", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.VICTORY
+    FIRE_IN_THE_SKY_P_WEST_BIOMASS = SC2_RACESWAP_LOC_ID_OFFSET + 7401, "West Biomass", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.VANILLA
+    FIRE_IN_THE_SKY_P_NORTH_BIOMASS = SC2_RACESWAP_LOC_ID_OFFSET + 7402, "North Biomass", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.VANILLA
+    FIRE_IN_THE_SKY_P_SOUTH_BIOMASS = SC2_RACESWAP_LOC_ID_OFFSET + 7403, "South Biomass", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.VANILLA
+    FIRE_IN_THE_SKY_P_DESTROY_3_GORGONS = SC2_RACESWAP_LOC_ID_OFFSET + 7404, "Destroy 3 Gorgons", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.EXTRA
+    FIRE_IN_THE_SKY_P_CLOSE_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 7405, "Close Rescue", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.EXTRA
+    FIRE_IN_THE_SKY_P_SOUTH_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 7406, "South Rescue", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.EXTRA
+    FIRE_IN_THE_SKY_P_NORTH_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 7407, "North Rescue", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.EXTRA
+    FIRE_IN_THE_SKY_P_WEST_ENERGIZER_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 7408, "West Energizer Rescue", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.EXTRA
+    FIRE_IN_THE_SKY_P_EAST_ENERGIZER_RESCUE = SC2_RACESWAP_LOC_ID_OFFSET + 7409, "East Energizer Rescue", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.EXTRA
+    FIRE_IN_THE_SKY_P_SOUTH_ORBITAL_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 7410, "South Orbital Command Center", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    FIRE_IN_THE_SKY_P_NORTHWEST_ORBITAL_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 7411, "Northwest Orbital Command Center", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    FIRE_IN_THE_SKY_P_SOUTHEAST_ORBITAL_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 7412, "Southeast Orbital Command Center", SC2Mission.FIRE_IN_THE_SKY_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    OLD_SOLDIERS_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 7500, "Victory", SC2Mission.OLD_SOLDIERS_T, LocationType.VICTORY
+    OLD_SOLDIERS_T_EAST_SCIENCE_LAB = SC2_RACESWAP_LOC_ID_OFFSET + 7501, "East Science Lab", SC2Mission.OLD_SOLDIERS_T, LocationType.VANILLA
+    OLD_SOLDIERS_T_NORTH_SCIENCE_LAB = SC2_RACESWAP_LOC_ID_OFFSET + 7502, "North Science Lab", SC2Mission.OLD_SOLDIERS_T, LocationType.VANILLA
+    OLD_SOLDIERS_T_GET_NUKED = SC2_RACESWAP_LOC_ID_OFFSET + 7503, "Get Nuked", SC2Mission.OLD_SOLDIERS_T, LocationType.EXTRA
+    OLD_SOLDIERS_T_ENTRANCE_GATE = SC2_RACESWAP_LOC_ID_OFFSET + 7504, "Entrance Gate", SC2Mission.OLD_SOLDIERS_T, LocationType.EXTRA
+    OLD_SOLDIERS_T_CITADEL_GATE = SC2_RACESWAP_LOC_ID_OFFSET + 7505, "Citadel Gate", SC2Mission.OLD_SOLDIERS_T, LocationType.EXTRA
+    OLD_SOLDIERS_T_SOUTH_EXPANSION = SC2_RACESWAP_LOC_ID_OFFSET + 7506, "South Expansion", SC2Mission.OLD_SOLDIERS_T, LocationType.EXTRA
+    OLD_SOLDIERS_T_RICH_MINERAL_EXPANSION = SC2_RACESWAP_LOC_ID_OFFSET + 7507, "Rich Mineral Expansion", SC2Mission.OLD_SOLDIERS_T, LocationType.EXTRA
+
+    OLD_SOLDIERS_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 7600, "Victory", SC2Mission.OLD_SOLDIERS_P, LocationType.VICTORY
+    OLD_SOLDIERS_P_EAST_SCIENCE_LAB = SC2_RACESWAP_LOC_ID_OFFSET + 7601, "East Science Lab", SC2Mission.OLD_SOLDIERS_P, LocationType.VANILLA
+    OLD_SOLDIERS_P_NORTH_SCIENCE_LAB = SC2_RACESWAP_LOC_ID_OFFSET + 7602, "North Science Lab", SC2Mission.OLD_SOLDIERS_P, LocationType.VANILLA
+    OLD_SOLDIERS_P_GET_NUKED = SC2_RACESWAP_LOC_ID_OFFSET + 7603, "Get Nuked", SC2Mission.OLD_SOLDIERS_P, LocationType.EXTRA
+    OLD_SOLDIERS_P_ENTRANCE_GATE = SC2_RACESWAP_LOC_ID_OFFSET + 7604, "Entrance Gate", SC2Mission.OLD_SOLDIERS_P, LocationType.EXTRA
+    OLD_SOLDIERS_P_CITADEL_GATE = SC2_RACESWAP_LOC_ID_OFFSET + 7605, "Citadel Gate", SC2Mission.OLD_SOLDIERS_P, LocationType.EXTRA
+    OLD_SOLDIERS_P_SOUTH_EXPANSION = SC2_RACESWAP_LOC_ID_OFFSET + 7606, "South Expansion", SC2Mission.OLD_SOLDIERS_P, LocationType.EXTRA
+    OLD_SOLDIERS_P_RICH_MINERAL_EXPANSION = SC2_RACESWAP_LOC_ID_OFFSET + 7607, "Rich Mineral Expansion", SC2Mission.OLD_SOLDIERS_P, LocationType.EXTRA
+
+    WAKING_THE_ANCIENT_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 7700, "Victory", SC2Mission.WAKING_THE_ANCIENT_T, LocationType.VICTORY
+    WAKING_THE_ANCIENT_T_CENTER_ESSENCE_POOL = SC2_RACESWAP_LOC_ID_OFFSET + 7701, "Center Essence Pool", SC2Mission.WAKING_THE_ANCIENT_T, LocationType.VANILLA
+    WAKING_THE_ANCIENT_T_EAST_ESSENCE_POOL = SC2_RACESWAP_LOC_ID_OFFSET + 7702, "East Essence Pool", SC2Mission.WAKING_THE_ANCIENT_T, LocationType.VANILLA
+    WAKING_THE_ANCIENT_T_SOUTH_ESSENCE_POOL = SC2_RACESWAP_LOC_ID_OFFSET + 7703, "South Essence Pool", SC2Mission.WAKING_THE_ANCIENT_T, LocationType.VANILLA
+    WAKING_THE_ANCIENT_T_FINISH_FEEDING = SC2_RACESWAP_LOC_ID_OFFSET + 7704, "Finish Feeding", SC2Mission.WAKING_THE_ANCIENT_T, LocationType.EXTRA
+    WAKING_THE_ANCIENT_T_SOUTH_PROXY_PRIMAL_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 7705, "South Proxy Primal Hive", SC2Mission.WAKING_THE_ANCIENT_T, LocationType.CHALLENGE
+    WAKING_THE_ANCIENT_T_EAST_PROXY_PRIMAL_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 7706, "East Proxy Primal Hive", SC2Mission.WAKING_THE_ANCIENT_T, LocationType.CHALLENGE
+    WAKING_THE_ANCIENT_T_SOUTH_MAIN_PRIMAL_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 7707, "South Main Primal Hive", SC2Mission.WAKING_THE_ANCIENT_T, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    WAKING_THE_ANCIENT_T_EAST_MAIN_PRIMAL_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 7708, "East Main Primal Hive", SC2Mission.WAKING_THE_ANCIENT_T, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    WAKING_THE_ANCIENT_T_FLAWLESS = SC2_RACESWAP_LOC_ID_OFFSET + 7709, "Flawless", SC2Mission.WAKING_THE_ANCIENT_T, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+
+    WAKING_THE_ANCIENT_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 7800, "Victory", SC2Mission.WAKING_THE_ANCIENT_P, LocationType.VICTORY
+    WAKING_THE_ANCIENT_P_CENTER_ESSENCE_POOL = SC2_RACESWAP_LOC_ID_OFFSET + 7801, "Center Essence Pool", SC2Mission.WAKING_THE_ANCIENT_P, LocationType.VANILLA
+    WAKING_THE_ANCIENT_P_EAST_ESSENCE_POOL = SC2_RACESWAP_LOC_ID_OFFSET + 7802, "East Essence Pool", SC2Mission.WAKING_THE_ANCIENT_P, LocationType.VANILLA
+    WAKING_THE_ANCIENT_P_SOUTH_ESSENCE_POOL = SC2_RACESWAP_LOC_ID_OFFSET + 7803, "South Essence Pool", SC2Mission.WAKING_THE_ANCIENT_P, LocationType.VANILLA
+    WAKING_THE_ANCIENT_P_FINISH_FEEDING = SC2_RACESWAP_LOC_ID_OFFSET + 7804, "Finish Feeding", SC2Mission.WAKING_THE_ANCIENT_P, LocationType.EXTRA
+    WAKING_THE_ANCIENT_P_SOUTH_PROXY_PRIMAL_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 7805, "South Proxy Primal Hive", SC2Mission.WAKING_THE_ANCIENT_P, LocationType.CHALLENGE
+    WAKING_THE_ANCIENT_P_EAST_PROXY_PRIMAL_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 7806, "East Proxy Primal Hive", SC2Mission.WAKING_THE_ANCIENT_P, LocationType.CHALLENGE
+    WAKING_THE_ANCIENT_P_SOUTH_MAIN_PRIMAL_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 7807, "South Main Primal Hive", SC2Mission.WAKING_THE_ANCIENT_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    WAKING_THE_ANCIENT_P_EAST_MAIN_PRIMAL_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 7808, "East Main Primal Hive", SC2Mission.WAKING_THE_ANCIENT_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+    WAKING_THE_ANCIENT_P_FLAWLESS = SC2_RACESWAP_LOC_ID_OFFSET + 7809, "Flawless", SC2Mission.WAKING_THE_ANCIENT_P, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+
+    THE_CRUCIBLE_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 7900, "Victory", SC2Mission.THE_CRUCIBLE_T, LocationType.VICTORY
+    THE_CRUCIBLE_T_TYRANNOZOR = SC2_RACESWAP_LOC_ID_OFFSET + 7901, "Tyrannozor", SC2Mission.THE_CRUCIBLE_T, LocationType.VANILLA
+    THE_CRUCIBLE_T_REACH_THE_POOL = SC2_RACESWAP_LOC_ID_OFFSET + 7902, "Reach the Pool", SC2Mission.THE_CRUCIBLE_T, LocationType.VANILLA
+    THE_CRUCIBLE_T_15_MINUTES_REMAINING = SC2_RACESWAP_LOC_ID_OFFSET + 7903, "15 Minutes Remaining", SC2Mission.THE_CRUCIBLE_T, LocationType.EXTRA
+    THE_CRUCIBLE_T_5_MINUTES_REMAINING = SC2_RACESWAP_LOC_ID_OFFSET + 7904, "5 Minutes Remaining", SC2Mission.THE_CRUCIBLE_T, LocationType.EXTRA
+    THE_CRUCIBLE_T_PINCER_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 7905, "Pincer Attack", SC2Mission.THE_CRUCIBLE_T, LocationType.EXTRA
+    THE_CRUCIBLE_T_YAGDRA_CLAIMS_BRAKKS_PACK = SC2_RACESWAP_LOC_ID_OFFSET + 7906, "Yagdra Claims Brakk's Pack", SC2Mission.THE_CRUCIBLE_T, LocationType.EXTRA
+
+    THE_CRUCIBLE_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 8000, "Victory", SC2Mission.THE_CRUCIBLE_P, LocationType.VICTORY
+    THE_CRUCIBLE_P_TYRANNOZOR = SC2_RACESWAP_LOC_ID_OFFSET + 8001, "Tyrannozor", SC2Mission.THE_CRUCIBLE_P, LocationType.VANILLA
+    THE_CRUCIBLE_P_REACH_THE_POOL = SC2_RACESWAP_LOC_ID_OFFSET + 8002, "Reach the Pool", SC2Mission.THE_CRUCIBLE_P, LocationType.VANILLA
+    THE_CRUCIBLE_P_15_MINUTES_REMAINING = SC2_RACESWAP_LOC_ID_OFFSET + 8003, "15 Minutes Remaining", SC2Mission.THE_CRUCIBLE_P, LocationType.EXTRA
+    THE_CRUCIBLE_P_5_MINUTES_REMAINING = SC2_RACESWAP_LOC_ID_OFFSET + 8004, "5 Minutes Remaining", SC2Mission.THE_CRUCIBLE_P, LocationType.EXTRA
+    THE_CRUCIBLE_P_PINCER_ATTACK = SC2_RACESWAP_LOC_ID_OFFSET + 8005, "Pincer Attack", SC2Mission.THE_CRUCIBLE_P, LocationType.EXTRA
+    THE_CRUCIBLE_P_YAGDRA_CLAIMS_BRAKKS_PACK = SC2_RACESWAP_LOC_ID_OFFSET + 8006, "Yagdra Claims Brakk's Pack", SC2Mission.THE_CRUCIBLE_P, LocationType.EXTRA
+
+    INFESTED_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 8300, "Victory", SC2Mission.INFESTED_T, LocationType.VICTORY
+    INFESTED_T_EAST_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 8301, "East Science Facility", SC2Mission.INFESTED_T, LocationType.VANILLA
+    INFESTED_T_CENTER_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 8302, "Center Science Facility", SC2Mission.INFESTED_T, LocationType.VANILLA
+    INFESTED_T_WEST_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 8303, "West Science Facility", SC2Mission.INFESTED_T, LocationType.VANILLA
+    INFESTED_T_FIRST_INTRO_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8304, "First Intro Garrison", SC2Mission.INFESTED_T, LocationType.EXTRA
+    INFESTED_T_SECOND_INTRO_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8305, "Second Intro Garrison", SC2Mission.INFESTED_T, LocationType.EXTRA
+    INFESTED_T_BASE_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8306, "Base Garrison", SC2Mission.INFESTED_T, LocationType.EXTRA
+    INFESTED_T_EAST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8307, "East Garrison", SC2Mission.INFESTED_T, LocationType.EXTRA
+    INFESTED_T_MID_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8308, "Mid Garrison", SC2Mission.INFESTED_T, LocationType.EXTRA
+    INFESTED_T_NORTH_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8309, "North Garrison", SC2Mission.INFESTED_T, LocationType.EXTRA
+    INFESTED_T_CLOSE_SOUTHWEST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8310, "Close Southwest Garrison", SC2Mission.INFESTED_T, LocationType.EXTRA
+    INFESTED_T_FAR_SOUTHWEST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8311, "Far Southwest Garrison", SC2Mission.INFESTED_T, LocationType.EXTRA
+
+    INFESTED_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 8400, "Victory", SC2Mission.INFESTED_P, LocationType.VICTORY
+    INFESTED_P_EAST_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 8401, "East Science Facility", SC2Mission.INFESTED_P, LocationType.VANILLA
+    INFESTED_P_CENTER_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 8402, "Center Science Facility", SC2Mission.INFESTED_P, LocationType.VANILLA
+    INFESTED_P_WEST_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 8403, "West Science Facility", SC2Mission.INFESTED_P, LocationType.VANILLA
+    INFESTED_P_FIRST_INTRO_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8404, "First Intro Garrison", SC2Mission.INFESTED_P, LocationType.EXTRA
+    INFESTED_P_SECOND_INTRO_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8405, "Second Intro Garrison", SC2Mission.INFESTED_P, LocationType.EXTRA
+    INFESTED_P_BASE_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8406, "Base Garrison", SC2Mission.INFESTED_P, LocationType.EXTRA
+    INFESTED_P_EAST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8407, "East Garrison", SC2Mission.INFESTED_P, LocationType.EXTRA
+    INFESTED_P_MID_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8408, "Mid Garrison", SC2Mission.INFESTED_P, LocationType.EXTRA
+    INFESTED_P_NORTH_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8409, "North Garrison", SC2Mission.INFESTED_P, LocationType.EXTRA
+    INFESTED_P_CLOSE_SOUTHWEST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8410, "Close Southwest Garrison", SC2Mission.INFESTED_P, LocationType.EXTRA
+    INFESTED_P_FAR_SOUTHWEST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 8411, "Far Southwest Garrison", SC2Mission.INFESTED_P, LocationType.EXTRA
+
+    HAND_OF_DARKNESS_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 8500, "Victory", SC2Mission.HAND_OF_DARKNESS_T, LocationType.VICTORY
+    HAND_OF_DARKNESS_T_NORTH_WAR_BOT = SC2_RACESWAP_LOC_ID_OFFSET + 8501, "North War Bot", SC2Mission.HAND_OF_DARKNESS_T, LocationType.VANILLA
+    HAND_OF_DARKNESS_T_SOUTH_WAR_BOT = SC2_RACESWAP_LOC_ID_OFFSET + 8502, "South War Bot", SC2Mission.HAND_OF_DARKNESS_T, LocationType.VANILLA
+    HAND_OF_DARKNESS_T_KILL_1_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8503, "Kill 1 Hybrid", SC2Mission.HAND_OF_DARKNESS_T, LocationType.EXTRA
+    HAND_OF_DARKNESS_T_KILL_2_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8504, "Kill 2 Hybrid", SC2Mission.HAND_OF_DARKNESS_T, LocationType.EXTRA
+    HAND_OF_DARKNESS_T_KILL_3_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8505, "Kill 3 Hybrid", SC2Mission.HAND_OF_DARKNESS_T, LocationType.EXTRA
+    HAND_OF_DARKNESS_T_KILL_4_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8506, "Kill 4 Hybrid", SC2Mission.HAND_OF_DARKNESS_T, LocationType.EXTRA
+    HAND_OF_DARKNESS_T_KILL_5_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8507, "Kill 5 Hybrid", SC2Mission.HAND_OF_DARKNESS_T, LocationType.EXTRA
+    HAND_OF_DARKNESS_T_KILL_6_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8508, "Kill 6 Hybrid", SC2Mission.HAND_OF_DARKNESS_T, LocationType.EXTRA
+    HAND_OF_DARKNESS_T_KILL_7_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8509, "Kill 7 Hybrid", SC2Mission.HAND_OF_DARKNESS_T, LocationType.EXTRA
+
+    HAND_OF_DARKNESS_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 8600, "Victory", SC2Mission.HAND_OF_DARKNESS_P, LocationType.VICTORY
+    HAND_OF_DARKNESS_P_NORTH_STONE_ZEALOT = SC2_RACESWAP_LOC_ID_OFFSET + 8601, "North Stone Zealot", SC2Mission.HAND_OF_DARKNESS_P, LocationType.VANILLA
+    HAND_OF_DARKNESS_P_SOUTH_STONE_ZEALOT = SC2_RACESWAP_LOC_ID_OFFSET + 8602, "South Stone Zealot", SC2Mission.HAND_OF_DARKNESS_P, LocationType.VANILLA
+    HAND_OF_DARKNESS_P_KILL_1_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8603, "Kill 1 Hybrid", SC2Mission.HAND_OF_DARKNESS_P, LocationType.EXTRA
+    HAND_OF_DARKNESS_P_KILL_2_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8604, "Kill 2 Hybrid", SC2Mission.HAND_OF_DARKNESS_P, LocationType.EXTRA
+    HAND_OF_DARKNESS_P_KILL_3_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8605, "Kill 3 Hybrid", SC2Mission.HAND_OF_DARKNESS_P, LocationType.EXTRA
+    HAND_OF_DARKNESS_P_KILL_4_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8606, "Kill 4 Hybrid", SC2Mission.HAND_OF_DARKNESS_P, LocationType.EXTRA
+    HAND_OF_DARKNESS_P_KILL_5_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8607, "Kill 5 Hybrid", SC2Mission.HAND_OF_DARKNESS_P, LocationType.EXTRA
+    HAND_OF_DARKNESS_P_KILL_6_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8608, "Kill 6 Hybrid", SC2Mission.HAND_OF_DARKNESS_P, LocationType.EXTRA
+    HAND_OF_DARKNESS_P_KILL_7_HYBRID = SC2_RACESWAP_LOC_ID_OFFSET + 8609, "Kill 7 Hybrid", SC2Mission.HAND_OF_DARKNESS_P, LocationType.EXTRA
+
+    PHANTOMS_OF_THE_VOID_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 8700, "Victory", SC2Mission.PHANTOMS_OF_THE_VOID_T, LocationType.VICTORY
+    PHANTOMS_OF_THE_VOID_T_NORTHWEST_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 8701, "Northwest Crystal", SC2Mission.PHANTOMS_OF_THE_VOID_T, LocationType.VANILLA
+    PHANTOMS_OF_THE_VOID_T_NORTHEAST_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 8702, "Northeast Crystal", SC2Mission.PHANTOMS_OF_THE_VOID_T, LocationType.VANILLA
+    PHANTOMS_OF_THE_VOID_T_SOUTH_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 8703, "South Crystal", SC2Mission.PHANTOMS_OF_THE_VOID_T, LocationType.VANILLA
+    PHANTOMS_OF_THE_VOID_T_BASE_ESTABLISHED = SC2_RACESWAP_LOC_ID_OFFSET + 8704, "Base Established", SC2Mission.PHANTOMS_OF_THE_VOID_T, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_T_CLOSE_TEMPLE = SC2_RACESWAP_LOC_ID_OFFSET + 8705, "Close Temple", SC2Mission.PHANTOMS_OF_THE_VOID_T, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_T_MID_TEMPLE = SC2_RACESWAP_LOC_ID_OFFSET + 8706, "Mid Temple", SC2Mission.PHANTOMS_OF_THE_VOID_T, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_T_SOUTHEAST_TEMPLE = SC2_RACESWAP_LOC_ID_OFFSET + 8707, "Southeast Temple", SC2Mission.PHANTOMS_OF_THE_VOID_T, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_T_NORTHEAST_TEMPLE = SC2_RACESWAP_LOC_ID_OFFSET + 8708, "Northeast Temple", SC2Mission.PHANTOMS_OF_THE_VOID_T, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_T_NORTHWEST_TEMPLE = SC2_RACESWAP_LOC_ID_OFFSET + 8709, "Northwest Temple", SC2Mission.PHANTOMS_OF_THE_VOID_T, LocationType.EXTRA
+
+    PHANTOMS_OF_THE_VOID_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 8800, "Victory", SC2Mission.PHANTOMS_OF_THE_VOID_P, LocationType.VICTORY
+    PHANTOMS_OF_THE_VOID_P_NORTHWEST_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 8801, "Northwest Crystal", SC2Mission.PHANTOMS_OF_THE_VOID_P, LocationType.VANILLA
+    PHANTOMS_OF_THE_VOID_P_NORTHEAST_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 8802, "Northeast Crystal", SC2Mission.PHANTOMS_OF_THE_VOID_P, LocationType.VANILLA
+    PHANTOMS_OF_THE_VOID_P_SOUTH_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 8803, "South Crystal", SC2Mission.PHANTOMS_OF_THE_VOID_P, LocationType.VANILLA
+    PHANTOMS_OF_THE_VOID_P_BASE_ESTABLISHED = SC2_RACESWAP_LOC_ID_OFFSET + 8804, "Base Established", SC2Mission.PHANTOMS_OF_THE_VOID_P, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_P_CLOSE_TEMPLE = SC2_RACESWAP_LOC_ID_OFFSET + 8805, "Close Temple", SC2Mission.PHANTOMS_OF_THE_VOID_P, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_P_MID_TEMPLE = SC2_RACESWAP_LOC_ID_OFFSET + 8806, "Mid Temple", SC2Mission.PHANTOMS_OF_THE_VOID_P, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_P_SOUTHEAST_TEMPLE = SC2_RACESWAP_LOC_ID_OFFSET + 8807, "Southeast Temple", SC2Mission.PHANTOMS_OF_THE_VOID_P, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_P_NORTHEAST_TEMPLE = SC2_RACESWAP_LOC_ID_OFFSET + 8808, "Northeast Temple", SC2Mission.PHANTOMS_OF_THE_VOID_P, LocationType.EXTRA
+    PHANTOMS_OF_THE_VOID_P_NORTHWEST_TEMPLE = SC2_RACESWAP_LOC_ID_OFFSET + 8809, "Northwest Temple", SC2Mission.PHANTOMS_OF_THE_VOID_P, LocationType.EXTRA
+
+    PLANETFALL_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 9300, "Victory", SC2Mission.PLANETFALL_T, LocationType.VICTORY
+    PLANETFALL_T_EAST_GATE = SC2_RACESWAP_LOC_ID_OFFSET + 9301, "East Gate", SC2Mission.PLANETFALL_T, LocationType.VANILLA
+    PLANETFALL_T_NORTHWEST_GATE = SC2_RACESWAP_LOC_ID_OFFSET + 9302, "Northwest Gate", SC2Mission.PLANETFALL_T, LocationType.VANILLA
+    PLANETFALL_T_NORTH_GATE = SC2_RACESWAP_LOC_ID_OFFSET + 9303, "North Gate", SC2Mission.PLANETFALL_T, LocationType.VANILLA
+    PLANETFALL_T_1_LASER_DRILL_DEPLOYED = SC2_RACESWAP_LOC_ID_OFFSET + 9304, "1 Laser Drill Deployed", SC2Mission.PLANETFALL_T, LocationType.EXTRA
+    PLANETFALL_T_2_LASER_DRILLS_DEPLOYED = SC2_RACESWAP_LOC_ID_OFFSET + 9305, "2 Laser Drills Deployed", SC2Mission.PLANETFALL_T, LocationType.EXTRA
+    PLANETFALL_T_3_LASER_DRILLS_DEPLOYED = SC2_RACESWAP_LOC_ID_OFFSET + 9306, "3 Laser Drills Deployed", SC2Mission.PLANETFALL_T, LocationType.EXTRA
+    PLANETFALL_T_4_LASER_DRILLS_DEPLOYED = SC2_RACESWAP_LOC_ID_OFFSET + 9307, "4 Laser Drills Deployed", SC2Mission.PLANETFALL_T, LocationType.EXTRA
+    PLANETFALL_T_5_LASER_DRILLS_DEPLOYED = SC2_RACESWAP_LOC_ID_OFFSET + 9308, "5 Laser Drills Deployed", SC2Mission.PLANETFALL_T, LocationType.EXTRA
+    PLANETFALL_T_SONS_OF_KORHAL = SC2_RACESWAP_LOC_ID_OFFSET + 9309, "Sons of Korhal", SC2Mission.PLANETFALL_T, LocationType.EXTRA
+    PLANETFALL_T_NIGHT_WOLVES = SC2_RACESWAP_LOC_ID_OFFSET + 9310, "Night Wolves", SC2Mission.PLANETFALL_T, LocationType.EXTRA
+    PLANETFALL_T_WEST_EXPANSION = SC2_RACESWAP_LOC_ID_OFFSET + 9311, "West Expansion", SC2Mission.PLANETFALL_T, LocationType.EXTRA
+    PLANETFALL_T_MID_EXPANSION = SC2_RACESWAP_LOC_ID_OFFSET + 9312, "Mid Expansion", SC2Mission.PLANETFALL_T, LocationType.EXTRA
+
+    PLANETFALL_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 9400, "Victory", SC2Mission.PLANETFALL_P, LocationType.VICTORY
+    PLANETFALL_P_EAST_GATE = SC2_RACESWAP_LOC_ID_OFFSET + 9401, "East Gate", SC2Mission.PLANETFALL_P, LocationType.VANILLA
+    PLANETFALL_P_NORTHWEST_GATE = SC2_RACESWAP_LOC_ID_OFFSET + 9402, "Northwest Gate", SC2Mission.PLANETFALL_P, LocationType.VANILLA
+    PLANETFALL_P_NORTH_GATE = SC2_RACESWAP_LOC_ID_OFFSET + 9403, "North Gate", SC2Mission.PLANETFALL_P, LocationType.VANILLA
+    PLANETFALL_P_1_PARTICLE_CANNON_DEPLOYED = SC2_RACESWAP_LOC_ID_OFFSET + 9404, "1 Particle Cannon Deployed", SC2Mission.PLANETFALL_P, LocationType.EXTRA
+    PLANETFALL_P_2_PARTICLE_CANNONS_DEPLOYED = SC2_RACESWAP_LOC_ID_OFFSET + 9405, "2 Particle Cannons Deployed", SC2Mission.PLANETFALL_P, LocationType.EXTRA
+    PLANETFALL_P_3_PARTICLE_CANNONS_DEPLOYED = SC2_RACESWAP_LOC_ID_OFFSET + 9406, "3 Particle Cannons Deployed", SC2Mission.PLANETFALL_P, LocationType.EXTRA
+    PLANETFALL_P_4_PARTICLE_CANNONS_DEPLOYED = SC2_RACESWAP_LOC_ID_OFFSET + 9407, "4 Particle Cannons Deployed", SC2Mission.PLANETFALL_P, LocationType.EXTRA
+    PLANETFALL_P_5_PARTICLE_CANNONS_DEPLOYED = SC2_RACESWAP_LOC_ID_OFFSET + 9408, "5 Particle Cannons Deployed", SC2Mission.PLANETFALL_P, LocationType.EXTRA
+    PLANETFALL_P_SONS_OF_KORHAL = SC2_RACESWAP_LOC_ID_OFFSET + 9409, "Sons of Korhal", SC2Mission.PLANETFALL_P, LocationType.EXTRA
+    PLANETFALL_P_NIGHT_WOLVES = SC2_RACESWAP_LOC_ID_OFFSET + 9410, "Night Wolves", SC2Mission.PLANETFALL_P, LocationType.EXTRA
+    PLANETFALL_P_WEST_EXPANSION = SC2_RACESWAP_LOC_ID_OFFSET + 9411, "West Expansion", SC2Mission.PLANETFALL_P, LocationType.EXTRA
+    PLANETFALL_P_MID_EXPANSION = SC2_RACESWAP_LOC_ID_OFFSET + 9412, "Mid Expansion", SC2Mission.PLANETFALL_P, LocationType.EXTRA
+
+    DEATH_FROM_ABOVE_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 9500, "Victory", SC2Mission.DEATH_FROM_ABOVE_T, LocationType.VICTORY
+    DEATH_FROM_ABOVE_T_FIRST_POWER_LINK = SC2_RACESWAP_LOC_ID_OFFSET + 9501, "First Power Link", SC2Mission.DEATH_FROM_ABOVE_T, LocationType.VANILLA
+    DEATH_FROM_ABOVE_T_SECOND_POWER_LINK = SC2_RACESWAP_LOC_ID_OFFSET + 9502, "Second Power Link", SC2Mission.DEATH_FROM_ABOVE_T, LocationType.VANILLA
+    DEATH_FROM_ABOVE_T_THIRD_POWER_LINK = SC2_RACESWAP_LOC_ID_OFFSET + 9503, "Third Power Link", SC2Mission.DEATH_FROM_ABOVE_T, LocationType.VANILLA
+    DEATH_FROM_ABOVE_T_EXPANSION_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 9504, "Expansion Command Center", SC2Mission.DEATH_FROM_ABOVE_T, LocationType.EXTRA
+    DEATH_FROM_ABOVE_T_MAIN_PATH_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 9505, "Main Path Command Center", SC2Mission.DEATH_FROM_ABOVE_T, LocationType.EXTRA
+
+    DEATH_FROM_ABOVE_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 9600, "Victory", SC2Mission.DEATH_FROM_ABOVE_P, LocationType.VICTORY
+    DEATH_FROM_ABOVE_P_FIRST_POWER_LINK = SC2_RACESWAP_LOC_ID_OFFSET + 9601, "First Power Link", SC2Mission.DEATH_FROM_ABOVE_P, LocationType.VANILLA
+    DEATH_FROM_ABOVE_P_SECOND_POWER_LINK = SC2_RACESWAP_LOC_ID_OFFSET + 9602, "Second Power Link", SC2Mission.DEATH_FROM_ABOVE_P, LocationType.VANILLA
+    DEATH_FROM_ABOVE_P_THIRD_POWER_LINK = SC2_RACESWAP_LOC_ID_OFFSET + 9603, "Third Power Link", SC2Mission.DEATH_FROM_ABOVE_P, LocationType.VANILLA
+    DEATH_FROM_ABOVE_P_EXPANSION_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 9604, "Expansion Command Center", SC2Mission.DEATH_FROM_ABOVE_P, LocationType.EXTRA
+    DEATH_FROM_ABOVE_P_MAIN_PATH_COMMAND_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 9605, "Main Path Command Center", SC2Mission.DEATH_FROM_ABOVE_P, LocationType.EXTRA
+
+    THE_RECKONING_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 9700, "Victory", SC2Mission.THE_RECKONING_T, LocationType.VICTORY
+    THE_RECKONING_T_SOUTH_LANE = SC2_RACESWAP_LOC_ID_OFFSET + 9701, "South Lane", SC2Mission.THE_RECKONING_T, LocationType.VANILLA
+    THE_RECKONING_T_NORTH_LANE = SC2_RACESWAP_LOC_ID_OFFSET + 9702, "North Lane", SC2Mission.THE_RECKONING_T, LocationType.VANILLA
+    THE_RECKONING_T_EAST_LANE = SC2_RACESWAP_LOC_ID_OFFSET + 9703, "East Lane", SC2Mission.THE_RECKONING_T, LocationType.VANILLA
+    THE_RECKONING_T_ODIN = SC2_RACESWAP_LOC_ID_OFFSET + 9704, "Odin", SC2Mission.THE_RECKONING_T, LocationType.EXTRA
+    THE_RECKONING_T_TRASH_THE_ODIN_EARLY = SC2_RACESWAP_LOC_ID_OFFSET + 9705, "Trash the Odin Early", SC2Mission.THE_RECKONING_T, LocationType.MASTERY, LocationFlag.SPEEDRUN
+
+    THE_RECKONING_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 9800, "Victory", SC2Mission.THE_RECKONING_P, LocationType.VICTORY
+    THE_RECKONING_P_SOUTH_LANE = SC2_RACESWAP_LOC_ID_OFFSET + 9801, "South Lane", SC2Mission.THE_RECKONING_P, LocationType.VANILLA
+    THE_RECKONING_P_NORTH_LANE = SC2_RACESWAP_LOC_ID_OFFSET + 9802, "North Lane", SC2Mission.THE_RECKONING_P, LocationType.VANILLA
+    THE_RECKONING_P_EAST_LANE = SC2_RACESWAP_LOC_ID_OFFSET + 9803, "East Lane", SC2Mission.THE_RECKONING_P, LocationType.VANILLA
+    THE_RECKONING_P_ODIN = SC2_RACESWAP_LOC_ID_OFFSET + 9804, "Odin", SC2Mission.THE_RECKONING_P, LocationType.EXTRA
+    THE_RECKONING_P_TRASH_THE_ODIN_EARLY = SC2_RACESWAP_LOC_ID_OFFSET + 9805, "Trash the Odin Early", SC2Mission.THE_RECKONING_P, LocationType.MASTERY, LocationFlag.SPEEDRUN
+
+    DARK_WHISPERS_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 9900, "Victory", SC2Mission.DARK_WHISPERS_T, LocationType.VICTORY
+    DARK_WHISPERS_T_FIRST_PRISONER_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 9901, "First Prisoner Group", SC2Mission.DARK_WHISPERS_T, LocationType.VANILLA
+    DARK_WHISPERS_T_SECOND_PRISONER_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 9902, "Second Prisoner Group", SC2Mission.DARK_WHISPERS_T, LocationType.VANILLA
+    DARK_WHISPERS_T_FIRST_PYLON = SC2_RACESWAP_LOC_ID_OFFSET + 9903, "First Pylon", SC2Mission.DARK_WHISPERS_T, LocationType.VANILLA
+    DARK_WHISPERS_T_SECOND_PYLON = SC2_RACESWAP_LOC_ID_OFFSET + 9904, "Second Pylon", SC2Mission.DARK_WHISPERS_T, LocationType.VANILLA
+    DARK_WHISPERS_T_ZERG_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 9905, "Zerg Base", SC2Mission.DARK_WHISPERS_T, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    DARK_WHISPERS_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 10000, "Victory", SC2Mission.DARK_WHISPERS_Z, LocationType.VICTORY
+    DARK_WHISPERS_Z_FIRST_PRISONER_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 10001, "First Prisoner Group", SC2Mission.DARK_WHISPERS_Z, LocationType.VANILLA
+    DARK_WHISPERS_Z_SECOND_PRISONER_GROUP = SC2_RACESWAP_LOC_ID_OFFSET + 10002, "Second Prisoner Group", SC2Mission.DARK_WHISPERS_Z, LocationType.VANILLA
+    DARK_WHISPERS_Z_FIRST_PYLON = SC2_RACESWAP_LOC_ID_OFFSET + 10003, "First Pylon", SC2Mission.DARK_WHISPERS_Z, LocationType.VANILLA
+    DARK_WHISPERS_Z_SECOND_PYLON = SC2_RACESWAP_LOC_ID_OFFSET + 10004, "Second Pylon", SC2Mission.DARK_WHISPERS_Z, LocationType.VANILLA
+    DARK_WHISPERS_Z_ZERG_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 10005, "Zerg Base", SC2Mission.DARK_WHISPERS_Z, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    GHOSTS_IN_THE_FOG_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 10100, "Victory", SC2Mission.GHOSTS_IN_THE_FOG_T, LocationType.VICTORY
+    GHOSTS_IN_THE_FOG_T_SOUTH_ROCK_FORMATION = SC2_RACESWAP_LOC_ID_OFFSET + 10101, "South Rock Formation", SC2Mission.GHOSTS_IN_THE_FOG_T, LocationType.VANILLA
+    GHOSTS_IN_THE_FOG_T_WEST_ROCK_FORMATION = SC2_RACESWAP_LOC_ID_OFFSET + 10102, "West Rock Formation", SC2Mission.GHOSTS_IN_THE_FOG_T, LocationType.VANILLA
+    GHOSTS_IN_THE_FOG_T_EAST_ROCK_FORMATION = SC2_RACESWAP_LOC_ID_OFFSET + 10103, "East Rock Formation", SC2Mission.GHOSTS_IN_THE_FOG_T, LocationType.VANILLA
+    GHOSTS_IN_THE_FOG_T_ALL_ROCK_FORMATIONS_IN_UNDER_10_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 10104, "All Rock Formations In Under 10 Minutes", SC2Mission.GHOSTS_IN_THE_FOG_T, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    GHOSTS_IN_THE_FOG_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 10200, "Victory", SC2Mission.GHOSTS_IN_THE_FOG_Z, LocationType.VICTORY
+    GHOSTS_IN_THE_FOG_Z_SOUTH_ROCK_FORMATION = SC2_RACESWAP_LOC_ID_OFFSET + 10201, "South Rock Formation", SC2Mission.GHOSTS_IN_THE_FOG_Z, LocationType.VANILLA
+    GHOSTS_IN_THE_FOG_Z_WEST_ROCK_FORMATION = SC2_RACESWAP_LOC_ID_OFFSET + 10202, "West Rock Formation", SC2Mission.GHOSTS_IN_THE_FOG_Z, LocationType.VANILLA
+    GHOSTS_IN_THE_FOG_Z_EAST_ROCK_FORMATION = SC2_RACESWAP_LOC_ID_OFFSET + 10203, "East Rock Formation", SC2Mission.GHOSTS_IN_THE_FOG_Z, LocationType.VANILLA
+    GHOSTS_IN_THE_FOG_Z_ALL_ROCK_FORMATIONS_IN_UNDER_10_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 10204, "All Rock Formations In Under 10 Minutes", SC2Mission.GHOSTS_IN_THE_FOG_Z, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    FOR_AIUR_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 10500, "Victory", SC2Mission.FOR_AIUR_T, LocationType.VICTORY
+    FOR_AIUR_T_SOUTHWEST_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 10501, "Southwest Hive", SC2Mission.FOR_AIUR_T, LocationType.VANILLA
+    FOR_AIUR_T_NORTHWEST_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 10502, "Northwest Hive", SC2Mission.FOR_AIUR_T, LocationType.VANILLA
+    FOR_AIUR_T_NORTHEAST_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 10503, "Northeast Hive", SC2Mission.FOR_AIUR_T, LocationType.VANILLA
+    FOR_AIUR_T_EAST_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 10504, "East Hive", SC2Mission.FOR_AIUR_T, LocationType.VANILLA
+    FOR_AIUR_T_WEST_CONDUIT = SC2_RACESWAP_LOC_ID_OFFSET + 10505, "West Conduit", SC2Mission.FOR_AIUR_T, LocationType.EXTRA
+    FOR_AIUR_T_MIDDLE_CONDUIT = SC2_RACESWAP_LOC_ID_OFFSET + 10506, "Middle Conduit", SC2Mission.FOR_AIUR_T, LocationType.EXTRA
+    FOR_AIUR_T_NORTHEAST_CONDUIT = SC2_RACESWAP_LOC_ID_OFFSET + 10507, "Northeast Conduit", SC2Mission.FOR_AIUR_T, LocationType.EXTRA
+
+    FOR_AIUR_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 10600, "Victory", SC2Mission.FOR_AIUR_Z, LocationType.VICTORY
+    FOR_AIUR_Z_SOUTHWEST_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 10601, "Southwest Hive", SC2Mission.FOR_AIUR_Z, LocationType.VANILLA
+    FOR_AIUR_Z_NORTHWEST_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 10602, "Northwest Hive", SC2Mission.FOR_AIUR_Z, LocationType.VANILLA
+    FOR_AIUR_Z_NORTHEAST_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 10603, "Northeast Hive", SC2Mission.FOR_AIUR_Z, LocationType.VANILLA
+    FOR_AIUR_Z_EAST_HIVE = SC2_RACESWAP_LOC_ID_OFFSET + 10604, "East Hive", SC2Mission.FOR_AIUR_Z, LocationType.VANILLA
+    FOR_AIUR_Z_WEST_CONDUIT = SC2_RACESWAP_LOC_ID_OFFSET + 10605, "West Conduit", SC2Mission.FOR_AIUR_Z, LocationType.EXTRA
+    FOR_AIUR_Z_MIDDLE_CONDUIT = SC2_RACESWAP_LOC_ID_OFFSET + 10606, "Middle Conduit", SC2Mission.FOR_AIUR_Z, LocationType.EXTRA
+    FOR_AIUR_Z_NORTHEAST_CONDUIT = SC2_RACESWAP_LOC_ID_OFFSET + 10607, "Northeast Conduit", SC2Mission.FOR_AIUR_Z, LocationType.EXTRA
+
+    THE_GROWING_SHADOW_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 10700, "Victory", SC2Mission.THE_GROWING_SHADOW_T, LocationType.VICTORY
+    THE_GROWING_SHADOW_T_CLOSE_PYLON = SC2_RACESWAP_LOC_ID_OFFSET + 10701, "Close Pylon", SC2Mission.THE_GROWING_SHADOW_T, LocationType.VANILLA
+    THE_GROWING_SHADOW_T_EAST_PYLON = SC2_RACESWAP_LOC_ID_OFFSET + 10702, "East Pylon", SC2Mission.THE_GROWING_SHADOW_T, LocationType.VANILLA
+    THE_GROWING_SHADOW_T_WEST_PYLON = SC2_RACESWAP_LOC_ID_OFFSET + 10703, "West Pylon", SC2Mission.THE_GROWING_SHADOW_T, LocationType.VANILLA
+    THE_GROWING_SHADOW_T_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 10704, "Base", SC2Mission.THE_GROWING_SHADOW_T, LocationType.EXTRA
+    THE_GROWING_SHADOW_T_TEMPLAR_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 10705, "Templar Base", SC2Mission.THE_GROWING_SHADOW_T, LocationType.EXTRA
+
+    THE_GROWING_SHADOW_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 10800, "Victory", SC2Mission.THE_GROWING_SHADOW_Z, LocationType.VICTORY
+    THE_GROWING_SHADOW_Z_CLOSE_PYLON = SC2_RACESWAP_LOC_ID_OFFSET + 10801, "Close Pylon", SC2Mission.THE_GROWING_SHADOW_Z, LocationType.VANILLA
+    THE_GROWING_SHADOW_Z_EAST_PYLON = SC2_RACESWAP_LOC_ID_OFFSET + 10802, "East Pylon", SC2Mission.THE_GROWING_SHADOW_Z, LocationType.VANILLA
+    THE_GROWING_SHADOW_Z_WEST_PYLON = SC2_RACESWAP_LOC_ID_OFFSET + 10803, "West Pylon", SC2Mission.THE_GROWING_SHADOW_Z, LocationType.VANILLA
+    THE_GROWING_SHADOW_Z_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 10804, "Base", SC2Mission.THE_GROWING_SHADOW_Z, LocationType.EXTRA
+    THE_GROWING_SHADOW_Z_TEMPLAR_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 10805, "Templar Base", SC2Mission.THE_GROWING_SHADOW_Z, LocationType.EXTRA
+
+    THE_SPEAR_OF_ADUN_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 10900, "Victory", SC2Mission.THE_SPEAR_OF_ADUN_T, LocationType.VICTORY
+    THE_SPEAR_OF_ADUN_T_FACTORY = SC2_RACESWAP_LOC_ID_OFFSET + 10901, "Factory", SC2Mission.THE_SPEAR_OF_ADUN_T, LocationType.VANILLA
+    THE_SPEAR_OF_ADUN_T_ARMORY = SC2_RACESWAP_LOC_ID_OFFSET + 10902, "Armory", SC2Mission.THE_SPEAR_OF_ADUN_T, LocationType.VANILLA
+    THE_SPEAR_OF_ADUN_T_STARPORT = SC2_RACESWAP_LOC_ID_OFFSET + 10903, "Starport", SC2Mission.THE_SPEAR_OF_ADUN_T, LocationType.VANILLA
+    THE_SPEAR_OF_ADUN_T_NORTH_POWER_CELL = SC2_RACESWAP_LOC_ID_OFFSET + 10904, "North Power Cell", SC2Mission.THE_SPEAR_OF_ADUN_T, LocationType.EXTRA
+    THE_SPEAR_OF_ADUN_T_EAST_POWER_CELL = SC2_RACESWAP_LOC_ID_OFFSET + 10905, "East Power Cell", SC2Mission.THE_SPEAR_OF_ADUN_T, LocationType.EXTRA
+    THE_SPEAR_OF_ADUN_T_SOUTH_POWER_CELL = SC2_RACESWAP_LOC_ID_OFFSET + 10906, "South Power Cell", SC2Mission.THE_SPEAR_OF_ADUN_T, LocationType.EXTRA
+    THE_SPEAR_OF_ADUN_T_SOUTHEAST_POWER_CELL = SC2_RACESWAP_LOC_ID_OFFSET + 10907, "Southeast Power Cell", SC2Mission.THE_SPEAR_OF_ADUN_T, LocationType.EXTRA
+
+    THE_SPEAR_OF_ADUN_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 11000, "Victory", SC2Mission.THE_SPEAR_OF_ADUN_Z, LocationType.VICTORY
+    THE_SPEAR_OF_ADUN_Z_BANELING_NEST = SC2_RACESWAP_LOC_ID_OFFSET + 11001, "Baneling Nest", SC2Mission.THE_SPEAR_OF_ADUN_Z, LocationType.VANILLA
+    THE_SPEAR_OF_ADUN_Z_ROACH_WARREN = SC2_RACESWAP_LOC_ID_OFFSET + 11002, "Roach Warren", SC2Mission.THE_SPEAR_OF_ADUN_Z, LocationType.VANILLA
+    THE_SPEAR_OF_ADUN_Z_INFESTATION_PIT = SC2_RACESWAP_LOC_ID_OFFSET + 11003, "Infestation Pit", SC2Mission.THE_SPEAR_OF_ADUN_Z, LocationType.VANILLA
+    THE_SPEAR_OF_ADUN_Z_NORTH_POWER_CELL = SC2_RACESWAP_LOC_ID_OFFSET + 11004, "North Power Cell", SC2Mission.THE_SPEAR_OF_ADUN_Z, LocationType.EXTRA
+    THE_SPEAR_OF_ADUN_Z_EAST_POWER_CELL = SC2_RACESWAP_LOC_ID_OFFSET + 11005, "East Power Cell", SC2Mission.THE_SPEAR_OF_ADUN_Z, LocationType.EXTRA
+    THE_SPEAR_OF_ADUN_Z_SOUTH_POWER_CELL = SC2_RACESWAP_LOC_ID_OFFSET + 11006, "South Power Cell", SC2Mission.THE_SPEAR_OF_ADUN_Z, LocationType.EXTRA
+    THE_SPEAR_OF_ADUN_Z_SOUTHEAST_POWER_CELL = SC2_RACESWAP_LOC_ID_OFFSET + 11007, "Southeast Power Cell", SC2Mission.THE_SPEAR_OF_ADUN_Z, LocationType.EXTRA
+
+    SKY_SHIELD_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 11100, "Victory", SC2Mission.SKY_SHIELD_T, LocationType.VICTORY
+    SKY_SHIELD_T_MID_EMP_SCRAMBLER = SC2_RACESWAP_LOC_ID_OFFSET + 11101, "Mid EMP Scrambler", SC2Mission.SKY_SHIELD_T, LocationType.VANILLA
+    SKY_SHIELD_T_SOUTHEAST_EMP_SCRAMBLER = SC2_RACESWAP_LOC_ID_OFFSET + 11102, "Southeast EMP Scrambler", SC2Mission.SKY_SHIELD_T, LocationType.VANILLA
+    SKY_SHIELD_T_NORTH_EMP_SCRAMBLER = SC2_RACESWAP_LOC_ID_OFFSET + 11103, "North EMP Scrambler", SC2Mission.SKY_SHIELD_T, LocationType.VANILLA
+    SKY_SHIELD_T_MID_STABILIZER = SC2_RACESWAP_LOC_ID_OFFSET + 11104, "Mid Stabilizer", SC2Mission.SKY_SHIELD_T, LocationType.EXTRA
+    SKY_SHIELD_T_SOUTHWEST_STABILIZER = SC2_RACESWAP_LOC_ID_OFFSET + 11105, "Southwest Stabilizer", SC2Mission.SKY_SHIELD_T, LocationType.EXTRA
+    SKY_SHIELD_T_NORTHWEST_STABILIZER = SC2_RACESWAP_LOC_ID_OFFSET + 11106, "Northwest Stabilizer", SC2Mission.SKY_SHIELD_T, LocationType.EXTRA
+    SKY_SHIELD_T_NORTHEAST_STABILIZER = SC2_RACESWAP_LOC_ID_OFFSET + 11107, "Northeast Stabilizer", SC2Mission.SKY_SHIELD_T, LocationType.EXTRA
+    SKY_SHIELD_T_SOUTHEAST_STABILIZER = SC2_RACESWAP_LOC_ID_OFFSET + 11108, "Southeast Stabilizer", SC2Mission.SKY_SHIELD_T, LocationType.EXTRA
+    SKY_SHIELD_T_WEST_RAYNOR_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 11109, "West Raynor Base", SC2Mission.SKY_SHIELD_T, LocationType.EXTRA
+    SKY_SHIELD_T_EAST_RAYNOR_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 11110, "East Raynor Base", SC2Mission.SKY_SHIELD_T, LocationType.EXTRA
+
+    SKY_SHIELD_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 11200, "Victory", SC2Mission.SKY_SHIELD_Z, LocationType.VICTORY
+    SKY_SHIELD_Z_MID_EMP_SCRAMBLER = SC2_RACESWAP_LOC_ID_OFFSET + 11201, "Mid EMP Scrambler", SC2Mission.SKY_SHIELD_Z, LocationType.VANILLA
+    SKY_SHIELD_Z_SOUTHEAST_EMP_SCRAMBLER = SC2_RACESWAP_LOC_ID_OFFSET + 11202, "Southeast EMP Scrambler", SC2Mission.SKY_SHIELD_Z, LocationType.VANILLA
+    SKY_SHIELD_Z_NORTH_EMP_SCRAMBLER = SC2_RACESWAP_LOC_ID_OFFSET + 11203, "North EMP Scrambler", SC2Mission.SKY_SHIELD_Z, LocationType.VANILLA
+    SKY_SHIELD_Z_MID_STABILIZER = SC2_RACESWAP_LOC_ID_OFFSET + 11204, "Mid Stabilizer", SC2Mission.SKY_SHIELD_Z, LocationType.EXTRA
+    SKY_SHIELD_Z_SOUTHWEST_STABILIZER = SC2_RACESWAP_LOC_ID_OFFSET + 11205, "Southwest Stabilizer", SC2Mission.SKY_SHIELD_Z, LocationType.EXTRA
+    SKY_SHIELD_Z_NORTHWEST_STABILIZER = SC2_RACESWAP_LOC_ID_OFFSET + 11206, "Northwest Stabilizer", SC2Mission.SKY_SHIELD_Z, LocationType.EXTRA
+    SKY_SHIELD_Z_NORTHEAST_STABILIZER = SC2_RACESWAP_LOC_ID_OFFSET + 11207, "Northeast Stabilizer", SC2Mission.SKY_SHIELD_Z, LocationType.EXTRA
+    SKY_SHIELD_Z_SOUTHEAST_STABILIZER = SC2_RACESWAP_LOC_ID_OFFSET + 11208, "Southeast Stabilizer", SC2Mission.SKY_SHIELD_Z, LocationType.EXTRA
+    SKY_SHIELD_Z_WEST_RAYNOR_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 11209, "West Raynor Base", SC2Mission.SKY_SHIELD_Z, LocationType.EXTRA
+    SKY_SHIELD_Z_EAST_RAYNOR_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 11210, "East Raynor Base", SC2Mission.SKY_SHIELD_Z, LocationType.EXTRA
+
+    BROTHERS_IN_ARMS_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 11300, "Victory", SC2Mission.BROTHERS_IN_ARMS_T, LocationType.VICTORY
+    BROTHERS_IN_ARMS_T_MID_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 11301, "Mid Science Facility", SC2Mission.BROTHERS_IN_ARMS_T, LocationType.VANILLA
+    BROTHERS_IN_ARMS_T_NORTH_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 11302, "North Science Facility", SC2Mission.BROTHERS_IN_ARMS_T, LocationType.VANILLA
+    BROTHERS_IN_ARMS_T_SOUTH_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 11303, "South Science Facility", SC2Mission.BROTHERS_IN_ARMS_T, LocationType.VANILLA
+    BROTHERS_IN_ARMS_T_RAYNOR_FORWARD_POSITIONS = SC2_RACESWAP_LOC_ID_OFFSET + 11304, "Raynor Forward Positions", SC2Mission.BROTHERS_IN_ARMS_T, LocationType.EXTRA
+    BROTHERS_IN_ARMS_T_VALERIAN_FORWARD_POSITIONS = SC2_RACESWAP_LOC_ID_OFFSET + 11305, "Valerian Forward Positions", SC2Mission.BROTHERS_IN_ARMS_T, LocationType.EXTRA
+    BROTHERS_IN_ARMS_T_WIN_IN_UNDER_15_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 11306, "Win In Under 15 Minutes", SC2Mission.BROTHERS_IN_ARMS_T, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    BROTHERS_IN_ARMS_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 11400, "Victory", SC2Mission.BROTHERS_IN_ARMS_Z, LocationType.VICTORY
+    BROTHERS_IN_ARMS_Z_MID_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 11401, "Mid Science Facility", SC2Mission.BROTHERS_IN_ARMS_Z, LocationType.VANILLA
+    BROTHERS_IN_ARMS_Z_NORTH_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 11402, "North Science Facility", SC2Mission.BROTHERS_IN_ARMS_Z, LocationType.VANILLA
+    BROTHERS_IN_ARMS_Z_SOUTH_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 11403, "South Science Facility", SC2Mission.BROTHERS_IN_ARMS_Z, LocationType.VANILLA
+    BROTHERS_IN_ARMS_Z_RAYNOR_FORWARD_POSITIONS = SC2_RACESWAP_LOC_ID_OFFSET + 11404, "Raynor Forward Positions", SC2Mission.BROTHERS_IN_ARMS_Z, LocationType.EXTRA
+    BROTHERS_IN_ARMS_Z_VALERIAN_FORWARD_POSITIONS = SC2_RACESWAP_LOC_ID_OFFSET + 11405, "Valerian Forward Positions", SC2Mission.BROTHERS_IN_ARMS_Z, LocationType.EXTRA
+    BROTHERS_IN_ARMS_Z_WIN_IN_UNDER_15_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 11406, "Win In Under 15 Minutes", SC2Mission.BROTHERS_IN_ARMS_Z, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    AMON_S_REACH_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 11500, "Victory", SC2Mission.AMON_S_REACH_T, LocationType.VICTORY
+    AMON_S_REACH_T_CLOSE_SOLARITE_RESERVE = SC2_RACESWAP_LOC_ID_OFFSET + 11501, "Close Solarite Reserve", SC2Mission.AMON_S_REACH_T, LocationType.VANILLA
+    AMON_S_REACH_T_NORTH_SOLARITE_RESERVE = SC2_RACESWAP_LOC_ID_OFFSET + 11502, "North Solarite Reserve", SC2Mission.AMON_S_REACH_T, LocationType.VANILLA
+    AMON_S_REACH_T_EAST_SOLARITE_RESERVE = SC2_RACESWAP_LOC_ID_OFFSET + 11503, "East Solarite Reserve", SC2Mission.AMON_S_REACH_T, LocationType.VANILLA
+    AMON_S_REACH_T_WEST_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 11504, "West Launch Bay", SC2Mission.AMON_S_REACH_T, LocationType.EXTRA
+    AMON_S_REACH_T_SOUTH_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 11505, "South Launch Bay", SC2Mission.AMON_S_REACH_T, LocationType.EXTRA
+    AMON_S_REACH_T_NORTHWEST_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 11506, "Northwest Launch Bay", SC2Mission.AMON_S_REACH_T, LocationType.EXTRA
+    AMON_S_REACH_T_EAST_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 11507, "East Launch Bay", SC2Mission.AMON_S_REACH_T, LocationType.EXTRA
+
+    AMON_S_REACH_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 11600, "Victory", SC2Mission.AMON_S_REACH_Z, LocationType.VICTORY
+    AMON_S_REACH_Z_CLOSE_SOLARITE_RESERVE = SC2_RACESWAP_LOC_ID_OFFSET + 11601, "Close Solarite Reserve", SC2Mission.AMON_S_REACH_Z, LocationType.VANILLA
+    AMON_S_REACH_Z_NORTH_SOLARITE_RESERVE = SC2_RACESWAP_LOC_ID_OFFSET + 11602, "North Solarite Reserve", SC2Mission.AMON_S_REACH_Z, LocationType.VANILLA
+    AMON_S_REACH_Z_EAST_SOLARITE_RESERVE = SC2_RACESWAP_LOC_ID_OFFSET + 11603, "East Solarite Reserve", SC2Mission.AMON_S_REACH_Z, LocationType.VANILLA
+    AMON_S_REACH_Z_WEST_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 11604, "West Launch Bay", SC2Mission.AMON_S_REACH_Z, LocationType.EXTRA
+    AMON_S_REACH_Z_SOUTH_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 11605, "South Launch Bay", SC2Mission.AMON_S_REACH_Z, LocationType.EXTRA
+    AMON_S_REACH_Z_NORTHWEST_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 11606, "Northwest Launch Bay", SC2Mission.AMON_S_REACH_Z, LocationType.EXTRA
+    AMON_S_REACH_Z_EAST_LAUNCH_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 11607, "East Launch Bay", SC2Mission.AMON_S_REACH_Z, LocationType.EXTRA
+
+    LAST_STAND_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 11700, "Victory", SC2Mission.LAST_STAND_T, LocationType.VICTORY
+    LAST_STAND_T_WEST_ZENITH_STONE = SC2_RACESWAP_LOC_ID_OFFSET + 11701, "West Zenith Stone", SC2Mission.LAST_STAND_T, LocationType.VANILLA
+    LAST_STAND_T_NORTH_ZENITH_STONE = SC2_RACESWAP_LOC_ID_OFFSET + 11702, "North Zenith Stone", SC2Mission.LAST_STAND_T, LocationType.VANILLA
+    LAST_STAND_T_EAST_ZENITH_STONE = SC2_RACESWAP_LOC_ID_OFFSET + 11703, "East Zenith Stone", SC2Mission.LAST_STAND_T, LocationType.VANILLA
+    LAST_STAND_T_1_BILLION_ZERG = SC2_RACESWAP_LOC_ID_OFFSET + 11704, "1 Billion Zerg", SC2Mission.LAST_STAND_T, LocationType.EXTRA
+    LAST_STAND_T_1_5_BILLION_ZERG = SC2_RACESWAP_LOC_ID_OFFSET + 11705, "1.5 Billion Zerg", SC2Mission.LAST_STAND_T, LocationType.VANILLA
+    LAST_STAND_T_ALL_ZENITH_STONES_IN_UNDER_10_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 11706, "All Zenith Stones In Under 10 Minutes", SC2Mission.LAST_STAND_T, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    LAST_STAND_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 11800, "Victory", SC2Mission.LAST_STAND_Z, LocationType.VICTORY
+    LAST_STAND_Z_WEST_ZENITH_STONE = SC2_RACESWAP_LOC_ID_OFFSET + 11801, "West Zenith Stone", SC2Mission.LAST_STAND_Z, LocationType.VANILLA
+    LAST_STAND_Z_NORTH_ZENITH_STONE = SC2_RACESWAP_LOC_ID_OFFSET + 11802, "North Zenith Stone", SC2Mission.LAST_STAND_Z, LocationType.VANILLA
+    LAST_STAND_Z_EAST_ZENITH_STONE = SC2_RACESWAP_LOC_ID_OFFSET + 11803, "East Zenith Stone", SC2Mission.LAST_STAND_Z, LocationType.VANILLA
+    LAST_STAND_Z_1_BILLION_ZERG = SC2_RACESWAP_LOC_ID_OFFSET + 11804, "1 Billion Zerg", SC2Mission.LAST_STAND_Z, LocationType.EXTRA
+    LAST_STAND_Z_1_5_BILLION_ZERG = SC2_RACESWAP_LOC_ID_OFFSET + 11805, "1.5 Billion Zerg", SC2Mission.LAST_STAND_Z, LocationType.VANILLA
+    LAST_STAND_Z_ALL_ZENITH_STONES_IN_UNDER_10_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 11806, "All Zenith Stones In Under 10 Minutes", SC2Mission.LAST_STAND_Z, LocationType.CHALLENGE, LocationFlag.SPEEDRUN
+
+    FORBIDDEN_WEAPON_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 11900, "Victory", SC2Mission.FORBIDDEN_WEAPON_T, LocationType.VICTORY
+    FORBIDDEN_WEAPON_T_SOUTH_SOLARITE = SC2_RACESWAP_LOC_ID_OFFSET + 11901, "South Solarite", SC2Mission.FORBIDDEN_WEAPON_T, LocationType.VANILLA
+    FORBIDDEN_WEAPON_T_NORTH_SOLARITE = SC2_RACESWAP_LOC_ID_OFFSET + 11902, "North Solarite", SC2Mission.FORBIDDEN_WEAPON_T, LocationType.VANILLA
+    FORBIDDEN_WEAPON_T_NORTHWEST_SOLARITE = SC2_RACESWAP_LOC_ID_OFFSET + 11903, "Northwest Solarite", SC2Mission.FORBIDDEN_WEAPON_T, LocationType.VANILLA
+    FORBIDDEN_WEAPON_T_RESCUE_MEDICS = SC2_RACESWAP_LOC_ID_OFFSET + 11904, "Rescue Medics", SC2Mission.FORBIDDEN_WEAPON_T, LocationType.EXTRA
+    FORBIDDEN_WEAPON_T_DESTROY_GATEWAYS = SC2_RACESWAP_LOC_ID_OFFSET + 11905, "Destroy Gateways", SC2Mission.FORBIDDEN_WEAPON_T, LocationType.CHALLENGE
+
+    FORBIDDEN_WEAPON_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 12000, "Victory", SC2Mission.FORBIDDEN_WEAPON_Z, LocationType.VICTORY
+    FORBIDDEN_WEAPON_Z_SOUTH_SOLARITE = SC2_RACESWAP_LOC_ID_OFFSET + 12001, "South Solarite", SC2Mission.FORBIDDEN_WEAPON_Z, LocationType.VANILLA
+    FORBIDDEN_WEAPON_Z_NORTH_SOLARITE = SC2_RACESWAP_LOC_ID_OFFSET + 12002, "North Solarite", SC2Mission.FORBIDDEN_WEAPON_Z, LocationType.VANILLA
+    FORBIDDEN_WEAPON_Z_NORTHWEST_SOLARITE = SC2_RACESWAP_LOC_ID_OFFSET + 12003, "Northwest Solarite", SC2Mission.FORBIDDEN_WEAPON_Z, LocationType.VANILLA
+    FORBIDDEN_WEAPON_Z_RESCUE_INFESTED_MEDICS = SC2_RACESWAP_LOC_ID_OFFSET + 12004, "Rescue Infested Medics", SC2Mission.FORBIDDEN_WEAPON_Z, LocationType.EXTRA
+    FORBIDDEN_WEAPON_Z_DESTROY_GATEWAYS = SC2_RACESWAP_LOC_ID_OFFSET + 12005, "Destroy Gateways", SC2Mission.FORBIDDEN_WEAPON_Z, LocationType.CHALLENGE
+
+    TEMPLE_OF_UNIFICATION_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 12100, "Victory", SC2Mission.TEMPLE_OF_UNIFICATION_T, LocationType.VICTORY
+    TEMPLE_OF_UNIFICATION_T_MID_CELESTIAL_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12101, "Mid Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION_T, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_T_WEST_CELESTIAL_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12102, "West Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION_T, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_T_SOUTH_CELESTIAL_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12103, "South Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION_T, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_T_EAST_CELESTIAL_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12104, "East Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION_T, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_T_NORTH_CELESTIAL_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12105, "North Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION_T, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_T_TITANIC_WARP_PRISM = SC2_RACESWAP_LOC_ID_OFFSET + 12106, "Titanic Warp Prism", SC2Mission.TEMPLE_OF_UNIFICATION_T, LocationType.VANILLA
+    TEMPLE_OF_UNIFICATION_T_TERRAN_MAIN_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 12107, "Terran Main Base", SC2Mission.TEMPLE_OF_UNIFICATION_T, LocationType.MASTERY, LocationFlag.BASEBUST
+    TEMPLE_OF_UNIFICATION_T_PROTOSS_MAIN_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 12108, "Protoss Main Base", SC2Mission.TEMPLE_OF_UNIFICATION_T, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    TEMPLE_OF_UNIFICATION_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 12200, "Victory", SC2Mission.TEMPLE_OF_UNIFICATION_Z, LocationType.VICTORY
+    TEMPLE_OF_UNIFICATION_Z_MID_CELESTIAL_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12201, "Mid Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION_Z, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_Z_WEST_CELESTIAL_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12202, "West Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION_Z, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_Z_SOUTH_CELESTIAL_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12203, "South Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION_Z, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_Z_EAST_CELESTIAL_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12204, "East Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION_Z, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_Z_NORTH_CELESTIAL_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12205, "North Celestial Lock", SC2Mission.TEMPLE_OF_UNIFICATION_Z, LocationType.EXTRA
+    TEMPLE_OF_UNIFICATION_Z_TITANIC_WARP_PRISM = SC2_RACESWAP_LOC_ID_OFFSET + 12206, "Titanic Warp Prism", SC2Mission.TEMPLE_OF_UNIFICATION_Z, LocationType.VANILLA
+    TEMPLE_OF_UNIFICATION_Z_TERRAN_MAIN_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 12207, "Terran Main Base", SC2Mission.TEMPLE_OF_UNIFICATION_Z, LocationType.MASTERY, LocationFlag.BASEBUST
+    TEMPLE_OF_UNIFICATION_Z_PROTOSS_MAIN_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 12208, "Protoss Main Base", SC2Mission.TEMPLE_OF_UNIFICATION_Z, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    HARBINGER_OF_OBLIVION_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 12500, "Victory", SC2Mission.HARBINGER_OF_OBLIVION_T, LocationType.VICTORY
+    HARBINGER_OF_OBLIVION_T_ARTANIS = SC2_RACESWAP_LOC_ID_OFFSET + 12501, "Artanis", SC2Mission.HARBINGER_OF_OBLIVION_T, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_T_NORTHWEST_VOID_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 12502, "Northwest Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION_T, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_T_NORTHEAST_VOID_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 12503, "Northeast Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION_T, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_T_SOUTHWEST_VOID_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 12504, "Southwest Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION_T, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_T_SOUTHEAST_VOID_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 12505, "Southeast Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION_T, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_T_SOUTH_XELNAGA_VESSEL = SC2_RACESWAP_LOC_ID_OFFSET + 12506, "South Xel'Naga Vessel", SC2Mission.HARBINGER_OF_OBLIVION_T, LocationType.VANILLA
+    HARBINGER_OF_OBLIVION_T_MID_XELNAGA_VESSEL = SC2_RACESWAP_LOC_ID_OFFSET + 12507, "Mid Xel'Naga Vessel", SC2Mission.HARBINGER_OF_OBLIVION_T, LocationType.VANILLA
+    HARBINGER_OF_OBLIVION_T_NORTH_XELNAGA_VESSEL = SC2_RACESWAP_LOC_ID_OFFSET + 12508, "North Xel'Naga Vessel", SC2Mission.HARBINGER_OF_OBLIVION_T, LocationType.VANILLA
+
+    HARBINGER_OF_OBLIVION_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 12600, "Victory", SC2Mission.HARBINGER_OF_OBLIVION_Z, LocationType.VICTORY
+    HARBINGER_OF_OBLIVION_Z_ARTANIS = SC2_RACESWAP_LOC_ID_OFFSET + 12601, "Artanis", SC2Mission.HARBINGER_OF_OBLIVION_Z, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_Z_NORTHWEST_VOID_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 12602, "Northwest Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION_Z, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_Z_NORTHEAST_VOID_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 12603, "Northeast Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION_Z, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_Z_SOUTHWEST_VOID_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 12604, "Southwest Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION_Z, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_Z_SOUTHEAST_VOID_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 12605, "Southeast Void Crystal", SC2Mission.HARBINGER_OF_OBLIVION_Z, LocationType.EXTRA
+    HARBINGER_OF_OBLIVION_Z_SOUTH_XELNAGA_VESSEL = SC2_RACESWAP_LOC_ID_OFFSET + 12606, "South Xel'Naga Vessel", SC2Mission.HARBINGER_OF_OBLIVION_Z, LocationType.VANILLA
+    HARBINGER_OF_OBLIVION_Z_MID_XELNAGA_VESSEL = SC2_RACESWAP_LOC_ID_OFFSET + 12607, "Mid Xel'Naga Vessel", SC2Mission.HARBINGER_OF_OBLIVION_Z, LocationType.VANILLA
+    HARBINGER_OF_OBLIVION_Z_NORTH_XELNAGA_VESSEL = SC2_RACESWAP_LOC_ID_OFFSET + 12608, "North Xel'Naga Vessel", SC2Mission.HARBINGER_OF_OBLIVION_Z, LocationType.VANILLA
+
+    UNSEALING_THE_PAST_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 12700, "Victory", SC2Mission.UNSEALING_THE_PAST_T, LocationType.VICTORY
+    UNSEALING_THE_PAST_T_ZERG_CLEARED = SC2_RACESWAP_LOC_ID_OFFSET + 12701, "Zerg Cleared", SC2Mission.UNSEALING_THE_PAST_T, LocationType.EXTRA
+    UNSEALING_THE_PAST_T_FIRST_STASIS_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12702, "First Stasis Lock", SC2Mission.UNSEALING_THE_PAST_T, LocationType.EXTRA
+    UNSEALING_THE_PAST_T_SECOND_STASIS_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12703, "Second Stasis Lock", SC2Mission.UNSEALING_THE_PAST_T, LocationType.EXTRA
+    UNSEALING_THE_PAST_T_THIRD_STASIS_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12704, "Third Stasis Lock", SC2Mission.UNSEALING_THE_PAST_T, LocationType.EXTRA
+    UNSEALING_THE_PAST_T_FOURTH_STASIS_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12705, "Fourth Stasis Lock", SC2Mission.UNSEALING_THE_PAST_T, LocationType.EXTRA
+    UNSEALING_THE_PAST_T_SOUTH_POWER_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 12706, "South Power Core", SC2Mission.UNSEALING_THE_PAST_T, LocationType.VANILLA
+    UNSEALING_THE_PAST_T_EAST_POWER_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 12707, "East Power Core", SC2Mission.UNSEALING_THE_PAST_T, LocationType.VANILLA
+
+    UNSEALING_THE_PAST_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 12800, "Victory", SC2Mission.UNSEALING_THE_PAST_Z, LocationType.VICTORY
+    UNSEALING_THE_PAST_Z_ZERG_CLEARED = SC2_RACESWAP_LOC_ID_OFFSET + 12801, "Zerg Cleared", SC2Mission.UNSEALING_THE_PAST_Z, LocationType.EXTRA
+    UNSEALING_THE_PAST_Z_FIRST_STASIS_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12802, "First Stasis Lock", SC2Mission.UNSEALING_THE_PAST_Z, LocationType.EXTRA
+    UNSEALING_THE_PAST_Z_SECOND_STASIS_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12803, "Second Stasis Lock", SC2Mission.UNSEALING_THE_PAST_Z, LocationType.EXTRA
+    UNSEALING_THE_PAST_Z_THIRD_STASIS_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12804, "Third Stasis Lock", SC2Mission.UNSEALING_THE_PAST_Z, LocationType.EXTRA
+    UNSEALING_THE_PAST_Z_FOURTH_STASIS_LOCK = SC2_RACESWAP_LOC_ID_OFFSET + 12805, "Fourth Stasis Lock", SC2Mission.UNSEALING_THE_PAST_Z, LocationType.EXTRA
+    UNSEALING_THE_PAST_Z_SOUTH_POWER_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 12806, "South Power Core", SC2Mission.UNSEALING_THE_PAST_Z, LocationType.VANILLA
+    UNSEALING_THE_PAST_Z_EAST_POWER_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 12807, "East Power Core", SC2Mission.UNSEALING_THE_PAST_Z, LocationType.VANILLA
+
+    PURIFICATION_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 12900, "Victory", SC2Mission.PURIFICATION_T, LocationType.VICTORY
+    PURIFICATION_T_NORTH_SECTOR_WEST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12901, "North Sector: West Null Circuit", SC2Mission.PURIFICATION_T, LocationType.VANILLA
+    PURIFICATION_T_NORTH_SECTOR_NORTHEAST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12902, "North Sector: Northeast Null Circuit", SC2Mission.PURIFICATION_T, LocationType.EXTRA
+    PURIFICATION_T_NORTH_SECTOR_SOUTHEAST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12903, "North Sector: Southeast Null Circuit", SC2Mission.PURIFICATION_T, LocationType.EXTRA
+    PURIFICATION_T_SOUTH_SECTOR_WEST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12904, "South Sector: West Null Circuit", SC2Mission.PURIFICATION_T, LocationType.VANILLA
+    PURIFICATION_T_SOUTH_SECTOR_NORTH_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12905, "South Sector: North Null Circuit", SC2Mission.PURIFICATION_T, LocationType.EXTRA
+    PURIFICATION_T_SOUTH_SECTOR_EAST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12906, "South Sector: East Null Circuit", SC2Mission.PURIFICATION_T, LocationType.EXTRA
+    PURIFICATION_T_WEST_SECTOR_WEST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12907, "West Sector: West Null Circuit", SC2Mission.PURIFICATION_T, LocationType.VANILLA
+    PURIFICATION_T_WEST_SECTOR_MID_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12908, "West Sector: Mid Null Circuit", SC2Mission.PURIFICATION_T, LocationType.EXTRA
+    PURIFICATION_T_WEST_SECTOR_EAST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12909, "West Sector: East Null Circuit", SC2Mission.PURIFICATION_T, LocationType.EXTRA
+    PURIFICATION_T_EAST_SECTOR_NORTH_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12910, "East Sector: North Null Circuit", SC2Mission.PURIFICATION_T, LocationType.VANILLA
+    PURIFICATION_T_EAST_SECTOR_WEST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12911, "East Sector: West Null Circuit", SC2Mission.PURIFICATION_T, LocationType.EXTRA
+    PURIFICATION_T_EAST_SECTOR_SOUTH_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 12912, "East Sector: South Null Circuit", SC2Mission.PURIFICATION_T, LocationType.EXTRA
+    PURIFICATION_T_PURIFIER_WARDEN = SC2_RACESWAP_LOC_ID_OFFSET + 12913, "Purifier Warden", SC2Mission.PURIFICATION_T, LocationType.VANILLA
+
+    PURIFICATION_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 13000, "Victory", SC2Mission.PURIFICATION_Z, LocationType.VICTORY
+    PURIFICATION_Z_NORTH_SECTOR_WEST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13001, "North Sector: West Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.VANILLA
+    PURIFICATION_Z_NORTH_SECTOR_NORTHEAST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13002, "North Sector: Northeast Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.EXTRA
+    PURIFICATION_Z_NORTH_SECTOR_SOUTHEAST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13003, "North Sector: Southeast Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.EXTRA
+    PURIFICATION_Z_SOUTH_SECTOR_WEST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13004, "South Sector: West Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.VANILLA
+    PURIFICATION_Z_SOUTH_SECTOR_NORTH_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13005, "South Sector: North Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.EXTRA
+    PURIFICATION_Z_SOUTH_SECTOR_EAST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13006, "South Sector: East Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.EXTRA
+    PURIFICATION_Z_WEST_SECTOR_WEST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13007, "West Sector: West Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.VANILLA
+    PURIFICATION_Z_WEST_SECTOR_MID_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13008, "West Sector: Mid Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.EXTRA
+    PURIFICATION_Z_WEST_SECTOR_EAST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13009, "West Sector: East Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.EXTRA
+    PURIFICATION_Z_EAST_SECTOR_NORTH_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13010, "East Sector: North Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.VANILLA
+    PURIFICATION_Z_EAST_SECTOR_WEST_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13011, "East Sector: West Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.EXTRA
+    PURIFICATION_Z_EAST_SECTOR_SOUTH_NULL_CIRCUIT = SC2_RACESWAP_LOC_ID_OFFSET + 13012, "East Sector: South Null Circuit", SC2Mission.PURIFICATION_Z, LocationType.EXTRA
+    PURIFICATION_Z_PURIFIER_WARDEN = SC2_RACESWAP_LOC_ID_OFFSET + 13013, "Purifier Warden", SC2Mission.PURIFICATION_Z, LocationType.VANILLA
+
+    STEPS_OF_THE_RITE_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 13100, "Victory", SC2Mission.STEPS_OF_THE_RITE_T, LocationType.VICTORY
+    STEPS_OF_THE_RITE_T_FIRST_TERRAZINE_FOG = SC2_RACESWAP_LOC_ID_OFFSET + 13101, "First Terrazine Fog", SC2Mission.STEPS_OF_THE_RITE_T, LocationType.EXTRA
+    STEPS_OF_THE_RITE_T_SOUTHWEST_GUARDIAN = SC2_RACESWAP_LOC_ID_OFFSET + 13102, "Southwest Guardian", SC2Mission.STEPS_OF_THE_RITE_T, LocationType.EXTRA
+    STEPS_OF_THE_RITE_T_WEST_GUARDIAN = SC2_RACESWAP_LOC_ID_OFFSET + 13103, "West Guardian", SC2Mission.STEPS_OF_THE_RITE_T, LocationType.EXTRA
+    STEPS_OF_THE_RITE_T_NORTHWEST_GUARDIAN = SC2_RACESWAP_LOC_ID_OFFSET + 13104, "Northwest Guardian", SC2Mission.STEPS_OF_THE_RITE_T, LocationType.EXTRA
+    STEPS_OF_THE_RITE_T_NORTHEAST_GUARDIAN = SC2_RACESWAP_LOC_ID_OFFSET + 13105, "Northeast Guardian", SC2Mission.STEPS_OF_THE_RITE_T, LocationType.EXTRA
+    STEPS_OF_THE_RITE_T_NORTH_MOTHERSHIP = SC2_RACESWAP_LOC_ID_OFFSET + 13106, "North Mothership", SC2Mission.STEPS_OF_THE_RITE_T, LocationType.VANILLA
+    STEPS_OF_THE_RITE_T_SOUTH_MOTHERSHIP = SC2_RACESWAP_LOC_ID_OFFSET + 13107, "South Mothership", SC2Mission.STEPS_OF_THE_RITE_T, LocationType.VANILLA
+
+    STEPS_OF_THE_RITE_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 13200, "Victory", SC2Mission.STEPS_OF_THE_RITE_Z, LocationType.VICTORY
+    STEPS_OF_THE_RITE_Z_FIRST_TERRAZINE_FOG = SC2_RACESWAP_LOC_ID_OFFSET + 13201, "First Terrazine Fog", SC2Mission.STEPS_OF_THE_RITE_Z, LocationType.EXTRA
+    STEPS_OF_THE_RITE_Z_SOUTHWEST_GUARDIAN = SC2_RACESWAP_LOC_ID_OFFSET + 13202, "Southwest Guardian", SC2Mission.STEPS_OF_THE_RITE_Z, LocationType.EXTRA
+    STEPS_OF_THE_RITE_Z_WEST_GUARDIAN = SC2_RACESWAP_LOC_ID_OFFSET + 13203, "West Guardian", SC2Mission.STEPS_OF_THE_RITE_Z, LocationType.EXTRA
+    STEPS_OF_THE_RITE_Z_NORTHWEST_GUARDIAN = SC2_RACESWAP_LOC_ID_OFFSET + 13204, "Northwest Guardian", SC2Mission.STEPS_OF_THE_RITE_Z, LocationType.EXTRA
+    STEPS_OF_THE_RITE_Z_NORTHEAST_GUARDIAN = SC2_RACESWAP_LOC_ID_OFFSET + 13205, "Northeast Guardian", SC2Mission.STEPS_OF_THE_RITE_Z, LocationType.EXTRA
+    STEPS_OF_THE_RITE_Z_NORTH_MOTHERSHIP = SC2_RACESWAP_LOC_ID_OFFSET + 13206, "North Mothership", SC2Mission.STEPS_OF_THE_RITE_Z, LocationType.VANILLA
+    STEPS_OF_THE_RITE_Z_SOUTH_MOTHERSHIP = SC2_RACESWAP_LOC_ID_OFFSET + 13207, "South Mothership", SC2Mission.STEPS_OF_THE_RITE_Z, LocationType.VANILLA
+
+    RAK_SHIR_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 13300, "Victory", SC2Mission.RAK_SHIR_T, LocationType.VICTORY
+    RAK_SHIR_T_NORTH_SLAYN_ELEMENTAL = SC2_RACESWAP_LOC_ID_OFFSET + 13301, "North Slayn Elemental", SC2Mission.RAK_SHIR_T, LocationType.VANILLA
+    RAK_SHIR_T_SOUTHWEST_SLAYN_ELEMENTAL = SC2_RACESWAP_LOC_ID_OFFSET + 13302, "Southwest Slayn Elemental", SC2Mission.RAK_SHIR_T, LocationType.VANILLA
+    RAK_SHIR_T_EAST_SLAYN_ELEMENTAL = SC2_RACESWAP_LOC_ID_OFFSET + 13303, "East Slayn Elemental", SC2Mission.RAK_SHIR_T, LocationType.VANILLA
+    RAK_SHIR_T_RESOURCE_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 13304, "Resource Pickups", SC2Mission.RAK_SHIR_T, LocationType.EXTRA
+    RAK_SHIR_T_DESTROY_NEXUSES = SC2_RACESWAP_LOC_ID_OFFSET + 13305, "Destroy Nexuses", SC2Mission.RAK_SHIR_T, LocationType.CHALLENGE
+    RAK_SHIR_T_WIN_IN_UNDER_15_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 13306, "Win In Under 15 Minutes", SC2Mission.RAK_SHIR_T, LocationType.MASTERY, LocationFlag.SPEEDRUN
+
+    RAK_SHIR_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 13400, "Victory", SC2Mission.RAK_SHIR_Z, LocationType.VICTORY
+    RAK_SHIR_Z_NORTH_SLAYN_ELEMENTAL = SC2_RACESWAP_LOC_ID_OFFSET + 13401, "North Slayn Elemental", SC2Mission.RAK_SHIR_Z, LocationType.VANILLA
+    RAK_SHIR_Z_SOUTHWEST_SLAYN_ELEMENTAL = SC2_RACESWAP_LOC_ID_OFFSET + 13402, "Southwest Slayn Elemental", SC2Mission.RAK_SHIR_Z, LocationType.VANILLA
+    RAK_SHIR_Z_EAST_SLAYN_ELEMENTAL = SC2_RACESWAP_LOC_ID_OFFSET + 13403, "East Slayn Elemental", SC2Mission.RAK_SHIR_Z, LocationType.VANILLA
+    RAK_SHIR_Z_RESOURCE_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 13404, "Resource Pickups", SC2Mission.RAK_SHIR_Z, LocationType.EXTRA
+    RAK_SHIR_Z_DESTROY_NEXUSES = SC2_RACESWAP_LOC_ID_OFFSET + 13405, "Destroy Nexuses", SC2Mission.RAK_SHIR_Z, LocationType.CHALLENGE
+    RAK_SHIR_Z_WIN_IN_UNDER_15_MINUTES = SC2_RACESWAP_LOC_ID_OFFSET + 13406, "Win In Under 15 Minutes", SC2Mission.RAK_SHIR_Z, LocationType.MASTERY, LocationFlag.SPEEDRUN
+
+    TEMPLAR_S_CHARGE_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 13500, "Victory", SC2Mission.TEMPLAR_S_CHARGE_T, LocationType.VICTORY
+    TEMPLAR_S_CHARGE_T_NORTHWEST_POWER_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 13501, "Northwest Power Core", SC2Mission.TEMPLAR_S_CHARGE_T, LocationType.EXTRA
+    TEMPLAR_S_CHARGE_T_NORTHEAST_POWER_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 13502, "Northeast Power Core", SC2Mission.TEMPLAR_S_CHARGE_T, LocationType.EXTRA
+    TEMPLAR_S_CHARGE_T_SOUTHEAST_POWER_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 13503, "Southeast Power Core", SC2Mission.TEMPLAR_S_CHARGE_T, LocationType.EXTRA
+    TEMPLAR_S_CHARGE_T_WEST_HYBRID_STASIS_CHAMBER = SC2_RACESWAP_LOC_ID_OFFSET + 13504, "West Hybrid Stasis Chamber", SC2Mission.TEMPLAR_S_CHARGE_T, LocationType.VANILLA
+    TEMPLAR_S_CHARGE_T_SOUTHEAST_HYBRID_STASIS_CHAMBER = SC2_RACESWAP_LOC_ID_OFFSET + 13505, "Southeast Hybrid Stasis Chamber", SC2Mission.TEMPLAR_S_CHARGE_T, LocationType.VANILLA
+
+    TEMPLAR_S_CHARGE_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 13600, "Victory", SC2Mission.TEMPLAR_S_CHARGE_Z, LocationType.VICTORY
+    TEMPLAR_S_CHARGE_Z_NORTHWEST_POWER_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 13601, "Northwest Power Core", SC2Mission.TEMPLAR_S_CHARGE_Z, LocationType.EXTRA
+    TEMPLAR_S_CHARGE_Z_NORTHEAST_POWER_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 13602, "Northeast Power Core", SC2Mission.TEMPLAR_S_CHARGE_Z, LocationType.EXTRA
+    TEMPLAR_S_CHARGE_Z_SOUTHEAST_POWER_CORE = SC2_RACESWAP_LOC_ID_OFFSET + 13603, "Southeast Power Core", SC2Mission.TEMPLAR_S_CHARGE_Z, LocationType.EXTRA
+    TEMPLAR_S_CHARGE_Z_WEST_HYBRID_STASIS_CHAMBER = SC2_RACESWAP_LOC_ID_OFFSET + 13604, "West Hybrid Stasis Chamber", SC2Mission.TEMPLAR_S_CHARGE_Z, LocationType.VANILLA
+    TEMPLAR_S_CHARGE_Z_SOUTHEAST_HYBRID_STASIS_CHAMBER = SC2_RACESWAP_LOC_ID_OFFSET + 13605, "Southeast Hybrid Stasis Chamber", SC2Mission.TEMPLAR_S_CHARGE_Z, LocationType.VANILLA
+
+    THE_HOST_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 13900, "Victory", SC2Mission.THE_HOST_T, LocationType.VICTORY
+    THE_HOST_T_SOUTHEAST_VOID_SHARD = SC2_RACESWAP_LOC_ID_OFFSET + 13901, "Southeast Void Shard", SC2Mission.THE_HOST_T, LocationType.EXTRA
+    THE_HOST_T_SOUTH_VOID_SHARD = SC2_RACESWAP_LOC_ID_OFFSET + 13902, "South Void Shard", SC2Mission.THE_HOST_T, LocationType.EXTRA
+    THE_HOST_T_SOUTHWEST_VOID_SHARD = SC2_RACESWAP_LOC_ID_OFFSET + 13903, "Southwest Void Shard", SC2Mission.THE_HOST_T, LocationType.EXTRA
+    THE_HOST_T_NORTH_VOID_SHARD = SC2_RACESWAP_LOC_ID_OFFSET + 13904, "North Void Shard", SC2Mission.THE_HOST_T, LocationType.EXTRA
+    THE_HOST_T_NORTHWEST_VOID_SHARD = SC2_RACESWAP_LOC_ID_OFFSET + 13905, "Northwest Void Shard", SC2Mission.THE_HOST_T, LocationType.EXTRA
+    THE_HOST_T_NERAZIM_WARP_IN_ZONE = SC2_RACESWAP_LOC_ID_OFFSET + 13906, "Nerazim Warp in Zone", SC2Mission.THE_HOST_T, LocationType.VANILLA
+    THE_HOST_T_TALDARIM_WARP_IN_ZONE = SC2_RACESWAP_LOC_ID_OFFSET + 13907, "Tal'darim Warp in Zone", SC2Mission.THE_HOST_T, LocationType.VANILLA
+    THE_HOST_T_PURIFIER_WARP_IN_ZONE = SC2_RACESWAP_LOC_ID_OFFSET + 13908, "Purifier Warp in Zone", SC2Mission.THE_HOST_T, LocationType.VANILLA
+
+    THE_HOST_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 14000, "Victory", SC2Mission.THE_HOST_Z, LocationType.VICTORY
+    THE_HOST_Z_SOUTHEAST_VOID_SHARD = SC2_RACESWAP_LOC_ID_OFFSET + 14001, "Southeast Void Shard", SC2Mission.THE_HOST_Z, LocationType.EXTRA
+    THE_HOST_Z_SOUTH_VOID_SHARD = SC2_RACESWAP_LOC_ID_OFFSET + 14002, "South Void Shard", SC2Mission.THE_HOST_Z, LocationType.EXTRA
+    THE_HOST_Z_SOUTHWEST_VOID_SHARD = SC2_RACESWAP_LOC_ID_OFFSET + 14003, "Southwest Void Shard", SC2Mission.THE_HOST_Z, LocationType.EXTRA
+    THE_HOST_Z_NORTH_VOID_SHARD = SC2_RACESWAP_LOC_ID_OFFSET + 14004, "North Void Shard", SC2Mission.THE_HOST_Z, LocationType.EXTRA
+    THE_HOST_Z_NORTHWEST_VOID_SHARD = SC2_RACESWAP_LOC_ID_OFFSET + 14005, "Northwest Void Shard", SC2Mission.THE_HOST_Z, LocationType.EXTRA
+    THE_HOST_Z_NERAZIM_WARP_IN_ZONE = SC2_RACESWAP_LOC_ID_OFFSET + 14006, "Nerazim Warp in Zone", SC2Mission.THE_HOST_Z, LocationType.VANILLA
+    THE_HOST_Z_TALDARIM_WARP_IN_ZONE = SC2_RACESWAP_LOC_ID_OFFSET + 14007, "Tal'darim Warp in Zone", SC2Mission.THE_HOST_Z, LocationType.VANILLA
+    THE_HOST_Z_PURIFIER_WARP_IN_ZONE = SC2_RACESWAP_LOC_ID_OFFSET + 14008, "Purifier Warp in Zone", SC2Mission.THE_HOST_Z, LocationType.VANILLA
+
+    SALVATION_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 14100, "Victory", SC2Mission.SALVATION_T, LocationType.VICTORY
+    SALVATION_T_FABRICATION_MATRIX = SC2_RACESWAP_LOC_ID_OFFSET + 14101, "Fabrication Matrix", SC2Mission.SALVATION_T, LocationType.EXTRA
+    SALVATION_T_ASSAULT_CLUSTER = SC2_RACESWAP_LOC_ID_OFFSET + 14102, "Assault Cluster", SC2Mission.SALVATION_T, LocationType.EXTRA
+    SALVATION_T_HULL_BREACH = SC2_RACESWAP_LOC_ID_OFFSET + 14103, "Hull Breach", SC2Mission.SALVATION_T, LocationType.EXTRA
+    SALVATION_T_CORE_CRITICAL = SC2_RACESWAP_LOC_ID_OFFSET + 14104, "Core Critical", SC2Mission.SALVATION_T, LocationType.EXTRA
+    SALVATION_T_KILL_BRUTALISK = SC2_RACESWAP_LOC_ID_OFFSET + 14105, "Kill Brutalisk", SC2Mission.SALVATION_T, LocationType.MASTERY
+
+    SALVATION_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 14200, "Victory", SC2Mission.SALVATION_Z, LocationType.VICTORY
+    SALVATION_Z_FABRICATION_MATRIX = SC2_RACESWAP_LOC_ID_OFFSET + 14201, "Fabrication Matrix", SC2Mission.SALVATION_Z, LocationType.EXTRA
+    SALVATION_Z_ASSAULT_CLUSTER = SC2_RACESWAP_LOC_ID_OFFSET + 14202, "Assault Cluster", SC2Mission.SALVATION_Z, LocationType.EXTRA
+    SALVATION_Z_HULL_BREACH = SC2_RACESWAP_LOC_ID_OFFSET + 14203, "Hull Breach", SC2Mission.SALVATION_Z, LocationType.EXTRA
+    SALVATION_Z_CORE_CRITICAL = SC2_RACESWAP_LOC_ID_OFFSET + 14204, "Core Critical", SC2Mission.SALVATION_Z, LocationType.EXTRA
+    SALVATION_Z_KILL_BRUTALISK = SC2_RACESWAP_LOC_ID_OFFSET + 14205, "Kill Brutalisk", SC2Mission.SALVATION_Z, LocationType.MASTERY
+
+    INTO_THE_VOID_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 14300, "Victory", SC2Mission.INTO_THE_VOID_T, LocationType.VICTORY
+    INTO_THE_VOID_T_CORRUPTION_SOURCE = SC2_RACESWAP_LOC_ID_OFFSET + 14301, "Corruption Source", SC2Mission.INTO_THE_VOID_T, LocationType.EXTRA
+    INTO_THE_VOID_T_SOUTHWEST_FORWARD_POSITION = SC2_RACESWAP_LOC_ID_OFFSET + 14302, "Southwest Forward Position", SC2Mission.INTO_THE_VOID_T, LocationType.VANILLA
+    INTO_THE_VOID_T_NORTHWEST_FORWARD_POSITION = SC2_RACESWAP_LOC_ID_OFFSET + 14303, "Northwest Forward Position", SC2Mission.INTO_THE_VOID_T, LocationType.VANILLA
+    INTO_THE_VOID_T_SOUTHEAST_FORWARD_POSITION = SC2_RACESWAP_LOC_ID_OFFSET + 14304, "Southeast Forward Position", SC2Mission.INTO_THE_VOID_T, LocationType.VANILLA
+    INTO_THE_VOID_T_NORTHEAST_FORWARD_POSITION = SC2_RACESWAP_LOC_ID_OFFSET + 14305, "Northeast Forward Position", SC2Mission.INTO_THE_VOID_T, LocationType.VANILLA
+
+    INTO_THE_VOID_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 14400, "Victory", SC2Mission.INTO_THE_VOID_Z, LocationType.VICTORY
+    INTO_THE_VOID_Z_CORRUPTION_SOURCE = SC2_RACESWAP_LOC_ID_OFFSET + 14401, "Corruption Source", SC2Mission.INTO_THE_VOID_Z, LocationType.EXTRA
+    INTO_THE_VOID_Z_SOUTHWEST_FORWARD_POSITION = SC2_RACESWAP_LOC_ID_OFFSET + 14402, "Southwest Forward Position", SC2Mission.INTO_THE_VOID_Z, LocationType.VANILLA
+    INTO_THE_VOID_Z_NORTHWEST_FORWARD_POSITION = SC2_RACESWAP_LOC_ID_OFFSET + 14403, "Northwest Forward Position", SC2Mission.INTO_THE_VOID_Z, LocationType.VANILLA
+    INTO_THE_VOID_Z_SOUTHEAST_FORWARD_POSITION = SC2_RACESWAP_LOC_ID_OFFSET + 14404, "Southeast Forward Position", SC2Mission.INTO_THE_VOID_Z, LocationType.VANILLA
+    INTO_THE_VOID_Z_NORTHEAST_FORWARD_POSITION = SC2_RACESWAP_LOC_ID_OFFSET + 14405, "Northeast Forward Position", SC2Mission.INTO_THE_VOID_Z, LocationType.VANILLA
+
+    THE_ESSENCE_OF_ETERNITY_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 14500, "Victory", SC2Mission.THE_ESSENCE_OF_ETERNITY_Z, LocationType.VICTORY
+    THE_ESSENCE_OF_ETERNITY_Z_INITIAL_VOID_THRASHERS = SC2_RACESWAP_LOC_ID_OFFSET + 14501, "Initial Void Thrashers", SC2Mission.THE_ESSENCE_OF_ETERNITY_Z, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_Z_VOID_THRASHER_WAVE_1 = SC2_RACESWAP_LOC_ID_OFFSET + 14502, "Void Thrasher Wave 1", SC2Mission.THE_ESSENCE_OF_ETERNITY_Z, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_Z_VOID_THRASHER_WAVE_2 = SC2_RACESWAP_LOC_ID_OFFSET + 14503, "Void Thrasher Wave 2", SC2Mission.THE_ESSENCE_OF_ETERNITY_Z, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_Z_VOID_THRASHER_WAVE_3 = SC2_RACESWAP_LOC_ID_OFFSET + 14504, "Void Thrasher Wave 3", SC2Mission.THE_ESSENCE_OF_ETERNITY_Z, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_Z_VOID_THRASHER_WAVE_4 = SC2_RACESWAP_LOC_ID_OFFSET + 14505, "Void Thrasher Wave 4", SC2Mission.THE_ESSENCE_OF_ETERNITY_Z, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_Z_NO_MORE_THAN_15_KERRIGAN_KILLS = SC2_RACESWAP_LOC_ID_OFFSET + 14506, "No more than 15 Kerrigan Kills", SC2Mission.THE_ESSENCE_OF_ETERNITY_Z, LocationType.MASTERY, LocationFlag.PREVENTATIVE
+
+    THE_ESSENCE_OF_ETERNITY_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 14600, "Victory", SC2Mission.THE_ESSENCE_OF_ETERNITY_P, LocationType.VICTORY
+    THE_ESSENCE_OF_ETERNITY_P_INITIAL_VOID_THRASHERS = SC2_RACESWAP_LOC_ID_OFFSET + 14601, "Initial Void Thrashers", SC2Mission.THE_ESSENCE_OF_ETERNITY_P, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_P_VOID_THRASHER_WAVE_1 = SC2_RACESWAP_LOC_ID_OFFSET + 14602, "Void Thrasher Wave 1", SC2Mission.THE_ESSENCE_OF_ETERNITY_P, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_P_VOID_THRASHER_WAVE_2 = SC2_RACESWAP_LOC_ID_OFFSET + 14603, "Void Thrasher Wave 2", SC2Mission.THE_ESSENCE_OF_ETERNITY_P, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_P_VOID_THRASHER_WAVE_3 = SC2_RACESWAP_LOC_ID_OFFSET + 14604, "Void Thrasher Wave 3", SC2Mission.THE_ESSENCE_OF_ETERNITY_P, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_P_VOID_THRASHER_WAVE_4 = SC2_RACESWAP_LOC_ID_OFFSET + 14605, "Void Thrasher Wave 4", SC2Mission.THE_ESSENCE_OF_ETERNITY_P, LocationType.EXTRA
+    THE_ESSENCE_OF_ETERNITY_P_NO_MORE_THAN_15_KERRIGAN_KILLS = SC2_RACESWAP_LOC_ID_OFFSET + 14606, "No more than 15 Kerrigan Kills", SC2Mission.THE_ESSENCE_OF_ETERNITY_P, LocationType.MASTERY, LocationFlag.PREVENTATIVE
+
+    AMON_S_FALL_T_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 14700, "Victory", SC2Mission.AMON_S_FALL_T, LocationType.VICTORY
+    AMON_S_FALL_T_DESTROY_1_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 14701, "Destroy 1 Crystal", SC2Mission.AMON_S_FALL_T, LocationType.EXTRA
+    AMON_S_FALL_T_DESTROY_2_CRYSTALS = SC2_RACESWAP_LOC_ID_OFFSET + 14702, "Destroy 2 Crystals", SC2Mission.AMON_S_FALL_T, LocationType.EXTRA
+    AMON_S_FALL_T_DESTROY_3_CRYSTALS = SC2_RACESWAP_LOC_ID_OFFSET + 14703, "Destroy 3 Crystals", SC2Mission.AMON_S_FALL_T, LocationType.EXTRA
+    AMON_S_FALL_T_DESTROY_4_CRYSTALS = SC2_RACESWAP_LOC_ID_OFFSET + 14704, "Destroy 4 Crystals", SC2Mission.AMON_S_FALL_T, LocationType.EXTRA
+    AMON_S_FALL_T_DESTROY_5_CRYSTALS = SC2_RACESWAP_LOC_ID_OFFSET + 14705, "Destroy 5 Crystals", SC2Mission.AMON_S_FALL_T, LocationType.EXTRA
+    AMON_S_FALL_T_DESTROY_6_CRYSTALS = SC2_RACESWAP_LOC_ID_OFFSET + 14706, "Destroy 6 Crystals", SC2Mission.AMON_S_FALL_T, LocationType.EXTRA
+    AMON_S_FALL_T_CLEAR_VOID_CHASMS = SC2_RACESWAP_LOC_ID_OFFSET + 14707, "Clear Void Chasms", SC2Mission.AMON_S_FALL_T, LocationType.MASTERY
+
+    AMON_S_FALL_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 14800, "Victory", SC2Mission.AMON_S_FALL_P, LocationType.VICTORY
+    AMON_S_FALL_P_DESTROY_1_CRYSTAL = SC2_RACESWAP_LOC_ID_OFFSET + 14801, "Destroy 1 Crystal", SC2Mission.AMON_S_FALL_P, LocationType.EXTRA
+    AMON_S_FALL_P_DESTROY_2_CRYSTALS = SC2_RACESWAP_LOC_ID_OFFSET + 14802, "Destroy 2 Crystals", SC2Mission.AMON_S_FALL_P, LocationType.EXTRA
+    AMON_S_FALL_P_DESTROY_3_CRYSTALS = SC2_RACESWAP_LOC_ID_OFFSET + 14803, "Destroy 3 Crystals", SC2Mission.AMON_S_FALL_P, LocationType.EXTRA
+    AMON_S_FALL_P_DESTROY_4_CRYSTALS = SC2_RACESWAP_LOC_ID_OFFSET + 14804, "Destroy 4 Crystals", SC2Mission.AMON_S_FALL_P, LocationType.EXTRA
+    AMON_S_FALL_P_DESTROY_5_CRYSTALS = SC2_RACESWAP_LOC_ID_OFFSET + 14805, "Destroy 5 Crystals", SC2Mission.AMON_S_FALL_P, LocationType.EXTRA
+    AMON_S_FALL_P_DESTROY_6_CRYSTALS = SC2_RACESWAP_LOC_ID_OFFSET + 14806, "Destroy 6 Crystals", SC2Mission.AMON_S_FALL_P, LocationType.EXTRA
+    AMON_S_FALL_P_CLEAR_VOID_CHASMS = SC2_RACESWAP_LOC_ID_OFFSET + 14807, "Clear Void Chasms", SC2Mission.AMON_S_FALL_P, LocationType.MASTERY
+
+    SUDDEN_STRIKE_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 15100, "Victory", SC2Mission.SUDDEN_STRIKE_Z, LocationType.VICTORY
+    SUDDEN_STRIKE_Z_RESEARCH_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 15101, "Research Center", SC2Mission.SUDDEN_STRIKE_Z, LocationType.VANILLA
+    SUDDEN_STRIKE_Z_WEAPONRY_LABS = SC2_RACESWAP_LOC_ID_OFFSET + 15102, "Weaponry Labs", SC2Mission.SUDDEN_STRIKE_Z, LocationType.VANILLA
+    SUDDEN_STRIKE_Z_BRUTALISK = SC2_RACESWAP_LOC_ID_OFFSET + 15103, "Brutalisk", SC2Mission.SUDDEN_STRIKE_Z, LocationType.EXTRA
+    SUDDEN_STRIKE_Z_GAS_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 15104, "Gas Pickups", SC2Mission.SUDDEN_STRIKE_Z, LocationType.EXTRA
+    SUDDEN_STRIKE_Z_PROTECT_BUILDINGS = SC2_RACESWAP_LOC_ID_OFFSET + 15105, "Protect Buildings", SC2Mission.SUDDEN_STRIKE_Z, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    SUDDEN_STRIKE_Z_ZERG_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 15106, "Zerg Base", SC2Mission.SUDDEN_STRIKE_Z, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    SUDDEN_STRIKE_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 15200, "Victory", SC2Mission.SUDDEN_STRIKE_P, LocationType.VICTORY
+    SUDDEN_STRIKE_P_RESEARCH_CENTER = SC2_RACESWAP_LOC_ID_OFFSET + 15201, "Research Center", SC2Mission.SUDDEN_STRIKE_P, LocationType.VANILLA
+    SUDDEN_STRIKE_P_WEAPONRY_LABS = SC2_RACESWAP_LOC_ID_OFFSET + 15202, "Weaponry Labs", SC2Mission.SUDDEN_STRIKE_P, LocationType.VANILLA
+    SUDDEN_STRIKE_P_BRUTALISK = SC2_RACESWAP_LOC_ID_OFFSET + 15203, "Brutalisk", SC2Mission.SUDDEN_STRIKE_P, LocationType.EXTRA
+    SUDDEN_STRIKE_P_GAS_PICKUPS = SC2_RACESWAP_LOC_ID_OFFSET + 15204, "Gas Pickups", SC2Mission.SUDDEN_STRIKE_P, LocationType.EXTRA
+    SUDDEN_STRIKE_P_PROTECT_BUILDINGS = SC2_RACESWAP_LOC_ID_OFFSET + 15205, "Protect Buildings", SC2Mission.SUDDEN_STRIKE_P, LocationType.CHALLENGE, LocationFlag.PREVENTATIVE
+    SUDDEN_STRIKE_P_ZERG_BASE = SC2_RACESWAP_LOC_ID_OFFSET + 15206, "Zerg Base", SC2Mission.SUDDEN_STRIKE_P, LocationType.MASTERY, LocationFlag.BASEBUST
+
+    ENEMY_INTELLIGENCE_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 15300, "Victory", SC2Mission.ENEMY_INTELLIGENCE_Z, LocationType.VICTORY
+    ENEMY_INTELLIGENCE_Z_WEST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 15301, "West Garrison", SC2Mission.ENEMY_INTELLIGENCE_Z, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_Z_CLOSE_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 15302, "Close Garrison", SC2Mission.ENEMY_INTELLIGENCE_Z, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_Z_NORTHEAST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 15303, "Northeast Garrison", SC2Mission.ENEMY_INTELLIGENCE_Z, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_Z_SOUTHEAST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 15304, "Southeast Garrison", SC2Mission.ENEMY_INTELLIGENCE_Z, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_Z_SOUTH_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 15305, "South Garrison", SC2Mission.ENEMY_INTELLIGENCE_Z, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_Z_ALL_GARRISONS = SC2_RACESWAP_LOC_ID_OFFSET + 15306, "All Garrisons", SC2Mission.ENEMY_INTELLIGENCE_Z, LocationType.VANILLA
+    ENEMY_INTELLIGENCE_Z_FORCES_RESCUED = SC2_RACESWAP_LOC_ID_OFFSET + 15307, "Forces Rescued", SC2Mission.ENEMY_INTELLIGENCE_Z, LocationType.VANILLA
+    ENEMY_INTELLIGENCE_Z_COMMUNICATIONS_HUB = SC2_RACESWAP_LOC_ID_OFFSET + 15308, "Communications Hub", SC2Mission.ENEMY_INTELLIGENCE_Z, LocationType.VANILLA
+
+    ENEMY_INTELLIGENCE_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 15400, "Victory", SC2Mission.ENEMY_INTELLIGENCE_P, LocationType.VICTORY
+    ENEMY_INTELLIGENCE_P_WEST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 15401, "West Garrison", SC2Mission.ENEMY_INTELLIGENCE_P, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_P_CLOSE_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 15402, "Close Garrison", SC2Mission.ENEMY_INTELLIGENCE_P, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_P_NORTHEAST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 15403, "Northeast Garrison", SC2Mission.ENEMY_INTELLIGENCE_P, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_P_SOUTHEAST_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 15404, "Southeast Garrison", SC2Mission.ENEMY_INTELLIGENCE_P, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_P_SOUTH_GARRISON = SC2_RACESWAP_LOC_ID_OFFSET + 15405, "South Garrison", SC2Mission.ENEMY_INTELLIGENCE_P, LocationType.EXTRA
+    ENEMY_INTELLIGENCE_P_ALL_GARRISONS = SC2_RACESWAP_LOC_ID_OFFSET + 15406, "All Garrisons", SC2Mission.ENEMY_INTELLIGENCE_P, LocationType.VANILLA
+    ENEMY_INTELLIGENCE_P_FORCES_RESCUED = SC2_RACESWAP_LOC_ID_OFFSET + 15407, "Forces Rescued", SC2Mission.ENEMY_INTELLIGENCE_P, LocationType.VANILLA
+    ENEMY_INTELLIGENCE_P_COMMUNICATIONS_HUB = SC2_RACESWAP_LOC_ID_OFFSET + 15408, "Communications Hub", SC2Mission.ENEMY_INTELLIGENCE_P, LocationType.VANILLA
+
+    TROUBLE_IN_PARADISE_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 15500, "Victory", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.VICTORY
+    TROUBLE_IN_PARADISE_Z_NORTH_BASE_WEST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15501, "North Base: West Hatchery", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_Z_NORTH_BASE_NORTH_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15502, "North Base: North Hatchery", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_Z_NORTH_BASE_EAST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15503, "North Base: East Hatchery", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_Z_SOUTH_BASE_NORTHWEST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15504, "South Base: Northwest Hatchery", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_Z_SOUTH_BASE_SOUTHWEST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15505, "South Base: Southwest Hatchery", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_Z_SOUTH_BASE_EAST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15506, "South Base: East Hatchery", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_Z_NORTH_SHIELD_PROJECTOR = SC2_RACESWAP_LOC_ID_OFFSET + 15507, "North Shield Projector", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_Z_EAST_SHIELD_PROJECTOR = SC2_RACESWAP_LOC_ID_OFFSET + 15508, "East Shield Projector", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_Z_SOUTH_SHIELD_PROJECTOR = SC2_RACESWAP_LOC_ID_OFFSET + 15509, "South Shield Projector", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_Z_WEST_SHIELD_PROJECTOR = SC2_RACESWAP_LOC_ID_OFFSET + 15510, "West Shield Projector", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_Z_FLEET_BEACON = SC2_RACESWAP_LOC_ID_OFFSET + 15511, "Fleet Beacon", SC2Mission.TROUBLE_IN_PARADISE_Z, LocationType.VANILLA
+
+    TROUBLE_IN_PARADISE_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 15600, "Victory", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.VICTORY
+    TROUBLE_IN_PARADISE_P_NORTH_BASE_WEST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15601, "North Base: West Hatchery", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_P_NORTH_BASE_NORTH_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15602, "North Base: North Hatchery", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_P_NORTH_BASE_EAST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15603, "North Base: East Hatchery", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_P_SOUTH_BASE_NORTHWEST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15604, "South Base: Northwest Hatchery", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_P_SOUTH_BASE_SOUTHWEST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15605, "South Base: Southwest Hatchery", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_P_SOUTH_BASE_EAST_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15606, "South Base: East Hatchery", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.VANILLA
+    TROUBLE_IN_PARADISE_P_NORTH_SHIELD_PROJECTOR = SC2_RACESWAP_LOC_ID_OFFSET + 15607, "North Shield Projector", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_P_EAST_SHIELD_PROJECTOR = SC2_RACESWAP_LOC_ID_OFFSET + 15608, "East Shield Projector", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_P_SOUTH_SHIELD_PROJECTOR = SC2_RACESWAP_LOC_ID_OFFSET + 15609, "South Shield Projector", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_P_WEST_SHIELD_PROJECTOR = SC2_RACESWAP_LOC_ID_OFFSET + 15610, "West Shield Projector", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.EXTRA
+    TROUBLE_IN_PARADISE_P_FLEET_BEACON = SC2_RACESWAP_LOC_ID_OFFSET + 15611, "Fleet Beacon", SC2Mission.TROUBLE_IN_PARADISE_P, LocationType.VANILLA
+
+    NIGHT_TERRORS_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 15700, "Victory", SC2Mission.NIGHT_TERRORS_Z, LocationType.VICTORY
+    NIGHT_TERRORS_Z_1_TERRAZINE_NODE_COLLECTED = SC2_RACESWAP_LOC_ID_OFFSET + 15701, "1 Terrazine Node Collected", SC2Mission.NIGHT_TERRORS_Z, LocationType.EXTRA
+    NIGHT_TERRORS_Z_2_TERRAZINE_NODES_COLLECTED = SC2_RACESWAP_LOC_ID_OFFSET + 15702, "2 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS_Z, LocationType.EXTRA
+    NIGHT_TERRORS_Z_3_TERRAZINE_NODES_COLLECTED = SC2_RACESWAP_LOC_ID_OFFSET + 15703, "3 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS_Z, LocationType.EXTRA
+    NIGHT_TERRORS_Z_4_TERRAZINE_NODES_COLLECTED = SC2_RACESWAP_LOC_ID_OFFSET + 15704, "4 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS_Z, LocationType.EXTRA
+    NIGHT_TERRORS_Z_5_TERRAZINE_NODES_COLLECTED = SC2_RACESWAP_LOC_ID_OFFSET + 15705, "5 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS_Z, LocationType.EXTRA
+    NIGHT_TERRORS_Z_HERC_OUTPOST = SC2_RACESWAP_LOC_ID_OFFSET + 15706, "HERC Outpost", SC2Mission.NIGHT_TERRORS_Z, LocationType.VANILLA
+    NIGHT_TERRORS_Z_UMOJAN_MINE = SC2_RACESWAP_LOC_ID_OFFSET + 15707, "Umojan Mine", SC2Mission.NIGHT_TERRORS_Z, LocationType.EXTRA
+    NIGHT_TERRORS_Z_BLIGHTBRINGER = SC2_RACESWAP_LOC_ID_OFFSET + 15708, "Blightbringer", SC2Mission.NIGHT_TERRORS_Z, LocationType.VANILLA
+    NIGHT_TERRORS_Z_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 15709, "Science Facility", SC2Mission.NIGHT_TERRORS_Z, LocationType.EXTRA
+    NIGHT_TERRORS_Z_ERADICATORS = SC2_RACESWAP_LOC_ID_OFFSET + 15710, "Eradicators", SC2Mission.NIGHT_TERRORS_Z, LocationType.VANILLA
+
+    NIGHT_TERRORS_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 15800, "Victory", SC2Mission.NIGHT_TERRORS_P, LocationType.VICTORY
+    NIGHT_TERRORS_P_1_TERRAZINE_NODE_COLLECTED = SC2_RACESWAP_LOC_ID_OFFSET + 15801, "1 Terrazine Node Collected", SC2Mission.NIGHT_TERRORS_P, LocationType.EXTRA
+    NIGHT_TERRORS_P_2_TERRAZINE_NODES_COLLECTED = SC2_RACESWAP_LOC_ID_OFFSET + 15802, "2 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS_P, LocationType.EXTRA
+    NIGHT_TERRORS_P_3_TERRAZINE_NODES_COLLECTED = SC2_RACESWAP_LOC_ID_OFFSET + 15803, "3 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS_P, LocationType.EXTRA
+    NIGHT_TERRORS_P_4_TERRAZINE_NODES_COLLECTED = SC2_RACESWAP_LOC_ID_OFFSET + 15804, "4 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS_P, LocationType.EXTRA
+    NIGHT_TERRORS_P_5_TERRAZINE_NODES_COLLECTED = SC2_RACESWAP_LOC_ID_OFFSET + 15805, "5 Terrazine Nodes Collected", SC2Mission.NIGHT_TERRORS_P, LocationType.EXTRA
+    NIGHT_TERRORS_P_HERC_OUTPOST = SC2_RACESWAP_LOC_ID_OFFSET + 15806, "HERC Outpost", SC2Mission.NIGHT_TERRORS_P, LocationType.VANILLA
+    NIGHT_TERRORS_P_UMOJAN_MINE = SC2_RACESWAP_LOC_ID_OFFSET + 15807, "Umojan Mine", SC2Mission.NIGHT_TERRORS_P, LocationType.EXTRA
+    NIGHT_TERRORS_P_BLIGHTBRINGER = SC2_RACESWAP_LOC_ID_OFFSET + 15808, "Blightbringer", SC2Mission.NIGHT_TERRORS_P, LocationType.VANILLA
+    NIGHT_TERRORS_P_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 15809, "Science Facility", SC2Mission.NIGHT_TERRORS_P, LocationType.EXTRA
+    NIGHT_TERRORS_P_ERADICATORS = SC2_RACESWAP_LOC_ID_OFFSET + 15810, "Eradicators", SC2Mission.NIGHT_TERRORS_P, LocationType.VANILLA
+
+    FLASHPOINT_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 15900, "Victory", SC2Mission.FLASHPOINT_Z, LocationType.VICTORY
+    FLASHPOINT_Z_CLOSE_NORTH_EVIDENCE_COORDINATES = SC2_RACESWAP_LOC_ID_OFFSET + 15901, "Close North Evidence Coordinates", SC2Mission.FLASHPOINT_Z, LocationType.EXTRA
+    FLASHPOINT_Z_CLOSE_EAST_EVIDENCE_COORDINATES = SC2_RACESWAP_LOC_ID_OFFSET + 15902, "Close East Evidence Coordinates", SC2Mission.FLASHPOINT_Z, LocationType.EXTRA
+    FLASHPOINT_Z_FAR_NORTH_EVIDENCE_COORDINATES = SC2_RACESWAP_LOC_ID_OFFSET + 15903, "Far North Evidence Coordinates", SC2Mission.FLASHPOINT_Z, LocationType.EXTRA
+    FLASHPOINT_Z_FAR_EAST_EVIDENCE_COORDINATES = SC2_RACESWAP_LOC_ID_OFFSET + 15904, "Far East Evidence Coordinates", SC2Mission.FLASHPOINT_Z, LocationType.EXTRA
+    FLASHPOINT_Z_EXPERIMENTAL_WEAPON = SC2_RACESWAP_LOC_ID_OFFSET + 15905, "Experimental Weapon", SC2Mission.FLASHPOINT_Z, LocationType.VANILLA
+    FLASHPOINT_Z_NORTHWEST_SUBWAY_ENTRANCE = SC2_RACESWAP_LOC_ID_OFFSET + 15906, "Northwest Subway Entrance", SC2Mission.FLASHPOINT_Z, LocationType.VANILLA
+    FLASHPOINT_Z_SOUTHEAST_SUBWAY_ENTRANCE = SC2_RACESWAP_LOC_ID_OFFSET + 15907, "Southeast Subway Entrance", SC2Mission.FLASHPOINT_Z, LocationType.VANILLA
+    FLASHPOINT_Z_NORTHEAST_SUBWAY_ENTRANCE = SC2_RACESWAP_LOC_ID_OFFSET + 15908, "Northeast Subway Entrance", SC2Mission.FLASHPOINT_Z, LocationType.VANILLA
+    FLASHPOINT_Z_EXPANSION_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 15909, "Expansion Hatchery", SC2Mission.FLASHPOINT_Z, LocationType.EXTRA
+    FLASHPOINT_Z_BANELING_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 15910, "Baneling Spawns", SC2Mission.FLASHPOINT_Z, LocationType.EXTRA
+    FLASHPOINT_Z_MUTALISK_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 15911, "Mutalisk Spawns", SC2Mission.FLASHPOINT_Z, LocationType.EXTRA
+    FLASHPOINT_Z_NYDUS_WORM_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 15912, "Nydus Worm Spawns", SC2Mission.FLASHPOINT_Z, LocationType.EXTRA
+    FLASHPOINT_Z_LURKER_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 15913, "Lurker Spawns", SC2Mission.FLASHPOINT_Z, LocationType.EXTRA
+    FLASHPOINT_Z_BROOD_LORD_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 15914, "Brood Lord Spawns", SC2Mission.FLASHPOINT_Z, LocationType.EXTRA
+    FLASHPOINT_Z_ULTRALISK_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 15915, "Ultralisk Spawns", SC2Mission.FLASHPOINT_Z, LocationType.EXTRA
+
+    FLASHPOINT_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 16000, "Victory", SC2Mission.FLASHPOINT_P, LocationType.VICTORY
+    FLASHPOINT_P_CLOSE_NORTH_EVIDENCE_COORDINATES = SC2_RACESWAP_LOC_ID_OFFSET + 16001, "Close North Evidence Coordinates", SC2Mission.FLASHPOINT_P, LocationType.EXTRA
+    FLASHPOINT_P_CLOSE_EAST_EVIDENCE_COORDINATES = SC2_RACESWAP_LOC_ID_OFFSET + 16002, "Close East Evidence Coordinates", SC2Mission.FLASHPOINT_P, LocationType.EXTRA
+    FLASHPOINT_P_FAR_NORTH_EVIDENCE_COORDINATES = SC2_RACESWAP_LOC_ID_OFFSET + 16003, "Far North Evidence Coordinates", SC2Mission.FLASHPOINT_P, LocationType.EXTRA
+    FLASHPOINT_P_FAR_EAST_EVIDENCE_COORDINATES = SC2_RACESWAP_LOC_ID_OFFSET + 16004, "Far East Evidence Coordinates", SC2Mission.FLASHPOINT_P, LocationType.EXTRA
+    FLASHPOINT_P_EXPERIMENTAL_WEAPON = SC2_RACESWAP_LOC_ID_OFFSET + 16005, "Experimental Weapon", SC2Mission.FLASHPOINT_P, LocationType.VANILLA
+    FLASHPOINT_P_NORTHWEST_SUBWAY_ENTRANCE = SC2_RACESWAP_LOC_ID_OFFSET + 16006, "Northwest Subway Entrance", SC2Mission.FLASHPOINT_P, LocationType.VANILLA
+    FLASHPOINT_P_SOUTHEAST_SUBWAY_ENTRANCE = SC2_RACESWAP_LOC_ID_OFFSET + 16007, "Southeast Subway Entrance", SC2Mission.FLASHPOINT_P, LocationType.VANILLA
+    FLASHPOINT_P_NORTHEAST_SUBWAY_ENTRANCE = SC2_RACESWAP_LOC_ID_OFFSET + 16008, "Northeast Subway Entrance", SC2Mission.FLASHPOINT_P, LocationType.VANILLA
+    FLASHPOINT_P_EXPANSION_HATCHERY = SC2_RACESWAP_LOC_ID_OFFSET + 16009, "Expansion Hatchery", SC2Mission.FLASHPOINT_P, LocationType.EXTRA
+    FLASHPOINT_P_BANELING_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 16010, "Baneling Spawns", SC2Mission.FLASHPOINT_P, LocationType.EXTRA
+    FLASHPOINT_P_MUTALISK_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 16011, "Mutalisk Spawns", SC2Mission.FLASHPOINT_P, LocationType.EXTRA
+    FLASHPOINT_P_NYDUS_WORM_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 16012, "Nydus Worm Spawns", SC2Mission.FLASHPOINT_P, LocationType.EXTRA
+    FLASHPOINT_P_LURKER_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 16013, "Lurker Spawns", SC2Mission.FLASHPOINT_P, LocationType.EXTRA
+    FLASHPOINT_P_BROOD_LORD_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 16014, "Brood Lord Spawns", SC2Mission.FLASHPOINT_P, LocationType.EXTRA
+    FLASHPOINT_P_ULTRALISK_SPAWNS = SC2_RACESWAP_LOC_ID_OFFSET + 16015, "Ultralisk Spawns", SC2Mission.FLASHPOINT_P, LocationType.EXTRA
+
+    DARK_SKIES_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 16300, "Victory", SC2Mission.DARK_SKIES_Z, LocationType.VICTORY
+    DARK_SKIES_Z_FIRST_SQUADRON_OF_DOMINION_FLEET = SC2_RACESWAP_LOC_ID_OFFSET + 16301, "First Squadron of Dominion Fleet", SC2Mission.DARK_SKIES_Z, LocationType.EXTRA
+    DARK_SKIES_Z_REMAINDER_OF_DOMINION_FLEET = SC2_RACESWAP_LOC_ID_OFFSET + 16302, "Remainder of Dominion Fleet", SC2Mission.DARK_SKIES_Z, LocationType.EXTRA
+    DARK_SKIES_Z_JINARA = SC2_RACESWAP_LOC_ID_OFFSET + 16303, "Ji'nara", SC2Mission.DARK_SKIES_Z, LocationType.EXTRA
+    DARK_SKIES_Z_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 16304, "Science Facility", SC2Mission.DARK_SKIES_Z, LocationType.VANILLA
+
+    DARK_SKIES_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 16400, "Victory", SC2Mission.DARK_SKIES_P, LocationType.VICTORY
+    DARK_SKIES_P_FIRST_SQUADRON_OF_DOMINION_FLEET = SC2_RACESWAP_LOC_ID_OFFSET + 16401, "First Squadron of Dominion Fleet", SC2Mission.DARK_SKIES_P, LocationType.EXTRA
+    DARK_SKIES_P_REMAINDER_OF_DOMINION_FLEET = SC2_RACESWAP_LOC_ID_OFFSET + 16402, "Remainder of Dominion Fleet", SC2Mission.DARK_SKIES_P, LocationType.EXTRA
+    DARK_SKIES_P_JINARA = SC2_RACESWAP_LOC_ID_OFFSET + 16403, "Ji'nara", SC2Mission.DARK_SKIES_P, LocationType.EXTRA
+    DARK_SKIES_P_SCIENCE_FACILITY = SC2_RACESWAP_LOC_ID_OFFSET + 16404, "Science Facility", SC2Mission.DARK_SKIES_P, LocationType.VANILLA
+
+    END_GAME_Z_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 16500, "Victory", SC2Mission.END_GAME_Z, LocationType.VICTORY
+    END_GAME_Z_DESTROY_THE_XANTHOS = SC2_RACESWAP_LOC_ID_OFFSET + 16501, "Destroy the Xanthos", SC2Mission.END_GAME_Z, LocationType.VANILLA
+    END_GAME_Z_DISABLE_XANTHOS_RAILGUN = SC2_RACESWAP_LOC_ID_OFFSET + 16502, "Disable Xanthos Railgun", SC2Mission.END_GAME_Z, LocationType.EXTRA
+    END_GAME_Z_DISABLE_XANTHOS_FLAMETHROWER = SC2_RACESWAP_LOC_ID_OFFSET + 16503, "Disable Xanthos Flamethrower", SC2Mission.END_GAME_Z, LocationType.EXTRA
+    END_GAME_Z_DISABLE_XANTHOS_FIGHTER_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 16504, "Disable Xanthos Fighter Bay", SC2Mission.END_GAME_Z, LocationType.EXTRA
+    END_GAME_Z_DISABLE_XANTHOS_MISSILE_PODS = SC2_RACESWAP_LOC_ID_OFFSET + 16505, "Disable Xanthos Missile Pods", SC2Mission.END_GAME_Z, LocationType.EXTRA
+    END_GAME_Z_PROTECT_HYPERION = SC2_RACESWAP_LOC_ID_OFFSET + 16506, "Protect Hyperion", SC2Mission.END_GAME_Z, LocationType.CHALLENGE
+    END_GAME_Z_DESTROY_ORBITAL_COMMANDS = SC2_RACESWAP_LOC_ID_OFFSET + 16507, "Destroy Orbital Commands", SC2Mission.END_GAME_Z, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
+    END_GAME_P_VICTORY = SC2_RACESWAP_LOC_ID_OFFSET + 16600, "Victory", SC2Mission.END_GAME_P, LocationType.VICTORY
+    END_GAME_P_DESTROY_THE_XANTHOS = SC2_RACESWAP_LOC_ID_OFFSET + 16601, "Destroy the Xanthos", SC2Mission.END_GAME_P, LocationType.VANILLA
+    END_GAME_P_DISABLE_XANTHOS_RAILGUN = SC2_RACESWAP_LOC_ID_OFFSET + 16602, "Disable Xanthos Railgun", SC2Mission.END_GAME_P, LocationType.EXTRA
+    END_GAME_P_DISABLE_XANTHOS_FLAMETHROWER = SC2_RACESWAP_LOC_ID_OFFSET + 16603, "Disable Xanthos Flamethrower", SC2Mission.END_GAME_P, LocationType.EXTRA
+    END_GAME_P_DISABLE_XANTHOS_FIGHTER_BAY = SC2_RACESWAP_LOC_ID_OFFSET + 16604, "Disable Xanthos Fighter Bay", SC2Mission.END_GAME_P, LocationType.EXTRA
+    END_GAME_P_DISABLE_XANTHOS_MISSILE_PODS = SC2_RACESWAP_LOC_ID_OFFSET + 16605, "Disable Xanthos Missile Pods", SC2Mission.END_GAME_P, LocationType.EXTRA
+    END_GAME_P_PROTECT_HYPERION = SC2_RACESWAP_LOC_ID_OFFSET + 16606, "Protect Hyperion", SC2Mission.END_GAME_P, LocationType.CHALLENGE
+    END_GAME_P_DESTROY_ORBITAL_COMMANDS = SC2_RACESWAP_LOC_ID_OFFSET + 16607, "Destroy Orbital Commands", SC2Mission.END_GAME_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
+
