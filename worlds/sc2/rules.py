@@ -54,7 +54,7 @@ class SC2Logic:
     @staticmethod
     def series(logic_series: LogicSeries, race: SC2Race, tier: int) -> Callable[[T], T]:
         def identity(x: T) -> T:
-            x.series_info = (logic_series, race, tier)
+            x.series_info = (logic_series, race, tier)  # type: ignore
             return x
         return identity
 
@@ -170,14 +170,14 @@ class SC2Logic:
 
         # Transition functions
         if self.generic_upgrade_missions > 0:
-            self.wa_upgrade_count = self._wa_upgrade_count_generic_filtering
+            self.wa_upgrade_count = self._wa_upgrade_count_generic_filtering  # type: ignore[method-assign]
         else:
-            self.wa_upgrade_count = self._wa_upgrade_count_items
+            self.wa_upgrade_count = self._wa_upgrade_count_items  # type: ignore[method-assign]
 
         if (self.kerrigan_levels_per_mission_completed > 0
             and self.kerrigan_levels_per_mission_completed_cap != 0
         ):
-            self.kerrigan_levels_from_missions = self._kerrigan_levels_from_missions_filtering
+            self.kerrigan_levels_from_missions = self._kerrigan_levels_from_missions_filtering  # type: ignore[method-assign]
 
     # ###################################################################################################### #
     # region Transition functions .......................................................................... #
@@ -246,13 +246,6 @@ class SC2Logic:
     # region Generic ....................................................................................... #
     # ###################################################################################################### #
 
-    def weapon_armor_upgrade_count(self, upgrade_item: str, state: CollectionState) -> int:
-        # @todo(mm): remove this
-        raise NotImplemented
-
-    def get_very_hard_required_upgrade_level(self) -> int:
-        return 2 if self.advanced_tactics else 3
-
     def soa_power_rating(self, state: CollectionState) -> int:
         """Points system out of 17. Excluding OP items gives max 13. Recommend requiring no more than 10."""
         power_rating = 0
@@ -275,7 +268,7 @@ class SC2Logic:
             (item_names.SOA_ORBITAL_STRIKE, 4, 1,),
         )
         found_main_weapon = False
-        for item, rating, count in soa_energy_ratings.items():
+        for item, rating, count in soa_energy_ratings:
             if state.has(item, self.player, count):
                 if not found_main_weapon:
                     power_rating += rating
@@ -671,6 +664,7 @@ class SC2Logic:
         """Rating out of 18. Recommend requiring no more than 12."""
         # Passive Score (Economic upgrades and global army upgrades)
         # max 18
+        power_score = 0
         terran_passive_ratings = {
             (item_names.AUTOMATED_REFINERY, 4,),
             (item_names.COMMAND_CENTER_MULE, 4,),
@@ -745,10 +739,10 @@ class SC2Logic:
         )
 
     def terran_basic_transport(self, state: CollectionState) -> bool:
-        return state.has_any(((
+        return state.has_any((
             item_names.MEDIVAC,
             item_names.HERCULES,
-        ), self.player))
+        ), self.player)
 
     def terran_basic_transport_or_air_comp(self, state: CollectionState) -> bool:
         return self.terran_basic_transport(state) or self.terran_basic_air_comp(state)
@@ -767,51 +761,6 @@ class SC2Logic:
                 and self.wa_upgrade_count(VirtualItem.TERRAN_SHIP_WEAPON, state) >= 2
             )
         )
-
-    def terran_competent_ground_to_air(self, state: CollectionState) -> bool:
-        """
-        Ground-to-air
-        """
-        return (
-            state.has(item_names.GOLIATH, self.player)
-            or (
-                state.has_any((item_names.MARINE, item_names.DOMINION_TROOPER), self.player)
-                and self.terran_bio_heal(state)
-                and self.wa_upgrade_count(VirtualItem.TERRAN_INFANTRY_WEAPON, state) >= 2
-            )
-            or (
-                self.advanced_tactics
-                and (
-                    state.has(item_names.CYCLONE, self.player)
-                    or state.has_all((item_names.THOR, item_names.THOR_PROGRESSIVE_HIGH_IMPACT_PAYLOAD), self.player)
-                )
-            )
-        )
-
-    def terran_army_weapon_armor_upgrade_min_level(self, state: CollectionState) -> int:
-        """
-        Minimum W/A upgrade level for unit classes present in the world
-        """
-        count: int = item_tables.WEAPON_ARMOR_UPGRADE_MAX_LEVEL
-        if self.has_barracks_unit:
-            count = min(
-                count,
-                self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_TERRAN_INFANTRY_WEAPON, state),
-                self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_TERRAN_INFANTRY_ARMOR, state),
-            )
-        if self.has_factory_unit:
-            count = min(
-                count,
-                self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_TERRAN_VEHICLE_WEAPON, state),
-                self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_TERRAN_VEHICLE_ARMOR, state),
-            )
-        if self.has_starport_unit:
-            count = min(
-                count,
-                self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_TERRAN_SHIP_WEAPON, state),
-                self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_TERRAN_SHIP_ARMOR, state),
-            )
-        return count
 
     def terran_early_tech(self, state: CollectionState) -> bool:
         """
@@ -875,23 +824,6 @@ class SC2Logic:
                 and state.has_any((item_names.PERDITION_TURRET, item_names.DEVASTATOR_TURRET), self.player)
             )
         )
-
-    def terran_beats_protoss_deathball(self, state: CollectionState) -> bool:
-        """
-        Ability to deal with Immortals, Colossi with some air support
-        """
-        return (
-            (
-                (
-                    state.has_any((item_names.BANSHEE, item_names.BATTLECRUISER), self.player)
-                    or state.has_all((item_names.LIBERATOR, item_names.LIBERATOR_RAID_ARTILLERY), self.player)
-                )
-                and self.terran_competent_anti_air(state)
-            )
-            or (self.terran_competent_comp(state)
-                and self.terran_air_anti_air(state)
-            )
-        ) and self.terran_army_weapon_armor_upgrade_min_level(state) >= 2
 
     def marine_medic_upgrade(self, state: CollectionState) -> bool:
         """
@@ -1347,6 +1279,7 @@ class SC2Logic:
         """Rating out of 20. Recommend requiring no more than 12."""
         # Passive Score (Economic upgrades and global army upgrades)
         # Max 20
+        power_score = 0
         zerg_passive_ratings = (
             (item_names.TWIN_DRONES, 7,),
             (item_names.AUTOMATED_EXTRACTORS, 4,),
@@ -1450,7 +1383,7 @@ class SC2Logic:
             and (
                 (
                     state.has(item_names.MUTALISK, self.player)
-                    and state.count((
+                    and state.count_from_list_unique((
                         item_names.MUTALISK_SEVERING_GLAIVE,
                         item_names.MUTALISK_SUNDERING_GLAIVE,
                         item_names.MUTALISK_VICIOUS_GLAIVE,
@@ -1482,7 +1415,10 @@ class SC2Logic:
                 )
                 or (
                     (
-                        state.has_all(item_names.CORRUPTOR, item_names.CORRUPTOR_RESOURCE_EFFICIENCY, self.player)
+                        state.has_all((
+                            item_names.CORRUPTOR,
+                            item_names.CORRUPTOR_RESOURCE_EFFICIENCY,
+                        ), self.player)
                         or state.has_all((
                             item_names.INFESTED_LIBERATOR,
                             item_names.INFESTED_LIBERATOR_CLOUD_DISPERSAL,
@@ -1518,7 +1454,7 @@ class SC2Logic:
                 item_names.INFESTED_BANSHEE_RAPID_HIBERNATION,
             ), self.player)
             or (
-                state.has(item_names.OVERLORD_GENERATE_CREEP)
+                state.has(item_names.OVERLORD_GENERATE_CREEP, self.player)
                 and (
                     state.has_all((
                         item_names.INFESTED_SIEGE_TANK,
@@ -1552,47 +1488,15 @@ class SC2Logic:
             ), self.player)
         )
 
-    def zerg_very_hard_mission_weapon_armor_level(self, state: CollectionState) -> bool:
-        # todo(mm): remove this
-        return (
-            self.zerg_army_weapon_armor_upgrade_min_level(state)
-            >= self.get_very_hard_required_upgrade_level()
-        )
-
-    def zerg_versatile_air(self, state: CollectionState) -> bool:
-        if state.has(item_names.MUTALISK, self.player):
-            return True
-        if self.morph_guardian(state) and state.has(item_names.GUARDIAN_PRIMAL_ADAPTATION, self.player):
-            return True
-        return (
-            # Air-to-air
-            (
-                state.has_any((
-                    item_names.CORRUPTOR,
-                    item_names.BROOD_QUEEN,
-                    item_names.SCOURGE,
-                    item_names.INFESTED_LIBERATOR,
-                ), self.player)
-                or self.morph_devourer(state)
-                or self.morph_viper(state)
-            )
-            # Air-to-ground
-            and (
-                state.has(item_names.INFESTED_BANSHEE, self.player)
-                or self.morph_guardian(state)
-                or self.morph_brood_lord(state)
-                or (self.morph_devourer(state)
-                    and state.has(item_names.DEVOURER_PRESCIENT_SPORES, self.player)
-                )
-            )
-        )
-
     def zerg_infested_tank_with_ammo(self, state: CollectionState) -> bool:
         return state.has(item_names.INFESTED_SIEGE_TANK, self.player) and (
             state.has_all({item_names.INFESTOR, item_names.INFESTOR_INFESTED_TERRAN}, self.player)
             or state.has(item_names.INFESTED_BUNKER, self.player)
             or (self.advanced_tactics and state.has(item_names.INFESTED_MARINE, self.player))
-            or state.count(item_names.INFESTED_SIEGE_TANK_PROGRESSIVE_AUTOMATED_MITOSIS, self.player) >= (1 if self.advanced_tactics else 2)
+            or (
+                state.count(item_names.INFESTED_SIEGE_TANK_PROGRESSIVE_AUTOMATED_MITOSIS, self.player)
+                >= (1 if self.advanced_tactics else 2)
+            )
         )
 
     def morph_baneling(self, state: CollectionState) -> bool:
@@ -1629,9 +1533,6 @@ class SC2Logic:
     def morph_lurker(self, state: CollectionState) -> bool:
         return (state.has(item_names.HYDRALISK, self.player) or self.morphling_enabled) and state.has(item_names.LURKER, self.player)
 
-    def morph_impaler_or_lurker(self, state: CollectionState) -> bool:
-        return self.morph_impaler(state) or self.morph_lurker(state)
-
     def morph_igniter(self, state: CollectionState) -> bool:
         return (state.has(item_names.ROACH, self.player) or self.morphling_enabled) and state.has(item_names.PRIMAL_IGNITER, self.player)
 
@@ -1639,24 +1540,6 @@ class SC2Logic:
         return state.has(item_names.TYRANNOZOR, self.player) and (
             state.has(item_names.ULTRALISK, self.player) or self.morphling_enabled
         )
-
-    def zerg_common_unit_basic_aa(self, state: CollectionState) -> bool:
-        return self.zerg_common_unit(state) and self.zerg_basic_anti_air(state)
-
-    def zerg_common_unit_competent_aa(self, state: CollectionState) -> bool:
-        return self.zerg_common_unit(state) and self.zerg_competent_anti_air(state)
-
-    def zerg_common_unit_or_advanced_tactics(self, state: CollectionState) -> bool:
-        return self.advanced_tactics or self.zerg_common_unit(state)
-
-    def zerg_competent_comp_basic_aa(self, state: CollectionState) -> bool:
-        return self.zerg_competent_comp(state) and self.zerg_basic_anti_air(state)
-
-    def zerg_competent_comp_moderate_aa(self, state: CollectionState) -> bool:
-        return self.zerg_competent_comp(state) and self.zerg_moderate_anti_air(state)
-
-    def zerg_competent_comp_competent_aa(self, state: CollectionState) -> bool:
-        return self.zerg_competent_comp(state) and self.zerg_competent_anti_air(state)
 
     def spread_creep(self, state: CollectionState, free_creep_tumor: bool = True) -> bool:
         return (
@@ -1713,31 +1596,6 @@ class SC2Logic:
     def get_hero_flag(self, mission: SC2Mission) -> HeroFlag:
         return self.hero_presence.get(mission, HeroFlag.NONE)
 
-    def active_hero(self, state: CollectionState, mission: SC2Mission) -> bool:
-        return self.get_hero_flag(mission) != HeroFlag.NONE
-
-    def basic_hero(self, state: CollectionState, mission: SC2Mission, story_tech_available: bool = True) -> bool:
-        presence = self.get_hero_flag(mission)
-        return ((HeroFlag.KERRIGAN in presence and self.basic_kerrigan(state, story_tech_available))
-            or self.basic_nova(state, mission, story_tech_available)
-            or (HeroFlag.ARTANIS in presence and self.basic_artanis(state, story_tech_available)))
-
-    def basic_or_no_hero(self, state: CollectionState, mission: SC2Mission, story_tech_available: bool = True) -> bool:
-        presence = self.get_hero_flag(mission)
-        return (presence == HeroFlag.NONE
-            or self.basic_hero(state, mission, story_tech_available))
-
-
-    def basic_nova(self, state: CollectionState, mission: SC2Mission, story_tech_available: bool = True) -> bool:
-        # Separate check for Nova. Unlike Kerrigan and Artanis, Nova has no baseline attack
-        presence = self.get_hero_flag(mission)
-        return HeroFlag.NOVA in presence and (self.nova_items_granted or self.nova_any_nobuild_damage(state))
-
-    def basic_or_no_nova(self, state: CollectionState, mission: SC2Mission, story_tech_available: bool = True) -> bool:
-        presence = self.get_hero_flag(mission)
-        return (HeroFlag.NOVA not in presence
-                or self.basic_nova(state, mission, story_tech_available))
-
     @series(LogicSeries.Kerrigan, SC2Race.ANY, 1)
     def basic_kerrigan(self, state: CollectionState, story_tech_available: bool = True) -> bool:
         if (story_tech_available or self.kerrigan_items_granted):
@@ -1772,23 +1630,12 @@ class SC2Logic:
     def two_kerrigan_solo_actives(self, state: CollectionState, story_tech_available: bool = True) -> bool:
         if story_tech_available or self.kerrigan_items_granted:
             return True
-        return state.count_from_list(item_groups.kerrigan_solo_active_abilities, self.player) >= 2
+        return state.count_from_list_unique(item_groups.kerrigan_solo_active_abilities, self.player) >= 2
 
     def two_kerrigan_actives(self, state: CollectionState, story_tech_available: bool = True) -> bool:
         if story_tech_available or self.kerrigan_items_granted:
             return True
-        return state.count_from_list(item_groups.kerrigan_logic_active_abilities, self.player) >= 2
-
-    def competent_hero(self, state: CollectionState, mission: SC2Mission) -> bool:
-        presence = self.get_hero_flag(mission)
-        return ((HeroFlag.KERRIGAN in presence and self.competent_kerrigan(state))
-            or (HeroFlag.NOVA in presence and self.competent_nova(state))
-            or (HeroFlag.ARTANIS in presence and self.competent_artanis(state)))
-
-    def competent_or_no_hero(self, state: CollectionState, mission: SC2Mission) -> bool:
-        presence = self.get_hero_flag(mission)
-        return (presence == HeroFlag.NONE
-            or self.competent_hero(state, mission))
+        return state.count_from_list_unique(item_groups.kerrigan_logic_active_abilities, self.player) >= 2
 
     @series(LogicSeries.Nova, SC2Race.ANY, 2)
     def competent_nova(self, state: CollectionState) -> bool:
@@ -1806,9 +1653,9 @@ class SC2Logic:
     def competent_kerrigan(self, state: CollectionState) -> bool:
         return (
             self.basic_kerrigan(state, False)
-            and state.count_from_list(item_groups.kerrigan_logic_active_abilities, self.player) >= 2
-            and state.count_from_list(item_groups.kerrigan_passives, self.player) >= 1
-            and state.count_from_list(item_groups.kerrigan_logic_ultimates, self.player) >= 1
+            and state.count_from_list_unique(item_groups.kerrigan_logic_active_abilities, self.player) >= 2
+            and state.count_from_list_unique(item_groups.kerrigan_passives, self.player) >= 1
+            and state.count_from_list_unique(item_groups.kerrigan_logic_ultimates, self.player) >= 1
         )
 
     @series(LogicSeries.Artanis, SC2Race.ANY, 2)
@@ -1845,13 +1692,6 @@ class SC2Logic:
             item_names.NOVA_C20A_CANISTER_RIFLE,
             item_names.NOVA_HELLFIRE_SHOTGUN,
             item_names.NOVA_PLASMA_RIFLE,
-        ), self.player)
-
-    def nova_anti_air_weapon(self, state: CollectionState) -> bool:
-        return state.has_any((
-            item_names.NOVA_C20A_CANISTER_RIFLE,
-            item_names.NOVA_PLASMA_RIFLE,
-            item_names.NOVA_BLAZEFIRE_GUNBLADE,
         ), self.player)
 
     def nova_splash(self, state: CollectionState) -> bool:
@@ -2078,26 +1918,6 @@ class SC2Logic:
             or self.protoss_can_merge_dark_archon(state)
         )
 
-    def protoss_anti_armor_anti_air(self, state: CollectionState) -> bool:
-        return (
-            state.has_any((
-                item_names.STALKER,
-                item_names.SLAYER,
-                item_names.INSTIGATOR,
-                item_names.DRAGOON,
-                item_names.VOID_RAY,
-                item_names.TEMPEST,
-                item_names.SCOUT,
-                item_names.MISTWING,
-            ), self.player)
-            or state.has_all((item_names.WRATHWALKER, item_names.WRATHWALKER_AERIAL_TRACKING), self.player)
-            or (self.advanced_tactics
-                and (
-                    state.has(item_names.CALADRIUS, self.player)
-                )
-            )
-        )
-
     @series(LogicSeries.AntiAir, SC2Race.PROTOSS, 3)
     def protoss_competent_anti_air(self, state: CollectionState) -> bool:
         return (
@@ -2200,6 +2020,7 @@ class SC2Logic:
         Individual options rate 1~3 points depending on strength and applicability.
         Max possible rating around 20. Reasonable requirement limit around 10.
         """
+        rating = 0
         has_attacking_building = False
         for item in (
             item_names.PHOTON_CANNON,
@@ -2266,64 +2087,6 @@ class SC2Logic:
 
     def protoss_basic_transport_or_air_comp(self, state: CollectionState) -> bool:
         return self.protoss_basic_transport(state) or self.protoss_basic_air_comp(state)
-
-    def protoss_army_weapon_armor_upgrade_min_level(self, state: CollectionState) -> int:
-        count: int = item_tables.WEAPON_ARMOR_UPGRADE_MAX_LEVEL + 1  # +1 for Quatro
-        if self.has_protoss_ground_unit:
-            count = min(
-                count,
-                self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_PROTOSS_GROUND_WEAPON, state),
-                self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_PROTOSS_GROUND_ARMOR, state),
-            )
-        if self.has_protoss_air_unit:
-            count = min(
-                count,
-                self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_PROTOSS_AIR_WEAPON, state),
-                self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_PROTOSS_AIR_ARMOR, state),
-            )
-        if self.has_protoss_ground_unit or self.has_protoss_air_unit:
-            count = min(
-                count,
-                self.weapon_armor_upgrade_count(item_names.PROGRESSIVE_PROTOSS_SHIELDS, state),
-            )
-        return count
-
-    def protoss_very_hard_mission_weapon_armor_level(self, state: CollectionState) -> bool:
-        return self.protoss_army_weapon_armor_upgrade_min_level(state) >= self.get_very_hard_required_upgrade_level()
-
-    def protoss_any_gap_transport(self, state: CollectionState) -> bool:
-        """Can get ground units across large gaps, larger than blink range, to collect pickups"""
-        return (
-            state.has_any((
-                item_names.WARP_PRISM,
-                item_names.ARBITER,
-            ), self.player)
-            or state.has(item_names.SOA_PROGRESSIVE_PROXY_PYLON, self.player, count=2)
-            or state.has_all((item_names.MISTWING, item_names.MISTWING_PILOT), self.player)
-            or state.has_all((item_names.ORACLE, item_names.ORACLE_SURFACE_STABILIZER), self.player)
-            or (
-                state.has(item_names.SOA_PROGRESSIVE_PROXY_PYLON, self.player)
-                and (
-                    state.has_any(item_groups.gateway_units + [item_names.ELDER_PROBES, item_names.PROBE_WARPIN], self.player)
-                    or (state.has(item_names.WARP_HARMONIZATION, self.player) and state.has_any(item_groups.protoss_ground_wa, self.player))
-                )
-            )
-        )
-
-    def protoss_any_anti_air_unit_or_soa(self, state: CollectionState) -> bool:
-        return self.protoss_any_anti_air_unit(state) or self.protoss_any_anti_air_soa(state)
-
-    def protoss_any_anti_air_soa(self, state: CollectionState) -> bool:
-        return (
-            state.has_any((
-                item_names.SOA_ORBITAL_STRIKE,
-                item_names.SOA_SOLAR_LANCE,
-                item_names.SOA_SOLAR_BOMBARDMENT,
-                item_names.SOA_PURIFIER_BEAM,
-                item_names.SOA_PYLON_OVERCHARGE,
-            ), self.player)
-            or state.has(item_names.SOA_PROGRESSIVE_PROXY_PYLON, self.player, 2)  # Warp-In Reinforcements
-        )
 
     def protoss_has_blink(self, state: CollectionState) -> bool:
         return (
@@ -2472,9 +2235,6 @@ class SC2Logic:
             )
         )
 
-    def protoss_static_defense(self, state: CollectionState) -> bool:
-        return state.has_any({item_names.PHOTON_CANNON, item_names.KHAYDARIN_MONOLITH}, self.player)
-
     def protoss_can_merge_archon(self, state: CollectionState) -> bool:
         return (
             state.has_any({item_names.HIGH_TEMPLAR, item_names.SIGNIFIER}, self.player)
@@ -2489,13 +2249,6 @@ class SC2Logic:
                 item_names.DARK_TEMPLAR,
                 item_names.DARK_TEMPLAR_DARK_ARCHON_MELD
             ), self.player)
-        )
-
-    def protoss_competent_comp_wa2(self, state: CollectionState) -> bool:
-        return (
-            self.protoss_competent_comp(state)
-            # todo(mm): Make this unit-specific within the competent comp function tree
-            and self.protoss_army_weapon_armor_upgrade_min_level(state) >= 2
         )
 
     def protoss_heal(self, state: CollectionState) -> bool:
@@ -2542,7 +2295,7 @@ class SC2Logic:
         )
 
     def artanis_active_ability_count(self, state: CollectionState) -> int:
-        return state.count_from_list(
+        return state.count_from_list_unique(
             item_groups.artanis_active_abilities + item_groups.artanis_weapon_aspect_active,
             self.player,
         )
@@ -2568,19 +2321,6 @@ class SC2Logic:
                 self.advanced_tactics
                 and state.has_any((
                     item_names.ARTANIS_RESURGENCE,  # need to actively use revive to get value out of this
-                ), self.player)
-            )
-        )
-
-    def artanis_anti_air(self, state: CollectionState) -> bool:
-        """Require a weapon on standard tactics, or an anti-air ability on advanced tactics"""
-        return (
-            state.has(item_names.ARTANIS_PSIONIC_ASSAULT, self.player)
-            or (
-                self.advanced_tactics
-                and state.has_any((
-                    item_names.ARTANIS_VOLTAIC_SHOCK,
-                    item_names.ARTANIS_SHADOW_SLICE
                 ), self.player)
             )
         )
@@ -2682,8 +2422,6 @@ class SC2Logic:
         """
         Ability to deal with trains (moving target with a lot of HP)
         """
-        if not self.basic_or_no_hero(state, SC2Mission.THE_GREAT_TRAIN_ROBBERY, False):
-            return False
         return (
             state.has_any((
                 item_names.SIEGE_TANK,
@@ -2908,17 +2646,9 @@ class SC2Logic:
             and state.has_any((item_names.WARP_PRISM, item_names.ARBITER), self.player)
         )
 
-    def terran_engine_of_destruction_start_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.active_hero(state, SC2Mission.ENGINE_OF_DESTRUCTION)
-            or self.marine_medic_upgrade(state)
-        )
-
     def terran_engine_of_destruction_requirement(self, state: CollectionState) -> bool:
         power_rating = self.terran_macro_rating(state)
-        if not self.basic_or_no_hero(state, SC2Mission.ENGINE_OF_DESTRUCTION, False):
-            return False
-        if power_rating < 3 or not self.marine_medic_upgrade(state) or not self.terran_common_unit(state):
+        if power_rating < 3 or not self.marine_medic_upgrade(state):
             return False
         if power_rating >= 7 and self.terran_competent_comp(state):
             return True
@@ -3106,60 +2836,6 @@ class SC2Logic:
             # Insufficient: Wild Mutation, Assimilation Aura
         )
 
-    def zerg_harvest_start_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.basic_or_no_nova(state, SC2Mission.HARVEST_OF_SCREAMS, False)
-        )
-
-    def zerg_harvest_early_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.zerg_common_unit(state)
-            and self.basic_or_no_nova(state, SC2Mission.HARVEST_OF_SCREAMS, False)
-        )
-
-    def zerg_harvest_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.zerg_common_unit(state)
-            and self.zerg_basic_anti_air(state)
-            and self.basic_or_no_nova(state, SC2Mission.HARVEST_OF_SCREAMS, False)
-        )
-
-    def terran_harvest_start_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.basic_or_no_nova(state, SC2Mission.HARVEST_OF_SCREAMS_T, False)
-        )
-
-    def terran_harvest_early_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.terran_common_unit(state)
-            and self.basic_or_no_nova(state, SC2Mission.HARVEST_OF_SCREAMS_T, False)
-        )
-
-    def terran_harvest_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.terran_common_unit(state)
-            and self.terran_basic_anti_air(state)
-            and self.basic_or_no_nova(state, SC2Mission.HARVEST_OF_SCREAMS_T, False)
-        )
-
-    def protoss_harvest_start_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.basic_or_no_nova(state, SC2Mission.HARVEST_OF_SCREAMS_P, False)
-        )
-
-    def protoss_harvest_early_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.protoss_common_unit(state)
-            and self.basic_or_no_nova(state, SC2Mission.HARVEST_OF_SCREAMS_P, False)
-        )
-
-    def protoss_harvest_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.protoss_common_unit(state)
-            and self.protoss_basic_anti_air(state)
-            and self.basic_or_no_nova(state, SC2Mission.HARVEST_OF_SCREAMS_P, False)
-        )
-
     def zerg_enemy_within_advanced_tactics_requirement(self, state: CollectionState) -> bool:
         return (
             state.has(item_names.INFESTOR, self.player)
@@ -3202,42 +2878,6 @@ class SC2Logic:
             or state.has_any(item_groups.ENEMY_WITHIN_PROTOSS_STANDARD_UNITS, self.player)
             or (self.advanced_tactics
                 and state.has_any(item_groups.ENEMY_WITHIN_PROTOSS_ADVANCED_UNITS, self.player)
-            )
-        )
-
-    def terran_domination_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.terran_common_unit(state)
-            and (
-                self.advanced_tactics
-                or self.terran_basic_anti_air(state)
-            )
-        )
-
-    def protoss_domination_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.protoss_common_unit(state)
-            and (
-                self.advanced_tactics
-                or self.protoss_basic_anti_air(state)
-            )
-        )
-
-    def zerg_fire_in_the_sky_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.zerg_competent_comp(state)
-            and self.zerg_moderate_anti_air(state)
-            and self.spread_creep(state)
-        )
-
-    def terran_waking_the_ancient_requirement(self, state: CollectionState) -> bool:
-        return (
-            self.terran_common_unit(state)
-            and (
-                self.terran_competent_anti_air(state)
-                or (self.advanced_tactics
-                    and self.terran_basic_anti_air(state)
-                )
             )
         )
 
@@ -3337,10 +2977,7 @@ class SC2Logic:
                 item_names.MOTHERSHIP_AIUR,
             ), self.player)
             or self.protoss_has_blink(state)
-            or (
-                state.has(item_names.WARP_PRISM, self.player)
-                and (self.protoss_common_unit(state) or state.has(item_names.WARP_PRISM_PHASE_BLASTER, self.player))
-            )
+            or state.has(item_names.WARP_PRISM, self.player)
             or (self.advanced_tactics and state.has_any((item_names.ORACLE, item_names.ARBITER), self.player))
         )
 
@@ -3348,8 +2985,6 @@ class SC2Logic:
         """
         Able to shoot by a long range or from air to claim the rock formation separated by a chasm
         """
-        if not self.terran_ghosts_in_the_fog_requirement(state):
-            return False
         # East rock formation
         return (
             state.has_any((
@@ -3423,7 +3058,7 @@ class SC2Logic:
     def protoss_unsealing_the_past_basic_ledge_requirement(self, state: CollectionState) -> bool:
         return (
             state.has_any((item_names.COLOSSUS, item_names.WRATHWALKER), self.player)
-            or self.protoss_can_attack_behind_chasm(state)
+            or self.protoss_can_grab_ghosts_in_the_fog_east_rock_formation(state)
         )
 
     def terran_unsealing_the_past_basic_ledge_requirement(self, state: CollectionState) -> bool:
@@ -3694,6 +3329,9 @@ class SC2Logic:
             or self.hero_handle_defiler(state, presence)
         )
 
+    def sudden_strike_artanis(self, state: CollectionState) -> bool:
+        return self.basic_artanis(state)
+
     def sudden_strike_nova(self, state: CollectionState) -> bool:
         return (
             self.nova_splash(state)
@@ -3769,7 +3407,7 @@ class SC2Logic:
             ), self.player)
             or (self.advanced_tactics
                 and state.has(item_names.ROGUE_FORCES, self.player)
-                and state.count_from_list((
+                and state.count_from_list_unique((
                     item_names.WAR_PIGS,
                     item_names.HAMMER_SECURITIES,
                     item_names.DEATH_HEADS,
@@ -3799,7 +3437,7 @@ class SC2Logic:
             or self.morph_impaler(state)
             or (self.advanced_tactics
                 and state.has(item_names.UNRESTRICTED_MUTATION, self.player)
-                and state.count_from_list((
+                and state.count_from_list_unique((
                     item_names.HUNTER_KILLERS,
                     item_names.INFESTED_SIEGE_BREAKERS,
                     item_names.CAUSTIC_HORRORS,
@@ -3931,7 +3569,7 @@ class SC2Logic:
 
     def terran_enemy_intelligence_hard_rule(self, state: CollectionState) -> bool:
         return (
-            self.enemy_intelligence_cliff_garrison(state)
+            self.terran_enemy_intelligence_cliff_garrison(state)
             and self.enemy_intelligence_hero(state, self.get_hero_flag(SC2Mission.ENEMY_INTELLIGENCE))
         )
 
@@ -4177,7 +3815,7 @@ class SC2Logic:
                     item_names.WINGED_NIGHTMARES,
                 ), self.player)
                 # + 2 upgrades that allow getting faster/earlier mercs
-                and state.count_from_list((
+                and state.count_from_list_unique((
                     item_names.RAPID_REINFORCEMENT,
                     item_names.PROGRESSIVE_FAST_DELIVERY,
                     item_names.ROGUE_FORCES,
@@ -4253,7 +3891,7 @@ class SC2Logic:
                     item_names.HUNTERLING,
                 ), self.player)
                 # + 2 upgrades that allow getting faster/earlier mercs
-                and state.count_from_list((
+                and state.count_from_list_unique((
                     item_names.UNRESTRICTED_MUTATION,
                     item_names.EVOLUTIONARY_LEAP,
                     item_names.CELL_DIVISION,
@@ -4417,7 +4055,7 @@ class SC2Logic:
     ) -> Callable[[CollectionState], bool]:
         if rating == 0 or race == SC2Race.ANY:
             return Location.access_rule
-        result = self.rating_functions.get(race, series, rating)
+        result = self.rating_functions.get((race, series, rating))
         if result is not None:
             return result
         parent = self.series_functions[series, race, series_modifier]
