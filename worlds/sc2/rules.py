@@ -50,11 +50,20 @@ class LogicSeries(enum.IntFlag):
     heroes = Kerrigan | Nova | Artanis
 
 
+def updateable(func: T) -> T:
+    """
+    Mark a function as something that gets monkey-patched,
+    and thus shouldn't be used as a top-level logic function.
+    """
+    func.updateable = True  # type: ignore[attr-defined]
+    return func
+
+
 class SC2Logic:
     @staticmethod
     def series(logic_series: LogicSeries, race: SC2Race, tier: int) -> Callable[[T], T]:
         def identity(x: T) -> T:
-            x.series_info = (logic_series, race, tier)  # type: ignore
+            x.series_info = (logic_series, race, tier)  # type: ignore[attr-defined]
             return x
         return identity
 
@@ -122,6 +131,15 @@ class SC2Logic:
         self.power_comp_functions: dict[tuple[SC2Race, int, int], Callable[[CollectionState], bool]] = {}
         self.rating_functions: dict[tuple[SC2Race, LogicSeries, int], Callable[[CollectionState], bool]] = {}
 
+        # Function registry
+        self.name_to_function: dict[str, Callable[[CollectionState], bool]] = {
+            func: getattr(self, func)
+            for func in dir(self)
+            if not func.startswith('_')
+            and not hasattr(getattr(self, func), 'updateable')
+            and callable(getattr(self, func))
+        }
+
     def init(self, world: 'SC2World') -> None:
         self.player = world.player
         self.logic_level = world.options.required_tactics.value
@@ -169,11 +187,13 @@ class SC2Logic:
             self.upgradeable_protoss_air_units = item_groups.protoss_advanced_air_units
 
         # Transition functions
+        assert self.wa_upgrade_count.updateable  # type: ignore[attr-defined]
         if self.generic_upgrade_missions > 0:
             self.wa_upgrade_count = self._wa_upgrade_count_generic_filtering  # type: ignore[method-assign]
         else:
             self.wa_upgrade_count = self._wa_upgrade_count_items  # type: ignore[method-assign]
 
+        assert self.kerrigan_levels_from_missions.updateable  # type: ignore[attr-defined]
         if (self.kerrigan_levels_per_mission_completed > 0
             and self.kerrigan_levels_per_mission_completed_cap != 0
         ):
@@ -186,14 +206,14 @@ class SC2Logic:
     def transition_prefill(self) -> None:
         """Transition mutable functions from item filtering versions to placement versions"""
         if self.generic_upgrade_missions > 0:
-            self.wa_upgrade_count = self._wa_upgrade_count_generic_placement  # type: ignore
+            self.wa_upgrade_count = self._wa_upgrade_count_generic_placement  # type: ignore[method-assign]
 
         if (self.kerrigan_levels_per_mission_completed > 0
             and self.kerrigan_levels_per_mission_completed_cap != 0
         ):
             self.kerrigan_levels_from_missions = self._kerrigan_levels_from_missions_placement  # type: ignore
 
-    # Replaced by one of the following functions during init based on options
+    @updateable
     def wa_upgrade_count(self, item: VirtualItem, state: CollectionState) -> int:
         return 0
 
@@ -216,7 +236,7 @@ class SC2Logic:
     def kerrigan_levels_from_items(self, state: CollectionState) -> int:
         return state.count(VirtualItem.KERRIGAN_LEVEL.name, self.player)
 
-    # Replaced by one of the following functions during init
+    @updateable
     def kerrigan_levels_from_missions(self, state: CollectionState) -> int:
         return 0
 
