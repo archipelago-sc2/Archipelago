@@ -19,6 +19,7 @@ from .mission_tables import (
     SC2Campaign, SC2Mission, lookup_name_to_mission, MissionPools, get_missions_with_any_flags_in_list,
     campaign_mission_table, SC2Race, MissionFlag
 )
+from . import locations
 from .mission_groups import mission_groups, MissionGroupNames
 from .mission_order.options import CustomMissionOrder
 from .tables import HeroOptions
@@ -1355,7 +1356,7 @@ class VictoryCache(Range):
     """
     display_name = "Victory Cache"
     range_start = 0
-    range_end = 10
+    range_end = locations.NUM_VICTORY_CACHE_LOCATIONS
     default = 0
 
 

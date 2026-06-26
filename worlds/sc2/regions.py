@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING, List, Dict, Any, Tuple, Optional
 
 from Options import OptionError
 from BaseClasses import Location
-from .locations import LocationData
 from .mission_tables import (
     SC2Mission, SC2Campaign, MissionFlag, SC2Race, get_campaign_goal_priority,
     campaign_final_mission_locations, campaign_alt_final_mission_locations
@@ -32,10 +31,7 @@ if TYPE_CHECKING:
     from . import SC2World
 
 
-def create_mission_order(
-    world: 'SC2World', locations: Tuple[LocationData, ...], location_cache: List[Location]
-) -> SC2MissionOrder:
-    # 'locations' contains both actual game locations and beat event locations for all mission regions
+def create_mission_order(world: 'SC2World', location_cache: list[Location]) -> SC2MissionOrder:
     # When a region (mission) is accessible, all its locations are potentially accessible
     # Accessible in this context always means "its access rule evaluates to True"
     # This includes the beat events, which copy the access rules of the victory locations
@@ -73,7 +69,8 @@ def create_mission_order(
     resolve_difficulties(mission_order)
 
     # Build the mission order
-    fill_missions(mission_order, mission_pools, world, [], locations, location_cache)  # TODO set locked missions
+    fill_missions(mission_order, mission_pools, world, [], location_cache)  # TODO set locked missions
+    # todo(mm): Apply rules based on depth
     make_connections(mission_order, world)
 
     # Fill in Key requirements now that missions are placed

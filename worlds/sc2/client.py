@@ -1096,7 +1096,6 @@ class SC2Context(CommonContext):
             self.maximum_supply_reduction_per_item = args["slot_data"].get("maximum_supply_reduction_per_item", options.MaximumSupplyReductionPerItem.default)
             self.lowest_maximum_supply = args["slot_data"].get("lowest_maximum_supply", options.LowestMaximumSupply.default)
             self.research_cost_reduction_per_item = args["slot_data"].get("research_cost_reduction_per_item", options.ResearchCostReductionPerItem.default)
-            self.nova_items_granted = args["slot_data"].get("nova_items_granted", False)
             hero_presence_args = args["slot_data"].get("hero_presence","0")
             if hero_presence_args != "0":
                 self.base_hero_presence = self.unpack_hero_presence(hero_presence_args)

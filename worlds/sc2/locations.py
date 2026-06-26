@@ -1,26 +1,24 @@
 import enum
-from typing import Callable, NamedTuple, TYPE_CHECKING
-from .options import get_option_value
+from typing import TYPE_CHECKING
 from .mission_tables import SC2Mission
 
-from BaseClasses import Location
-
 if TYPE_CHECKING:
-    from BaseClasses import CollectionState
     from . import SC2World
 
 
+# Note(mm): These offsets date back to when all AP games shared a location ID space.
+# Offsets were chosen to avoid collisions with other core games.
+# This practice is no longer necessary, but the offsets remain to avoid
+# having to convert IDs from older gen games.
 SC2WOL_LOC_ID_OFFSET = 1000
 SC2HOTS_LOC_ID_OFFSET = 20000000  # Avoid clashes with The Legend of Zelda
 SC2LOTV_LOC_ID_OFFSET = SC2HOTS_LOC_ID_OFFSET + 2000
 SC2NCO_LOC_ID_OFFSET = SC2LOTV_LOC_ID_OFFSET + 2500
 SC2_RACESWAP_LOC_ID_OFFSET = SC2NCO_LOC_ID_OFFSET + 900
+
 VICTORY_MODULO = 100
 VICTORY_CACHE_OFFSET = 90
-
-
-class SC2Location(Location):
-    game: str = "Starcraft2"
+NUM_VICTORY_CACHE_LOCATIONS = 10
 
 
 class LocationType(enum.IntEnum):
@@ -30,6 +28,7 @@ class LocationType(enum.IntEnum):
     CHALLENGE = 3  # Challenging objectives, often harder than just completing a mission, and often associated with Achievements
     MASTERY = 4  # Extremely challenging objectives often associated with Masteries and Feats of Strength in the original campaign
     VICTORY_CACHE = 5  # Bonus locations for beating a mission
+    EVENT = 6  # Used to mark AP events for logic, basically permanently plandoed locations
 
 
 class LocationFlag(enum.IntFlag):
@@ -42,15 +41,9 @@ class LocationFlag(enum.IntFlag):
     """Locations that are about preventing something from happening"""
 
 
-# todo(mm): Maybe remove this
-class LocationData(NamedTuple):
-    region: str
-    name: str
-    code: int
-    type: LocationType
-    rule: Callable[["CollectionState"], bool] = Location.access_rule
-    flags: LocationFlag = LocationFlag.NONE
-    hard_rule: Callable[["CollectionState"], bool] | None = None
+def victory_cache_location_name(location: 'Sc2Location', index: int) -> str:
+    """Get the location name for a victory cache location given the mission and the cache's (0-based) index"""
+    return f"{location.global_name()} Cache ({index + 1})"
 
 
 def get_location_types(world: "SC2World", inclusion_type: int) -> set[LocationType]:
@@ -59,16 +52,15 @@ def get_location_types(world: "SC2World", inclusion_type: int) -> set[LocationTy
     :param inclusion_type: Level of inclusion to check for
     :return: A list of location types that match the inclusion type
     """
-    exclusion_options = [
-        ("vanilla_locations", LocationType.VANILLA),
-        ("extra_locations", LocationType.EXTRA),
-        ("challenge_locations", LocationType.CHALLENGE),
-        ("mastery_locations", LocationType.MASTERY),
-    ]
     excluded_location_types = set()
-    for option_name, location_type in exclusion_options:
-        if get_option_value(world, option_name) is inclusion_type:
-            excluded_location_types.add(location_type)
+    if world.options.vanilla_locations.value == inclusion_type:
+        excluded_location_types.add(LocationType.VANILLA)
+    if world.options.extra_locations.value == inclusion_type:
+        excluded_location_types.add(LocationType.EXTRA)
+    if world.options.challenge_locations.value == inclusion_type:
+        excluded_location_types.add(LocationType.CHALLENGE)
+    if world.options.mastery_locations.value == inclusion_type:
+        excluded_location_types.add(LocationType.MASTERY)
     return excluded_location_types
 
 
@@ -2311,3 +2303,69 @@ class Sc2Location(enum.IntEnum):
     END_GAME_P_PROTECT_HYPERION = SC2_RACESWAP_LOC_ID_OFFSET + 16606, "Protect Hyperion", SC2Mission.END_GAME_P, LocationType.CHALLENGE
     END_GAME_P_DESTROY_ORBITAL_COMMANDS = SC2_RACESWAP_LOC_ID_OFFSET + 16607, "Destroy Orbital Commands", SC2Mission.END_GAME_P, LocationType.CHALLENGE, LocationFlag.BASEBUST
 
+
+LOCATION_ID_TO_LOCATION = {
+    _location.id: _location
+    for _location in Sc2Location
+}
+LOCATION_ID_TO_NAME = {
+    _location.id: _location.name
+    for _location in Sc2Location
+}
+LOCATION_NAME_TO_ID = {
+    _location.name: _location.id
+    for _location in Sc2Location
+}
+BEAT_EVENTS: list[tuple[str, Sc2Location]] = []
+
+
+def _init_tables(
+    location_id_to_name: dict[int, str],
+    location_name_to_id: dict[str, int],
+    beat_events: list[tuple[str, Sc2Location]]
+) -> None:
+    for location in Sc2Location:
+        # Generating Beat event and Victory Cache locations
+        if location.type == LocationType.VICTORY:
+            beat_events.append(("Beat " + location.mission.mission_name, location))
+            for cache_index in range(NUM_VICTORY_CACHE_LOCATIONS):
+                victory_cache_name = victory_cache_location_name(location, cache_index)
+                victory_cache_id = location.id + VICTORY_CACHE_OFFSET + cache_index
+                location_id_to_name[victory_cache_id] = victory_cache_name
+                location_name_to_id[victory_cache_name] = victory_cache_id
+
+
+_init_tables(LOCATION_ID_TO_NAME, LOCATION_NAME_TO_ID, BEAT_EVENTS)
+del _init_tables
+
+
+def is_victory_cache(location_id: int) -> bool:
+    objective_id = location_id % VICTORY_MODULO
+    return objective_id >= VICTORY_CACHE_OFFSET
+
+
+def location_id_to_location(location_id: int) -> tuple[Sc2Location, int]:
+    """
+    Returns a tuple of Sc2Location enum entry and victory cache index.
+    For victory cache IDs, the location will be the corresponding victory location.
+    For non-victory cache IDs, the cache index will always be 0.
+    """
+    objective_id = location_id % VICTORY_MODULO
+    if objective_id >= VICTORY_CACHE_OFFSET:
+        return (
+            LOCATION_ID_TO_LOCATION[location_id - objective_id],
+            objective_id - VICTORY_CACHE_OFFSET + 1
+        )
+    return (LOCATION_ID_TO_LOCATION[location_id], 0)
+
+
+def get_location_offset(mission_id: int) -> int:
+    return (
+        SC2WOL_LOC_ID_OFFSET
+        if mission_id <= SC2Mission.ALL_IN.id
+        else (SC2HOTS_LOC_ID_OFFSET - SC2Mission.ALL_IN.id * VICTORY_MODULO)
+    )
+
+
+def get_location_id(mission_id: int, objective_id: int) -> int:
+    return get_location_offset(mission_id) + mission_id * VICTORY_MODULO + objective_id

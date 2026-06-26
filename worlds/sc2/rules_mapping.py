@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Callable, NamedTuple
 from dataclasses import dataclass
 
 from .rules import SC2Logic, LogicSeries
+from . import rule_helpers
 from .mission_tables import SC2Mission, SC2Race, MissionFlag
 from .locations import LocationType, Sc2Location
 from .tables import HeroFlag
@@ -10,7 +11,6 @@ from . import options
 
 if TYPE_CHECKING:
     from BaseClasses import CollectionState
-    from . import SC2World
 
 
 LOGIC_BASIC = 0
@@ -35,18 +35,6 @@ MAX_UNITS_REQUIRED = 5
 MASTERY_LOCATION_UNITS_REQUIRED = 6
 ADVANCED_FREE_DEFENSE_RATING = 2
 ADVANCED_FREE_MACRO_RATING = 2
-
-
-def combine_rule(
-    left: Callable[[CollectionState], bool] | None,
-    right: Callable[[CollectionState], bool] | None,
-) -> Callable[[CollectionState], bool] | None:
-    if left is None:
-        return right
-    if right is None:
-        return left
-    result = lambda state: left(state) and right(state)
-    return result
 
 
 def resolve_aa(aa_min: int, logic_level: int) -> int:
@@ -82,40 +70,41 @@ class RuleSignature(NamedTuple):
     rule: Callable[[SC2Logic, CollectionState], bool] | None = None
 
     def resolve(self, logic: SC2Logic) -> Callable[[CollectionState], bool] | None:
-        result: Callable[[CollectionState], bool] | None = None
+        parts: list[Callable[[CollectionState], bool]] = []
         addon: Callable[[CollectionState], bool]
         if self.num_units > 0:
             addon = logic.has_race_units(self.num_units, self.race, self.logic_level)
-            result = combine_rule(result, addon)
+            parts.append(addon)
         if self.upgrades > 0 or self.power_comp > COMP_UPGRADEABLE:
             addon = logic.has_power_comp(self.race, self.upgrades, self.power_comp)
-            result = combine_rule(result, addon)
+            parts.append(addon)
         if self.anti_air > 0:
             addon = logic.series_functions[LogicSeries.AntiAir, self.race, self.anti_air]
-            result = combine_rule(result, addon)
+            parts.append(addon)
         if self.detection > 0:
             addon = logic.series_functions[LogicSeries.Detection, self.race, self.detection]
-            result = combine_rule(result, addon)
+            parts.append(addon)
         if self.macro_rating > 0:
             addon = logic.get_rating_function(self.race, LogicSeries.MacroPower, self.macro_rating)
-            result = combine_rule(result, addon)
+            parts.append(addon)
         if self.defense_rating > 0:
             addon = logic.get_rating_function(self.race, LogicSeries.DefenseRating, self.defense_rating)
-            result = combine_rule(result, addon)
+            parts.append(addon)
 
         if self.artanis > 0:
             addon = logic.series_functions[LogicSeries.Artanis, SC2Race.ANY, self.artanis]
-            result = combine_rule(result, addon)
+            parts.append(addon)
         if self.nova > 0:
             addon = logic.series_functions[LogicSeries.Nova, SC2Race.ANY, self.nova]
-            result = combine_rule(result, addon)
+            parts.append(addon)
         if self.kerrigan > 0:
             addon = logic.series_functions[LogicSeries.Kerrigan, SC2Race.ANY, self.kerrigan]
-            result = combine_rule(result, addon)
+            parts.append(addon)
 
         if self.rule is not None:
             addon = logic.name_to_function[self.rule.__name__]
-            result = combine_rule(result, addon)
+            parts.append(addon)
+        result = rule_helpers.COUNT_TO_AND_FUNCTION[len(parts)](*parts)
         return result
 
 
@@ -184,7 +173,11 @@ class ProtoRule:
                 assert location.type != LocationType.MASTERY
                 num_units = 0
             else:
-                num_units = min(depth, MAX_UNITS_REQUIRED)
+                num_units = depth
+                if location.type == LocationType.CHALLENGE:
+                    num_units += 1
+                if num_units > MAX_UNITS_REQUIRED:
+                    num_units = MAX_UNITS_REQUIRED
             detection = self.detection
             anti_air = self.rating_from_depth(depth, anti_air_depths)
             aa_min = resolve_aa(self.aa_min, logic_level)

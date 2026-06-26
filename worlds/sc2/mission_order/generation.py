@@ -6,6 +6,7 @@ The functions here are called from ..regions.py.
 
 from typing import Set, Dict, Any, List, Tuple, Union, Optional, Callable, TYPE_CHECKING
 import logging
+from dataclasses import dataclass, field
 
 from BaseClasses import Location, Region, Entrance
 from ..mission_tables import SC2Mission, MissionFlag, lookup_name_to_mission, lookup_id_to_mission
@@ -17,10 +18,61 @@ from .mission_pools import (
     SC2MOGenMissionPools, Difficulty, modified_difficulty_thresholds, STANDARD_DIFFICULTY_FILL_ORDER
 )
 from .options import GENERIC_KEY_NAME, GENERIC_PROGRESSIVE_KEY_NAME
+from ..options import LocationInclusion
+from .. import locations
+from ..rule_helpers import and_2_rules, and_3_rules
 
 if TYPE_CHECKING:
-    from ..locations import LocationData
     from .. import SC2World
+    from BaseClasses import CollectionState
+
+
+@dataclass(slots=True)
+class EventData:
+    victory_location: locations.Sc2Location
+
+
+@dataclass(slots=True)
+class VictoryCacheData:
+    index: int
+    victory_location: locations.Sc2Location
+
+
+FLAG_EASIEST_LOCATION = 0b01
+
+
+@dataclass(slots=True)
+class LocationData:
+    info: locations.Sc2Location | EventData | VictoryCacheData
+    type: locations.LocationType = field(init=False)
+    location: Location | None = None
+    depth: int | None = None
+    flags: int = 0
+
+    def __post_init__(self) -> None:
+        if isinstance(self.info, EventData):
+            self.type = locations.LocationType.EVENT
+        elif isinstance(self.info, VictoryCacheData):
+            self.type = locations.LocationType.VICTORY_CACHE
+        else:
+            self.type = self.info.type
+
+    def name(self) -> str:
+        if isinstance(self.info, EventData):
+            return f"Beat {self.info.victory_location.mission.mission_name}"
+        elif isinstance(self.info, VictoryCacheData):
+            return locations.victory_cache_location_name(self.info.victory_location, self.info.index)
+        else:
+            return self.info.global_name()
+
+    def code(self) -> int | None:
+        if isinstance(self.info, EventData):
+            return None
+        elif isinstance(self.info, VictoryCacheData):
+            return self.info.victory_location.id + locations.VICTORY_CACHE_OFFSET + self.info.index
+        else:
+            return self.info.id
+
 
 def resolve_unlocks(mission_order: SC2MOGenMissionOrder):
     """Parses a mission order's entry rule dicts into entry rule objects."""
@@ -287,19 +339,26 @@ def resolve_difficulties(mission_order: SC2MOGenMissionOrder) -> None:
 
 
 def fill_missions(
-        mission_order: SC2MOGenMissionOrder, mission_pools: SC2MOGenMissionPools,
-        world: 'SC2World', locked_missions: List[str], locations: Tuple['LocationData', ...], location_cache: List[Location]
+    mission_order: SC2MOGenMissionOrder,
+    mission_pools: SC2MOGenMissionPools,
+    world: 'SC2World',
+    locked_missions: list[str],
+    location_cache: list[Location],
 ) -> None:
-    """Places missions in all non-empty mission slots. Also responsible for creating Archipelago regions & locations for placed missions."""
-    locations_per_region = get_locations_per_region(locations)
-    regions: List[Region] = [create_region(world, locations_per_region, location_cache, "Menu")]
+    """
+    Places missions in all non-empty mission slots.
+    Also responsible for creating Archipelago regions & locations for placed missions.
+    """
+    locations_per_region = get_locations_per_region(world)
+    regions: list[Region] = [
+        create_region(world, locations_per_region, location_cache, world.origin_region_name)
+    ]
     locked_ids = [lookup_name_to_mission[mission].id for mission in locked_missions]
     prefer_close_difficulty = world.options.difficulty_curve.value == world.options.difficulty_curve.option_standard
 
     def set_mission_in_slot(slot: SC2MOGenMission, mission: SC2Mission):
         slot.mission = mission
-        slot.region = create_region(world, locations_per_region, location_cache,
-                                    mission.mission_name, slot)
+        slot.region = create_region(world, locations_per_region, location_cache, mission.mission_name, slot)
 
     # Resolve slots with set mission names
     for mission_slot in mission_order.fixed_missions:
@@ -383,48 +442,71 @@ def fill_missions(
     world.multiworld.regions += regions
 
 
-def get_locations_per_region(locations: Tuple['LocationData', ...]) -> Dict[str, List['LocationData']]:
-    per_region: Dict[str, List['LocationData']] = {}
+def get_locations_per_region(world: 'SC2World') -> dict[str, list[LocationData]]:
+    result: dict[str, list[LocationData]] = {}
 
-    for location in locations:
-        per_region.setdefault(location.region, []).append(location)
+    # Filtering out excluded locations
+    excluded_location_types = locations.get_location_types(world, LocationInclusion.option_disabled)
+    excluded_location_flags = locations.get_location_flags(world, LocationInclusion.option_disabled)
+    chance_location_types = locations.get_location_types(world, LocationInclusion.option_half_chance)
+    chance_location_flags = locations.get_location_flags(world, LocationInclusion.option_half_chance)
+    plando_locations = locations.get_plando_locations(world)
+    exclude_locations = world.options.exclude_locations.value
 
-    return per_region
+    def include_location(location: locations.Sc2Location) -> bool:
+        if location.type is locations.LocationType.VICTORY:
+            return True
+        if location.name in plando_locations:
+            return True
+        if location.name in exclude_locations:
+            return False
+        if location.flags & excluded_location_flags:
+            return False
+        if location.type in excluded_location_types:
+            return False
+        if location.flags & chance_location_flags:
+            if world.random.random() < 0.5:
+                return False
+        if location.type in chance_location_types:
+            if world.random.random() < 0.5:
+                return False
+        return True
+
+    for location in locations.Sc2Location:
+        if not include_location(location):
+            continue
+        # Regular location data
+        mission_name = location.mission.mission_name
+        result.setdefault(mission_name, []).append(LocationData(location))
+        if location.type == locations.LocationType.VICTORY:
+            # Beat event
+            result[mission_name].append(LocationData(EventData(location)))
+            # Victory cache
+            for cache_index in range(locations.NUM_VICTORY_CACHE_LOCATIONS):
+                result[mission_name].append(LocationData(VictoryCacheData(cache_index, location)))
+
+    return result
 
 
-def create_location(player: int, location_data: 'LocationData', region: Region,
-                    location_cache: List[Location]) -> Location:
-    location = Location(player, location_data.name, location_data.code, region)
-    location.access_rule = location_data.rule
-
-    location_cache.append(location)
-    return location
-
-
-def create_minimal_logic_location(
-    world: 'SC2World', location_data: 'LocationData', region: Region, location_cache: List[Location], unit_count: int = 0,
+def create_location(
+    player: int,
+    location_data: LocationData,
+    region: Region,
+    location_cache: List[Location],
 ) -> Location:
-    location = Location(world.player, location_data.name, location_data.code, region)
-    mission = lookup_name_to_mission.get(region.name)
-    if mission is None:
-        pass
-    elif location_data.hard_rule:
-        assert world.logic
-        unit_rule = world.logic.has_race_units(unit_count, mission.race)
-        location.access_rule = lambda state: unit_rule(state) and location_data.hard_rule(state)
-    else:
-        assert world.logic
-        location.access_rule = world.logic.has_race_units(unit_count, mission.race)
+    location = Location(player, location_data.name(), location_data.code(), region)
+    location_data.location = location
+
     location_cache.append(location)
     return location
 
 
 def create_region(
     world: 'SC2World',
-    locations_per_region: Dict[str, List['LocationData']],
-    location_cache: List[Location],
+    locations_per_region: dict[str, list['LocationData']],
+    location_cache: list[Location],
     name: str,
-    slot: Optional[SC2MOGenMission] = None,
+    slot: SC2MOGenMission | None = None,  # None for menu/global locations
 ) -> Region:
     MAX_UNIT_REQUIREMENT = 5
     region = Region(name, world.player, world.multiworld)
@@ -462,19 +544,9 @@ def create_region(
         if world.options.required_tactics.value == world.options.required_tactics.option_chaos:
             if mission_needs_unit and not unit_given and location_data.type == easiest_category:
                 # Ensure there is at least one no-logic location if the first mission is a build mission
-                location = create_minimal_logic_location(world, location_data, region, location_cache, 0)
+                location_data.flags |= FLAG_EASIEST_LOCATION
                 unit_given = True
-            elif location_data.type == LocationType.MASTERY:
-                # Mastery locations always require max units regardless of position in the ramp
-                location = create_minimal_logic_location(world, location_data, region, location_cache, MAX_UNIT_REQUIREMENT)
-            else:
-                # Required number of units = mission depth; +1 if it's a starting build mission; +1 if it's a challenge location
-                location = create_minimal_logic_location(world, location_data, region, location_cache, min(
-                    slot.min_depth + mission_needs_unit + (location_data.type == LocationType.CHALLENGE),
-                    MAX_UNIT_REQUIREMENT
-                ))
-        else:
-            location = create_location(world.player, location_data, region, location_cache)
+        location = create_location(world.player, location_data, region, location_cache)
         region.locations.append(location)
 
     return region
@@ -506,24 +578,21 @@ def make_connections(mission_order: SC2MOGenMissionOrder, world: 'SC2World'):
                         mandatory_prereq = layout.entry_rule.find_mandatory_mission() if mandatory_prereq is None else mandatory_prereq
 
                         # Avoid calling obviously unused lambdas
+                        unlock_rule: Callable[['CollectionState'], bool] | None
                         if campaign_uses_rule:
                             if layout_uses_rule:
                                 if mission_uses_rule:
-                                    unlock_rule = lambda state, campaign_rule=campaign_rule, layout_rule=layout_rule, mission_rule=mission_rule: \
-                                                         campaign_rule(state) and layout_rule(state) and mission_rule(state)
+                                    unlock_rule = and_3_rules(campaign_rule, layout_rule, mission_rule)
                                 else:
-                                    unlock_rule = lambda state, campaign_rule=campaign_rule, layout_rule=layout_rule: \
-                                                         campaign_rule(state) and layout_rule(state)
+                                    unlock_rule = and_2_rules(campaign_rule, layout_rule)
                             else:
                                 if mission_uses_rule:
-                                    unlock_rule = lambda state, campaign_rule=campaign_rule, mission_rule=mission_rule: \
-                                                         campaign_rule(state) and mission_rule(state)
+                                    unlock_rule = and_2_rules(campaign_rule, mission_rule)
                                 else:
                                     unlock_rule = campaign_rule
                         elif layout_uses_rule:
                             if mission_uses_rule:
-                                unlock_rule = lambda state, layout_rule=layout_rule, mission_rule=mission_rule: \
-                                                     layout_rule(state) and mission_rule(state)
+                                unlock_rule = and_2_rules(layout_rule, mission_rule)
                             else:
                                 unlock_rule = layout_rule
                         elif mission_uses_rule:

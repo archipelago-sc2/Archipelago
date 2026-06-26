@@ -20,8 +20,13 @@ from .item import (
     ItemData,
 )
 from .locations import (
-	get_locations, DEFAULT_LOCATION_LIST, get_location_types, get_location_flags,
-    get_plando_locations, LocationType, lookup_location_id_to_type,
+    get_location_types,
+    get_location_flags,
+    get_plando_locations,
+    is_victory_cache,
+    location_id_to_location,
+    LocationType,
+    LOCATION_NAME_TO_ID,
     VICTORY_MODULO,
 )
 from .mission_order.layout_types import Gauntlet
@@ -99,11 +104,11 @@ class SC2World(World):
     settings: ClassVar[settings.Starcraft2Settings]
 
     item_name_to_id = {name: data.code for name, data in item_tables.item_table.items()}
-    location_name_to_id = {location.name: location.code for location in DEFAULT_LOCATION_LIST}
+    location_name_to_id = LOCATION_NAME_TO_ID
     options_dataclass = Starcraft2Options
     options: Starcraft2Options
 
-    item_name_groups = item_groups.item_name_groups  # type: ignore
+    item_name_groups = item_groups.item_name_groups  # type: ignore[assignment]
     location_name_groups = location_groups.get_location_groups()
     locked_locations: list[str]
     """Locations locked to contain specific items, such as victory events or forced resources"""
@@ -171,9 +176,8 @@ class SC2World(World):
 
     def create_regions(self) -> None:
         self.logic = SC2Logic(self)
-        self.custom_mission_order = create_mission_order(
-            self, get_locations(self), self.location_cache
-        )
+        self.custom_mission_order = create_mission_order(self, self.location_cache)
+        self.logic.total_mission_count = self.custom_mission_order.get_mission_count()
         # TODO (Snarky): Make work with Hero Presence
         # if (
         #     NovaPresenceOptions.GHOST_OF_A_CHANCE_AUTO in self.options.nova_presence
@@ -191,6 +195,8 @@ class SC2World(World):
         # * Start-inventory units if necessary for logic
         # * Plando filler items based on location exclusions
         # * If the item pool is less than the location count, add some filler items
+
+        assert self.logic
 
         setup_events(self.player, self.locked_locations, self.location_cache)
         set_up_filler_items_distribution(self)
@@ -283,9 +289,7 @@ class SC2World(World):
             if type(option) in {str, int}:
                 slot_data[option_name] = int(option)
 
-        enabled_campaigns = get_enabled_campaigns(self)
         slot_data["plando_locations"] = get_plando_locations(self)
-        slot_data["nova_items_granted"] = self.logic.nova_items_granted
         slot_data["hero_presence"] = pack_hero_presence(self.hero_presence)
         slot_data["final_mission_ids"] = self.custom_mission_order.get_final_mission_ids()
         slot_data["custom_mission_order"] = self.custom_mission_order.get_slot_data()
@@ -297,7 +301,7 @@ class SC2World(World):
                 if not location.is_event:
                     assert location.address is not None
                     assert location.item is not None
-                    if lookup_location_id_to_type[location.address] == LocationType.VICTORY_CACHE:
+                    if is_victory_cache(location.address):
                         # Ensure that if there are multiple items given for finishing a mission and that at least
                         # one is progressive, the flag kept is progressive.
                         location_id = (location.address // VICTORY_MODULO) * VICTORY_MODULO
@@ -321,7 +325,7 @@ class SC2World(World):
 
     def pre_fill(self) -> None:
         assert self.logic is not None
-        self.logic.total_mission_count = self.custom_mission_order.get_mission_count()
+        self.logic.transition_prefill()
         if self.options.generic_upgrade_missions > 0:
             # Attempt to resolve a situation when the option is too high for the mission order rolled
             weapon_armor_item_names = [
@@ -426,7 +430,9 @@ def calculate_hero_presence(presence: int, heroes: set[str]) -> dict[SC2Campaign
         SC2Race.TERRAN: nova_flag,
         SC2Race.PROTOSS: artanis_flag,
     }
-    result = {campaign: {race: HeroFlag.NONE for race in races} for campaign in campaigns}
+    result: dict[SC2Campaign, dict[SC2Race, HeroFlag]] = {
+        campaign: {race: HeroFlag.NONE for race in races} for campaign in campaigns
+    }
     if presence == HeroPresence.option_anywhere:
         for campaign in campaigns:
             for race in races:
@@ -812,8 +818,6 @@ def flag_mission_based_item_excludes(world: SC2World, item_list: list[FilterItem
     assert world.logic is not None
     world.logic.kerrigan_items_granted = remove_kerrigan_items
     world.logic.kerrigan_levels_granted = remove_kerrigan_items
-    world.logic.nova_items_granted = remove_nova_items
-    world.logic.artanis_items_granted = remove_artanis_items
     if kerrigan_build_missions:
         world.logic.kerrigan_build_missions = True
 
@@ -1181,14 +1185,16 @@ def flag_and_add_resource_locations(world: SC2World, item_list: list[FilterItem]
     plando_locations = get_plando_locations(world)
     filler_location_types = get_location_types(world, LocationInclusion.option_filler)
     filler_location_flags = get_location_flags(world, LocationInclusion.option_filler)
-    location_data = {sc2_location.name: sc2_location for sc2_location in DEFAULT_LOCATION_LIST}
     for location in open_locations:
         # Go through the locations that aren't locked yet (early unit, etc)
+        if location.address is None:
+            continue
         if location.name not in plando_locations:
             # The location is not plando'd
-            sc2_location = location_data[location.name]
-            if (sc2_location.type in filler_location_types
-                or (sc2_location.flags & filler_location_flags)
+            location_info, is_victory_cache = location_id_to_location(location.address)
+            location_type = LocationType.VICTORY_CACHE if is_victory_cache else location_info.type
+            if (location_type in filler_location_types
+                or (location_info.flags & filler_location_flags)
             ):
                 item_name = world.get_filler_item_name()
                 item = create_item_with_correct_settings(world.player, item_name)
@@ -1314,6 +1320,7 @@ def create_item_with_correct_settings(player: int, name: str, filter_flags: Item
 
 def fill_pool_with_kerrigan_levels(world: SC2World, item_pool: list[StarcraftItem]):
     total_levels = world.options.kerrigan_level_item_sum.value
+    assert world.logic
     if (world.logic.kerrigan_levels_granted
         or total_levels == 0
         or (world.options.grant_story_levels and not world.logic.kerrigan_build_missions)

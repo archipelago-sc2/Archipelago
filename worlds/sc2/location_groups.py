@@ -2,19 +2,18 @@
 Location group definitions
 """
 
-from typing import Dict, Set, Iterable
-from .locations import DEFAULT_LOCATION_LIST, LocationData
+from . import locations
 from .mission_tables import lookup_name_to_mission, MissionFlag
 
-def get_location_groups() -> Dict[str, Set[str]]:
-    result: Dict[str, Set[str]] = {}
-    locations: Iterable[LocationData] = DEFAULT_LOCATION_LIST
+def get_location_groups() -> dict[str, set[str]]:
+    result: dict[str, set[str]] = {}
 
-    for location in locations:
-        if location.code is None:
+    for location_name, location_id in locations.LOCATION_NAME_TO_ID.items():
+        if location_id is None:
             # Beat events
             continue
-        mission = lookup_name_to_mission.get(location.region)
+        location, is_victory_cache = locations.location_id_to_location(location_id)
+        mission = lookup_name_to_mission.get(location.mission)
         if mission is None:
             continue
 
@@ -35,6 +34,7 @@ def get_location_groups() -> Dict[str, Set[str]]:
         result.setdefault(mission.mission_name, set()).add(location.name)
 
         # Location group by location category
-        result.setdefault(location.type.name.title(), set()).add(location.name)
+        location_type = locations.LocationType.VICTORY_CACHE if is_victory_cache else location.type
+        result.setdefault(location_type.name.title(), set()).add(location.name)
 
     return result

@@ -130,11 +130,11 @@ def after_add_item(inventory: 'Counter[str]', item: 'Item') -> None:
     effect = LINEAR_EFFECTS.get(item.code)
     if effect is not None:
         for target in effect.virtual_item:
-            inventory[target.name] += effect.magnitude
+            inventory[target.name] += effect.magnitude  # type: ignore[index]
 
 
 def after_remove_item(inventory: 'Counter[str]', item: 'Item') -> None:
     effect = LINEAR_EFFECTS.get(item.code)
     if effect is not None:
         for target in effect.virtual_item:
-            inventory[target.name] -= effect.magnitude
+            inventory[target.name] -= effect.magnitude  # type: ignore[index]
