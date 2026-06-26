@@ -3,9 +3,7 @@ from dataclasses import dataclass
 
 from .rules import SC2Logic, LogicSeries
 from .mission_tables import SC2Mission, SC2Race, MissionFlag
-from .item import item_names
-from util.out.locations import Sc2Location  # @nocheckin
-from .locations import LocationType
+from .locations import LocationType, Sc2Location
 from .tables import HeroFlag
 from . import options
 
@@ -247,9 +245,6 @@ class ProtoRule:
 
 def get_location_rules(world: SC2World) -> dict[Sc2Location, ProtoRule]:
     logic = SC2Logic(world)
-    player = world.player
-    adv_tactics = logic.advanced_tactics
-    kerriganless = logic.kerrigan_items_granted
     result = {
         # Sc2Location.LIBERATION_DAY_VICTORY: ProtoRule(),
         # Sc2Location.LIBERATION_DAY_FIRST_STATUE: ProtoRule(),
@@ -931,8 +926,8 @@ def get_location_rules(world: SC2World) -> dict[Sc2Location, ProtoRule]:
         Sc2Location.FLASHPOINT_FAR_NORTH_EVIDENCE_COORDINATES: ProtoRule(upgrades_min=2, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, defense_rating=4, hero_min=HERO_COMPETENT, detection=DETECTION_MOBILE),
         Sc2Location.FLASHPOINT_FAR_EAST_EVIDENCE_COORDINATES: ProtoRule(upgrades_min=2, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, defense_rating=4, hero_min=HERO_COMPETENT, detection=DETECTION_MOBILE),
         Sc2Location.FLASHPOINT_EXPERIMENTAL_WEAPON: ProtoRule(upgrades_min=2, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, defense_rating=4, hero_min=HERO_COMPETENT, detection=DETECTION_MOBILE),
-        Sc2Location.FLASHPOINT_NORTHWEST_SUBWAY_ENTRANCE: ProtoRule(upgrades_min=2, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, defense_rating=3, hero_min=HERO_BASIC, rule=logic.terran_flashpoint_far_requirement),
-        Sc2Location.FLASHPOINT_SOUTHEAST_SUBWAY_ENTRANCE: ProtoRule(upgrades_min=2, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, defense_rating=3, hero_min=HERO_BASIC, rule=logic.terran_flashpoint_far_requirement),
+        Sc2Location.FLASHPOINT_NORTHWEST_SUBWAY_ENTRANCE: ProtoRule(upgrades_min=2, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, defense_rating=3, hero_min=HERO_BASIC),
+        Sc2Location.FLASHPOINT_SOUTHEAST_SUBWAY_ENTRANCE: ProtoRule(upgrades_min=2, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, defense_rating=3, hero_min=HERO_BASIC),
         Sc2Location.FLASHPOINT_NORTHEAST_SUBWAY_ENTRANCE: ProtoRule(upgrades_min=2, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, defense_rating=4, hero_min=HERO_COMPETENT, detection=DETECTION_MOBILE),
         Sc2Location.FLASHPOINT_EXPANSION_HATCHERY: ProtoRule(aa_min=AA_BASIC, hero_min=HERO_BASIC),
         Sc2Location.FLASHPOINT_BANELING_SPAWNS: ProtoRule(upgrades_min=2, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, defense_rating=4, hero_min=HERO_COMPETENT, detection=DETECTION_MOBILE),
@@ -1077,9 +1072,9 @@ def get_location_rules(world: SC2World) -> dict[Sc2Location, ProtoRule]:
         Sc2Location.HAVENS_FALL_Z_MIDDLE_COLONY_BASE: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, basic_rule=logic.zerg_basic_air_comp),
         Sc2Location.HAVENS_FALL_Z_SOUTHEAST_COLONY_BASE: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, basic_rule=logic.zerg_basic_air_comp),
         Sc2Location.HAVENS_FALL_Z_SOUTHWEST_COLONY_BASE: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, basic_rule=logic.zerg_basic_air_comp),
-        Sc2Location.HAVENS_FALL_Z_SOUTHWEST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, aa_min=AA_COMPETENT, rule=logic.zerg_havens_fall_gas_pickups, hard_rule=logic.zerg_can_collect_pickup_across_gap),
-        Sc2Location.HAVENS_FALL_Z_EAST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, aa_min=AA_COMPETENT, basic_rule=logic.zerg_havens_fall_gas_pickups),
-        Sc2Location.HAVENS_FALL_Z_SOUTHEAST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, aa_min=AA_COMPETENT, basic_rule=logic.zerg_havens_fall_gas_pickups),
+        Sc2Location.HAVENS_FALL_Z_SOUTHWEST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, rule=logic.zerg_havens_fall_gas_pickups, hard_rule=logic.zerg_can_collect_pickup_across_gap),
+        Sc2Location.HAVENS_FALL_Z_EAST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, basic_rule=logic.zerg_havens_fall_gas_pickups),
+        Sc2Location.HAVENS_FALL_Z_SOUTHEAST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, basic_rule=logic.zerg_havens_fall_gas_pickups),
         Sc2Location.HAVENS_FALL_P_VICTORY: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT),
         Sc2Location.HAVENS_FALL_P_NORTH_HIVE: ProtoRule(aa_min=AA_COMPETENT),
         Sc2Location.HAVENS_FALL_P_EAST_HIVE: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT),
@@ -1089,9 +1084,9 @@ def get_location_rules(world: SC2World) -> dict[Sc2Location, ProtoRule]:
         Sc2Location.HAVENS_FALL_P_MIDDLE_COLONY_BASE: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, basic_rule=logic.protoss_basic_air_comp),
         Sc2Location.HAVENS_FALL_P_SOUTHEAST_COLONY_BASE: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, basic_rule=logic.protoss_basic_air_comp),
         Sc2Location.HAVENS_FALL_P_SOUTHWEST_COLONY_BASE: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, basic_rule=logic.protoss_basic_air_comp),
-        Sc2Location.HAVENS_FALL_P_SOUTHWEST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, aa_min=AA_COMPETENT, basic_rule=logic.protoss_havens_fall_gas_pickups),
-        Sc2Location.HAVENS_FALL_P_EAST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, aa_min=AA_COMPETENT, basic_rule=logic.protoss_havens_fall_gas_pickups),
-        Sc2Location.HAVENS_FALL_P_SOUTHEAST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, aa_min=AA_COMPETENT, basic_rule=logic.protoss_havens_fall_gas_pickups),
+        Sc2Location.HAVENS_FALL_P_SOUTHWEST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, basic_rule=logic.protoss_havens_fall_gas_pickups),
+        Sc2Location.HAVENS_FALL_P_EAST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, basic_rule=logic.protoss_havens_fall_gas_pickups),
+        Sc2Location.HAVENS_FALL_P_SOUTHEAST_GAS_PICKUPS: ProtoRule(upgrades_min=1, aa_min=AA_COMPETENT, basic_rule=logic.protoss_havens_fall_gas_pickups),
         Sc2Location.SMASH_AND_GRAB_Z_VICTORY: ProtoRule(aa_min=AA_BASIC),
         # Sc2Location.SMASH_AND_GRAB_Z_FIRST_RELIC: ProtoRule(),
         # Sc2Location.SMASH_AND_GRAB_Z_SECOND_RELIC: ProtoRule(),
@@ -1754,7 +1749,7 @@ def get_location_rules(world: SC2World) -> dict[Sc2Location, ProtoRule]:
         Sc2Location.DARK_WHISPERS_Z_ZERG_BASE: ProtoRule(upgrades_min=2, comp_type=COMP_ULTIMATE, aa_min=AA_COMPETENT, macro_rating=6),
         Sc2Location.GHOSTS_IN_THE_FOG_T_VICTORY: ProtoRule(upgrades_min=2, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, rule=logic.terran_mineral_dump),
         Sc2Location.GHOSTS_IN_THE_FOG_T_SOUTH_ROCK_FORMATION: ProtoRule(aa_min=AA_COMPETENT, rule=logic.terran_mineral_dump),
-        Sc2Location.GHOSTS_IN_THE_FOG_T_WEST_ROCK_FORMATION: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, rule=logic.logic.terran_mineral_dump),
+        Sc2Location.GHOSTS_IN_THE_FOG_T_WEST_ROCK_FORMATION: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, rule=logic.terran_mineral_dump),
         Sc2Location.GHOSTS_IN_THE_FOG_T_EAST_ROCK_FORMATION: ProtoRule(aa_min=AA_COMPETENT, rule=logic.terran_mineral_dump),
         Sc2Location.GHOSTS_IN_THE_FOG_T_ALL_ROCK_FORMATIONS_IN_UNDER_10_MINUTES: ProtoRule(aa_min=AA_COMPETENT, rule=logic.terran_can_grab_ghosts_in_the_fog_fast_rock_formations),
         Sc2Location.GHOSTS_IN_THE_FOG_Z_VICTORY: ProtoRule(upgrades_min=2, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, rule=logic.zerg_can_grab_ghosts_in_the_fog_east_rock_formation),
