@@ -3,7 +3,7 @@ from typing import Callable, Dict, List, Set, Tuple, TYPE_CHECKING, Iterable
 from collections import Counter
 
 from BaseClasses import Location, ItemClassification
-from . import tables
+from . import rules_mapping
 from .item import StarcraftItem, ItemFilterFlags, item_names, item_parents, item_groups, virtual_items
 from .item.item_tables import item_table, TerranItemType, ZergItemType, spear_of_adun_calldowns
 
@@ -174,13 +174,19 @@ class ValidInventory:
             if self.logical_inventory.get(item.name, 0) > 0:
                 self.logical_inventory[item.name] -= 1
                 virtual_items.after_remove_item(self.logical_inventory, item)
-                failed_rules = [name for name, requirement in mission_requirements if not requirement(self)]
+                failed_rules = [(name, requirement) for name, requirement in mission_requirements if not requirement(self)]
                 if failed_rules:
+                    if rules_mapping.DEBUG_RULES:
+                        for failed_name, failed_req in failed_rules[5:]:
+                            logging.getLogger("Starcraft 2").warning(f"{failed_name}:")
+                            for index, subrule in enumerate(rules_mapping.DEBUG_CACHE.get(id(failed_req), [])):
+                                if not subrule(self):
+                                    logging.getLogger("Starcraft 2").warning(f"  {index}: {subrule.__name__}")
                     # If item cannot be removed, lock and revert
                     self.logical_inventory[item.name] += 1
                     virtual_items.after_add_item(self.logical_inventory, item)
                     item.filter_flags |= ItemFilterFlags.LogicLocked
-                    return f"{len(failed_rules)} rules starting with \"{failed_rules[0]}\""
+                    return f"{len(failed_rules)} rules starting with \"{failed_rules[0][0]}\""
                 if not self.logical_inventory[item.name]:
                     del self.logical_inventory[item.name]
             item.filter_flags |= remove_flag

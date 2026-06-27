@@ -781,7 +781,6 @@ class TestItemFiltering(Sc2SetupTestBase):
         """
         Tests the case when there aren't enough missions in order to get required weapon/armor upgrades
         for logic requirements.
-        :return:
         """
         world_options = {
             # Vanilla WoL with all missions

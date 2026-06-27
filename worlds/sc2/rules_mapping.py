@@ -13,6 +13,10 @@ if TYPE_CHECKING:
     from BaseClasses import CollectionState
 
 
+DEBUG_RULES = False
+"""Set this to true to store some extra information on rules for tracking issues"""
+DEBUG_CACHE: dict[int, list[Callable[['CollectionState'], bool]]] = {}
+
 LOGIC_BASIC = 0
 LOGIC_ADVANCED = 1
 LOGIC_CHAOS = 2
@@ -59,7 +63,7 @@ class RuleSignature(NamedTuple):
     """1=upgradeable unit, 2=competent comp, 3=ultimate comp"""
     macro_rating: int = 0
     """Rating out of 12. (Options and inventories reach higher ratings)."""
-    has_soa: int = 0
+    soa_flags: int = 0
     defense_rating: int = 0
     """Rating out of 10."""
     detection: int = 0
@@ -92,7 +96,9 @@ class RuleSignature(NamedTuple):
             addon = logic.series_functions[LogicSeries.Detection, self.race, self.detection]
             parts.append(addon)
         if self.macro_rating > 0:
-            addon = logic.get_rating_function(self.race, LogicSeries.MacroPower, self.macro_rating)
+            addon = logic.get_rating_function(
+                self.race, LogicSeries.MacroPower, self.macro_rating, self.soa_flags
+            )
             parts.append(addon)
         if self.defense_rating > 0:
             addon = logic.get_rating_function(self.race, LogicSeries.DefenseRating, self.defense_rating)
@@ -115,6 +121,8 @@ class RuleSignature(NamedTuple):
         if not parts:
             return default
         result = rule_helpers.COUNT_TO_AND_FUNCTION[len(parts)](*parts)
+        if DEBUG_RULES:
+            DEBUG_CACHE[id(result)] = parts
         return result
 
 
@@ -173,7 +181,7 @@ class ProtoRule:
             upgrade_depths=(4, 7, 10)
             hero_depths=(2, 7)
 
-        has_soa = 0
+        soa_flags = 0
         defense_rating = 0
         macro_rating = 0
         if mission.flags & MissionFlag.NoBuild or first_location:
@@ -198,11 +206,16 @@ class ProtoRule:
             if location.type == LocationType.MASTERY:
                 num_units = MASTERY_LOCATION_UNITS_REQUIRED
                 upgrades = max(upgrades, 3)
-            has_soa = int(options.is_mission_in_soa_presence(
-                opt.spear_of_adun_presence.value,
-                mission,
-                options.SpearOfAdunPresence,
-            ))
+            soa_flags = (
+                options.is_mission_in_soa_presence(
+                    opt.spear_of_adun_presence.value, mission, options.SpearOfAdunPresence,
+                )
+                | options.is_mission_in_soa_presence(
+                    opt.spear_of_adun_passive_ability_presence.value,
+                    mission,
+                    options.SpearOfAdunPassiveAbilityPresence,
+                ) << 1
+            )
             if logic_level == LOGIC_BASIC:
                 defense_rating = self.defense_rating
                 macro_rating = self.macro_rating
@@ -230,7 +243,7 @@ class ProtoRule:
             upgrades,
             COMP_UPGRADEABLE if logic_level >= LOGIC_CHAOS else self.comp_type,
             macro_rating,
-            has_soa,
+            soa_flags,
             defense_rating,
             detection,
             artanis=required_hero_rating if HeroFlag.ARTANIS in heroes else 0,

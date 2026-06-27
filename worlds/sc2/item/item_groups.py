@@ -389,30 +389,32 @@ item_name_groups[ItemGroupNames.TERRAN_DETECTION] = terran_detection = (
     *terran_mobile_detection,
     item_names.MISSILE_TURRET,
 )
-barracks_wa_group = [
+barracks_wa_group = (
     item_names.MARINE, item_names.FIREBAT, item_names.MARAUDER,
     item_names.REAPER, item_names.GHOST, item_names.SPECTRE, item_names.HERC,
     item_names.DOMINION_TROOPER,
-]
-item_name_groups[ItemGroupNames.BARRACKS_UNITS] = barracks_units = (barracks_wa_group + [
+)
+item_name_groups[ItemGroupNames.BARRACKS_UNITS] = barracks_units = (
+    *barracks_wa_group,
     item_names.MEDIC,
     item_names.SON_OF_KORHAL,
     item_names.FIELD_RESPONSE_THETA,
     item_names.AEGIS_GUARD,
     item_names.EMPERORS_SHADOW,
-])
-factory_wa_group = [
+)
+factory_wa_group = (
     item_names.HELLION, item_names.VULTURE, item_names.GOLIATH, item_names.DIAMONDBACK,
     item_names.SIEGE_TANK, item_names.THOR, item_names.PREDATOR,
     item_names.CYCLONE, item_names.WARHOUND,
-]
-item_name_groups[ItemGroupNames.FACTORY_UNITS] = factory_units = (factory_wa_group + [
+)
+item_name_groups[ItemGroupNames.FACTORY_UNITS] = factory_units = (
+    *factory_wa_group,
     item_names.WIDOW_MINE,
     item_names.BULWARK_COMPANY,
     item_names.SHOCK_DIVISION,
     item_names.BLACKHAMMER,
-])
-starport_wa_group = [
+)
+starport_wa_group = (
     item_names.WRAITH,
     item_names.VIKING,
     item_names.BANSHEE,
@@ -420,19 +422,43 @@ starport_wa_group = [
     item_names.LIBERATOR,
     item_names.VALKYRIE,
     item_names.RAVEN_HUNTER_SEEKER_WEAPON,
-]
-item_name_groups[ItemGroupNames.STARPORT_UNITS] = starport_units = [
+)
+item_name_groups[ItemGroupNames.STARPORT_UNITS] = starport_units = (
     item_names.MEDIVAC, item_names.WRAITH, item_names.VIKING, item_names.BANSHEE,
     item_names.BATTLECRUISER, item_names.HERCULES, item_names.SCIENCE_VESSEL, item_names.RAVEN,
     item_names.LIBERATOR, item_names.VALKYRIE, item_names.PRIDE_OF_AUGUSTGRAD, item_names.SKY_FURY,
     item_names.EMPERORS_GUARDIAN, item_names.NIGHT_HAWK, item_names.NIGHT_WOLF,
-]
+)
 terran_basic_barracks_units = _intersection(terran_basic_units, barracks_wa_group)
 terran_basic_factory_units = _intersection(terran_basic_units, factory_wa_group)
 terran_basic_starport_units = _intersection(terran_basic_units, starport_wa_group)
 terran_advanced_barracks_units = _intersection(terran_advanced_units, barracks_wa_group)
 terran_advanced_factory_units = _intersection(terran_advanced_units, factory_wa_group)
 terran_advanced_starport_units = _intersection(terran_advanced_units, starport_wa_group)
+terran_chaos_infantry_units = (
+    *barracks_wa_group,
+    item_names.WAR_PIGS,
+    item_names.HAMMER_SECURITIES,
+    item_names.DEVIL_DOGS,
+    item_names.DEATH_HEADS,
+)
+terran_chaos_vehicle_units = (
+    *factory_wa_group,
+    item_names.SPARTAN_COMPANY,
+    item_names.SIEGE_BREAKERS,
+    item_names.JOTUN,
+)
+terran_chaos_ship_units = (
+    *(_x for _x in starport_wa_group if _x != item_names.RAVEN_HUNTER_SEEKER_WEAPON),
+    item_names.SCIENCE_VESSEL,
+    item_names.RAVEN,
+    item_names.HELS_ANGELS,
+    item_names.DUSK_WINGS,
+    item_names.JACKSONS_REVENGE,
+    item_names.WINGED_NIGHTMARES,
+    item_names.MIDNIGHT_RIDERS,
+    item_names.BRYNHILDS,
+)
 item_name_groups[ItemGroupNames.TERRAN_MERCENARIES] = terran_mercenaries = [
     item_name for item_name, item_data in item_tables.item_table.items()
     if item_data.type == item_tables.TerranItemType.Mercenary
@@ -883,9 +909,48 @@ zerg_air_units = [
 zerg_basic_melee_units = _intersection(zerg_basic_units, zerg_melee_wa)
 zerg_basic_ranged_units = _intersection(zerg_basic_units, zerg_ranged_wa)
 zerg_basic_air_units = _intersection(zerg_basic_units, zerg_air_units)
+zerg_basic_melee_morphs = (
+    item_names.TYRANNOZOR,
+)
+zerg_basic_ranged_morphs = (
+    item_names.PRIMAL_IGNITER,
+    item_names.LURKER,
+    item_names.IMPALER,
+)
+zerg_basic_air_morphs = (
+    item_names.BROOD_LORD,
+    item_names.GUARDIAN,
+)
 zerg_advanced_melee_units = _intersection(zerg_advanced_units, zerg_melee_wa)
 zerg_advanced_ranged_units = _intersection(zerg_advanced_units, zerg_ranged_wa)
 zerg_advanced_air_units = _intersection(zerg_advanced_units, zerg_air_units)
+zerg_advanced_melee_morphs = zerg_basic_melee_morphs
+zerg_advanced_ranged_morphs = (
+    *zerg_basic_ranged_morphs,
+    item_names.RAVAGER,
+)
+zerg_advanced_air_morphs = (
+    *zerg_basic_air_morphs,
+    item_names.VIPER,
+    item_names.DEVOURER,
+)
+zerg_chaos_melee_units = (
+    *(_x for _x in zerg_melee_wa if _x not in zerg_morphs),
+    item_names.HUNTERLING,
+    item_names.DEVOURING_ONES,
+    item_names.WISE_OLD_TORRASQUE,
+)
+zerg_chaos_ranged_units = (
+    *(_x for _x in zerg_ranged_wa if _x not in zerg_morphs),
+    item_names.INFESTED_SIEGE_BREAKERS,
+    item_names.HUNTER_KILLERS,
+    item_names.CAUSTIC_HORRORS,
+)
+zerg_chaos_air_units = (
+    *(_x for _x in zerg_air_units if _x not in zerg_morphs),
+    item_names.INFESTED_DUSK_WINGS,
+)
+
 item_name_groups[ItemGroupNames.ZERG_GENERIC_UPGRADES] = zerg_generic_upgrades = [
     item_name for item_name, item_data in item_tables.item_table.items()
     if item_data.type == item_tables.ZergItemType.Upgrade
@@ -1293,7 +1358,7 @@ item_name_groups[ItemGroupNames.PROTOSS_CHAOS_STARTER_UNITS] = protoss_chaos_sta
     item_names.MOTHERSHIP_AIUR,
     item_names.MOTHERSHIP_PURIFIER,
 ]
-protoss_ground_wa = [
+protoss_ground_wa = (
     item_names.ZEALOT, item_names.CENTURION, item_names.SENTINEL, item_names.SUPPLICANT,
     item_names.SENTRY, item_names.ENERGIZER,
     item_names.STALKER, item_names.INSTIGATOR, item_names.SLAYER, item_names.DRAGOON, item_names.ADEPT,
@@ -1303,8 +1368,8 @@ protoss_ground_wa = [
     item_names.IMMORTAL, item_names.ANNIHILATOR, item_names.VANGUARD, item_names.STALWART,
     item_names.COLOSSUS, item_names.WRATHWALKER,
     item_names.REAVER,
-]
-protoss_air_wa = [
+)
+protoss_air_wa = (
     item_names.WARP_PRISM_PHASE_BLASTER,
     item_names.PHOENIX, item_names.MIRAGE, item_names.CORSAIR, item_names.SKIRMISHER,
     item_names.VOID_RAY, item_names.DESTROYER, item_names.PULSAR, item_names.DAWNBRINGER,
@@ -1313,11 +1378,13 @@ protoss_air_wa = [
     item_names.MOTHERSHIP_AIUR, item_names.MOTHERSHIP_PURIFIER,
     item_names.ARBITER, item_names.ORACLE, item_names.OPPRESSOR,
     item_names.CALADRIUS, item_names.MISTWING,
-]
+)
 protoss_basic_ground_units = _intersection(protoss_basic_units, protoss_ground_wa)
 protoss_basic_air_units = _intersection(protoss_basic_units, protoss_air_wa)
 protoss_advanced_ground_units = _intersection(protoss_advanced_units, protoss_ground_wa)
 protoss_advanced_air_units = _intersection(protoss_advanced_units, protoss_air_wa)
+protoss_chaos_ground_units = protoss_ground_wa
+protoss_chaos_air_units = protoss_air_wa
 item_name_groups[ItemGroupNames.PROTOSS_GENERIC_UPGRADES] = protoss_generic_upgrades = [
     item_name for item_name, item_data in item_tables.item_table.items()
     if item_data.type == item_tables.ProtossItemType.Upgrade
