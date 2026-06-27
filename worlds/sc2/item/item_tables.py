@@ -958,7 +958,7 @@ item_table = {
         ItemData(770 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_7, 24, SC2Race.TERRAN,
                  classification=ItemClassification.progression, parent=item_names.WARHOUND,),
     item_names.SCV_RESOURCEFUL:
-        ItemData(771 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_7, 25, SC2Race.TERRAN),
+        ItemData(771 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_7, 25, SC2Race.TERRAN, classification=ItemClassification.progression),
     item_names.SCV_CAUTERIZER:
         ItemData(772 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_7, 26, SC2Race.TERRAN),
     item_names.COMMAND_CENTER_TACTICAL_JUMP:
@@ -1542,7 +1542,7 @@ item_table = {
     item_names.IMPALER_TENTACLE_EXTENSIONS:
         ItemData(394 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_5, 21, SC2Race.ZERG, parent=item_names.IMPALER),
     item_names.IMPALER_DEEP_TUNNEL:
-        ItemData(395 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_5, 22, SC2Race.ZERG, parent=item_names.IMPALER),
+        ItemData(395 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_5, 22, SC2Race.ZERG, classification=ItemClassification.progression, parent=item_names.IMPALER),
     item_names.HIVE_QUEEN_PSIONIC_MITOCHONDRIA:
         ItemData(396 + SC2HOTS_ITEM_ID_OFFSET, ZergItemType.Mutation_5, 23, SC2Race.ZERG, parent=item_names.HIVE_QUEEN),
     item_names.HIVE_QUEEN_STRAIN_INJECTION:
@@ -2000,7 +2000,7 @@ item_table = {
     item_names.STALKER_PHASE_REACTOR: ItemData(503 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council, 3, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.STALKER),
     item_names.DRAGOON_PHALANX_SUIT: ItemData(504 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council, 4, SC2Race.PROTOSS, parent=item_names.DRAGOON),
     item_names.INSTIGATOR_MODERNIZED_SERVOS: ItemData(505 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council, 5, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.INSTIGATOR),
-    item_names.ADEPT_DISRUPTIVE_TRANSFER: ItemData(506 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council, 6, SC2Race.PROTOSS, parent=item_names.ADEPT),
+    item_names.ADEPT_DISRUPTIVE_TRANSFER: ItemData(506 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council, 6, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.ADEPT),
     item_names.SLAYER_PHASE_BLINK: ItemData(507 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council, 7, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.SLAYER),
     item_names.AVENGER_KRYHAS_CLOAK: ItemData(508 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council, 8, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.AVENGER),
     item_names.DARK_TEMPLAR_LESSER_SHADOW_FURY: ItemData(509 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.War_Council, 9, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.DARK_TEMPLAR),
@@ -2052,9 +2052,9 @@ item_table = {
     item_names.SOA_PROGRESSIVE_PROXY_PYLON: ItemData(701 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Progressive, 0, SC2Race.PROTOSS, quantity=2, classification=ItemClassification.progression),
     item_names.SOA_PYLON_OVERCHARGE: ItemData(702 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Spear_Of_Adun, 1, SC2Race.PROTOSS, classification=ItemClassification.progression),
     item_names.SOA_ORBITAL_STRIKE: ItemData(703 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Spear_Of_Adun, 2, SC2Race.PROTOSS, classification=ItemClassification.progression),
-    item_names.SOA_TEMPORAL_FIELD: ItemData(704 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Spear_Of_Adun, 3, SC2Race.PROTOSS),
+    item_names.SOA_TEMPORAL_FIELD: ItemData(704 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Spear_Of_Adun, 3, SC2Race.PROTOSS, classification=ItemClassification.progression),
     item_names.SOA_SOLAR_LANCE: ItemData(705 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Spear_Of_Adun, 4, SC2Race.PROTOSS, classification=ItemClassification.progression),
-    item_names.SOA_MASS_RECALL: ItemData(706 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Spear_Of_Adun, 5, SC2Race.PROTOSS),
+    item_names.SOA_MASS_RECALL: ItemData(706 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Spear_Of_Adun, 5, SC2Race.PROTOSS, classification=ItemClassification.progression),
     item_names.SOA_SHIELD_OVERCHARGE: ItemData(707 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Spear_Of_Adun, 6, SC2Race.PROTOSS, classification=ItemClassification.progression),
     item_names.SOA_DEPLOY_FENIX: ItemData(708 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Spear_Of_Adun, 7, SC2Race.PROTOSS, classification=ItemClassification.progression),
     item_names.SOA_PURIFIER_BEAM: ItemData(709 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Spear_Of_Adun, 8, SC2Race.PROTOSS, classification=ItemClassification.progression),

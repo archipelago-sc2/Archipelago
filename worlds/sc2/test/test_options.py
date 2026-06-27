@@ -1,8 +1,4 @@
 import unittest
-from types import SimpleNamespace
-from typing import Dict
-
-from Options import OptionError
 
 from .. import apply_hero_presence_override, calculate_hero_presence, calculate_mission_hero_presence, locations
 from ..client import SC2Context
@@ -66,27 +62,8 @@ class TestOptions(unittest.TestCase):
         self.assertTrue(context.hero_presence[SC2Mission.THE_OUTLAWS] & HeroFlag.KERRIGAN.value)
         self.assertNotIn(SC2Mission.LIBERATION_DAY, context.hero_presence)
 
-    def test_victory_hero_requirement_skips_fully_disabled_heroes(self) -> None:
-        rule = lambda state: False
-        location = locations.make_location_data(
-            SC2Mission.RENDEZVOUS.mission_name,
-            "Victory",
-            1,
-            locations.LocationType.VICTORY,
-            rule=rule,
-        )
-        world = SimpleNamespace(
-            options=SimpleNamespace(enabled_heroes=SimpleNamespace(value=set())),
-            hero_presence={},
-        )
-
-        result = locations.add_victory_hero_requirement(location, None, world)
-
-        self.assertIs(result.rule, rule)
-        self.assertIsNone(result.hard_rule)
-
     def test_unit_max_upgrades_matching_items(self) -> None:
-        upgrade_group_to_count: Dict[str, int] = {}
+        upgrade_group_to_count: dict[str, int] = {}
         for parent_id, child_list in item_parents.parent_id_to_children.items():
             main_parent = item_parents.parent_present[parent_id].constraint_group
             if main_parent is None:

@@ -459,10 +459,10 @@ terran_chaos_ship_units = (
     item_names.MIDNIGHT_RIDERS,
     item_names.BRYNHILDS,
 )
-item_name_groups[ItemGroupNames.TERRAN_MERCENARIES] = terran_mercenaries = [
+item_name_groups[ItemGroupNames.TERRAN_MERCENARIES] = terran_mercenaries = tuple(
     item_name for item_name, item_data in item_tables.item_table.items()
     if item_data.type == item_tables.TerranItemType.Mercenary
-]
+)
 item_name_groups[ItemGroupNames.NCO_UNITS] = nco_units = [
     item_names.MARINE, item_names.MARAUDER, item_names.REAPER,
     item_names.HELLION, item_names.GOLIATH, item_names.SIEGE_TANK,

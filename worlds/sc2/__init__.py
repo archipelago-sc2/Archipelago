@@ -33,7 +33,7 @@ from .mission_order.layout_types import Gauntlet
 from .options import (
     get_option_value, LocationInclusion, KerriganLevelItemDistribution,
     KerriganPrimalStatus, StarterUnit, SpearOfAdunPresence,
-    get_enabled_campaigns, SpearOfAdunPassiveAbilityPresence, Starcraft2Options,
+    SpearOfAdunPassiveAbilityPresence, Starcraft2Options,
     GrantStoryTech, GrantStoryLevels, GenericUpgradeResearch, RequiredTactics,
     upgrade_included_names, EnableVoidTrade, FillerItemsDistribution, MissionOrderScouting, option_groups,
     HeroPresence, HeroOptions, MissionOrder, VanillaItemsOnly, ExcludeOverpoweredItems,
@@ -178,6 +178,18 @@ class SC2World(World):
         self.logic = SC2Logic(self)
         self.custom_mission_order = create_mission_order(self, self.location_cache)
         self.logic.total_mission_count = self.custom_mission_order.get_mission_count()
+        if self.options.required_tactics.value < RequiredTactics.option_chaos:
+            if self.options.kerrigan_total_level_cap > 0:
+                required_levels = rules.get_required_kerrigan_levels(
+                    self.custom_mission_order.get_used_missions()
+                )
+                if required_levels > self.options.kerrigan_total_level_cap:
+                    logger.warning(
+                        f"Kerrigan level cap {self.options.kerrigan_total_level_cap.value} was too low for "
+                        f"required amount {required_levels}. Raising the global cap to {required_levels}."
+                    )
+                    self.options.kerrigan_total_level_cap = required_levels
+                    self.logic.kerrigan_total_level_cap = required_levels
         # TODO (Snarky): Make work with Hero Presence
         # if (
         #     NovaPresenceOptions.GHOST_OF_A_CHANCE_AUTO in self.options.nova_presence
@@ -250,23 +262,6 @@ class SC2World(World):
         # Tell the logic which unit classes are used for required W/A upgrades
         used_item_names: set[str] = {item.name for item in pruned_items}
         used_item_names = used_item_names.union(item.name for item in self.multiworld.itempool if item.player == self.player)
-        assert self.logic is not None
-        if used_item_names.isdisjoint(item_groups.barracks_wa_group):
-            self.logic.has_barracks_unit = False
-        if used_item_names.isdisjoint(item_groups.factory_wa_group):
-            self.logic.has_factory_unit = False
-        if used_item_names.isdisjoint(item_groups.starport_wa_group):
-            self.logic.has_starport_unit = False
-        if used_item_names.isdisjoint(item_groups.zerg_melee_wa):
-            self.logic.has_zerg_melee_unit = False
-        if used_item_names.isdisjoint(item_groups.zerg_ranged_wa):
-            self.logic.has_zerg_ranged_unit = False
-        if used_item_names.isdisjoint(item_groups.zerg_air_units):
-            self.logic.has_zerg_air_unit = False
-        if used_item_names.isdisjoint(item_groups.protoss_ground_wa):
-            self.logic.has_protoss_ground_unit = False
-        if used_item_names.isdisjoint(item_groups.protoss_air_wa):
-            self.logic.has_protoss_air_unit = False
 
         pad_item_pool_with_filler(self, len(self.location_cache) - len(self.locked_locations) - len(pool), pool)
 
@@ -326,27 +321,9 @@ class SC2World(World):
     def pre_fill(self) -> None:
         assert self.logic is not None
         self.logic.transition_prefill()
-        if self.options.generic_upgrade_missions > 0:
-            # Attempt to resolve a situation when the option is too high for the mission order rolled
-            weapon_armor_item_names = [
-                item_names.PROGRESSIVE_TERRAN_WEAPON_ARMOR_UPGRADE,
-                item_names.PROGRESSIVE_ZERG_WEAPON_ARMOR_UPGRADE,
-                item_names.PROGRESSIVE_PROTOSS_WEAPON_ARMOR_UPGRADE,
-            ]
-            def state_with_kerrigan_levels() -> CollectionState:
-                state: CollectionState = self.multiworld.get_all_state(False)
-                # Ignore dead ends caused by Kerrigan -> solve those in the next stage
-                state.collect(self.create_item(item_names.KERRIGAN_LEVELS_70))
-                state.update_reachable_regions(self.player)
-                return state
-
-            self._fill_needed_items(
-                state_with_kerrigan_levels, weapon_armor_item_names, item_tables.WEAPON_ARMOR_UPGRADE_MAX_LEVEL
-            )
         if self.options.kerrigan_levels_per_mission_completed > 0:
             # Attempt to solve being locked by Kerrigan level requirements
             self._fill_needed_items(lambda: self.multiworld.get_all_state(False), [item_names.KERRIGAN_LEVELS_1], 70)
-
 
     def _fill_needed_items(self, all_state_getter: Callable[[],CollectionState], items_to_use: list[str], max_attempts: int) -> None:
         """
@@ -372,7 +349,6 @@ class SC2World(World):
                     self.multiworld.push_precollected(item)
             else:
                 return
-
 
     def extend_hint_information(self, hint_data: dict[int, dict[int, str]]) -> None:
         """
@@ -818,8 +794,6 @@ def flag_mission_based_item_excludes(world: SC2World, item_list: list[FilterItem
     assert world.logic is not None
     world.logic.kerrigan_items_granted = remove_kerrigan_items
     world.logic.kerrigan_levels_granted = remove_kerrigan_items
-    if kerrigan_build_missions:
-        world.logic.kerrigan_build_missions = True
 
     # TvX build missions -- check flags
     if world.options.take_over_ai_allies:
@@ -1321,13 +1295,26 @@ def create_item_with_correct_settings(player: int, name: str, filter_flags: Item
 
 
 def fill_pool_with_kerrigan_levels(world: SC2World, item_pool: list[StarcraftItem]):
-    total_levels = world.options.kerrigan_level_item_sum.value
+    item_levels = world.options.kerrigan_level_item_sum.value
     assert world.logic
-    if (world.logic.kerrigan_levels_granted
-        or total_levels == 0
-        or (world.options.grant_story_levels and not world.logic.kerrigan_build_missions)
-    ):
+    if world.logic.kerrigan_levels_granted:
         return
+    missions = world.custom_mission_order.get_used_missions()
+    missions_from_levels = (
+        world.options.kerrigan_levels_per_mission_completed
+        * (len(missions) - 1)
+    )
+    level_requirement = rules.get_required_kerrigan_levels(missions)
+    starter_levels = level_requirement - item_levels - missions_from_levels
+    while starter_levels >= 5:
+        item_pool.append(create_item_with_correct_settings(
+            world.player, item_names.KERRIGAN_LEVELS_5, ItemFilterFlags.StartInventory
+        ))
+        starter_levels -= 5
+    for _ in range(starter_levels):
+        item_pool.append(create_item_with_correct_settings(
+            world.player, item_names.KERRIGAN_LEVELS_1, ItemFilterFlags.StartInventory
+        ))
 
     def add_kerrigan_level_items(level_amount: int, item_amount: int):
         name = f"{level_amount} Kerrigan Level"
@@ -1340,7 +1327,7 @@ def fill_pool_with_kerrigan_levels(world: SC2World, item_pool: list[StarcraftIte
     option = world.options.kerrigan_level_item_distribution.value
 
     assert isinstance(option, int)
-    assert isinstance(total_levels, int)
+    assert isinstance(item_levels, int)
 
     if option in (KerriganLevelItemDistribution.option_vanilla, KerriganLevelItemDistribution.option_smooth):
         distribution = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -1353,11 +1340,11 @@ def fill_pool_with_kerrigan_levels(world: SC2World, item_pool: list[StarcraftIte
     else:
         size = sizes[option - 2]
         round_func: Callable[[float], int] = round
-        if total_levels > 70:
+        if item_levels > 70:
             round_func = floor
         else:
             round_func = ceil
-        add_kerrigan_level_items(size, round_func(float(total_levels) / size))
+        add_kerrigan_level_items(size, round_func(float(item_levels) / size))
 
 
 def push_precollected_items_to_multiworld(world: SC2World, item_list: list[StarcraftItem]) -> None:

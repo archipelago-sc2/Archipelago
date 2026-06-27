@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Callable, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar, Iterable
 import enum
 
 from BaseClasses import CollectionState, Location
@@ -9,11 +9,7 @@ from .options import (
     AllInMap,
     GrantStoryTech,
     SpearOfAdunPassiveAbilityPresence,
-    SpearOfAdunPresence,
     MissionOrder,
-    EnabledCampaigns,
-    EnabledHeroes,
-    HeroPresence,
 )
 from .mission_tables import SC2Race, SC2Campaign, SC2Mission
 from .tables import HeroFlag
@@ -80,6 +76,8 @@ class SC2Logic:
         self.take_over_ai_allies = bool(world.options.take_over_ai_allies)
         self.kerrigan_levels_per_mission_completed = world.options.kerrigan_levels_per_mission_completed.value
         self.kerrigan_levels_per_mission_completed_cap = world.options.kerrigan_levels_per_mission_completed_cap.value
+        if self.kerrigan_levels_per_mission_completed_cap < 0:
+            self.kerrigan_levels_per_mission_completed_cap = KERRIGAN_MAX_LEVEL
         self.kerrigan_total_level_cap = world.options.kerrigan_total_level_cap.value
         if self.kerrigan_total_level_cap < 0:
             self.kerrigan_total_level_cap = KERRIGAN_MAX_LEVEL
@@ -98,13 +96,7 @@ class SC2Logic:
         self.war_council_upgrades = not world.options.war_council_nerfs.value
         self.protoss_base_macro_rating = 3 if not world.options.war_council_nerfs else 0
         self.hero_presence_option = world.options.hero_presence.value
-
-        self.mission_order = MissionOrder.default
-        self.generic_upgrade_missions = 0
-        self.all_in_map = AllInMap.option_ground
-        self.enabled_heroes: frozenset[str] = EnabledHeroes.default
-        self.protoss_base_macro_rating = 3
-        self.hero_presence_option: int = HeroPresence.default
+        self.generic_upgrade_missions = world.options.generic_upgrade_missions.value
 
         # Must be set externally for accurate logic checking of upgrade level when generic_upgrade_missions is checked
         self.total_mission_count = 1
@@ -152,17 +144,17 @@ class SC2Logic:
 
         # Logic level-based groups
         if self.logic_level == RequiredTactics.option_basic:
-            self.upgradeable_barracks_units = item_groups.terran_basic_barracks_units
-            self.upgradeable_factory_units = item_groups.terran_basic_factory_units
-            self.upgradeable_starport_units = item_groups.terran_basic_starport_units
-            self.upgradeable_zerg_melee_units = item_groups.zerg_basic_melee_units
-            self.upgradeable_zerg_ranged_units = item_groups.zerg_basic_ranged_units
-            self.upgradeable_zerg_air_units = item_groups.zerg_basic_air_units
-            self.upgradeable_zerg_melee_morphs = item_groups.zerg_basic_melee_morphs
-            self.upgradeable_zerg_ranged_morphs = item_groups.zerg_basic_ranged_morphs
-            self.upgradeable_zerg_air_morphs = item_groups.zerg_basic_air_morphs
-            self.upgradeable_protoss_ground_units = item_groups.protoss_basic_ground_units
-            self.upgradeable_protoss_air_units = item_groups.protoss_basic_air_units
+            self.upgradeable_barracks_units: Iterable[str] = item_groups.terran_basic_barracks_units
+            self.upgradeable_factory_units: Iterable[str] = item_groups.terran_basic_factory_units
+            self.upgradeable_starport_units: Iterable[str] = item_groups.terran_basic_starport_units
+            self.upgradeable_zerg_melee_units: Iterable[str] = item_groups.zerg_basic_melee_units
+            self.upgradeable_zerg_ranged_units: Iterable[str] = item_groups.zerg_basic_ranged_units
+            self.upgradeable_zerg_air_units: Iterable[str] = item_groups.zerg_basic_air_units
+            self.upgradeable_zerg_melee_morphs: Iterable[str] = item_groups.zerg_basic_melee_morphs
+            self.upgradeable_zerg_ranged_morphs: Iterable[str] = item_groups.zerg_basic_ranged_morphs
+            self.upgradeable_zerg_air_morphs: Iterable[str] = item_groups.zerg_basic_air_morphs
+            self.upgradeable_protoss_ground_units: Iterable[str] = item_groups.protoss_basic_ground_units
+            self.upgradeable_protoss_air_units: Iterable[str] = item_groups.protoss_basic_air_units
         elif self.logic_level == RequiredTactics.option_advanced:
             self.upgradeable_barracks_units = item_groups.terran_advanced_barracks_units
             self.upgradeable_factory_units = item_groups.terran_advanced_factory_units
@@ -207,9 +199,6 @@ class SC2Logic:
 
     def transition_prefill(self) -> None:
         """Transition mutable functions from item filtering versions to placement versions"""
-        # if self.generic_upgrade_missions > 0:
-        #     self.wa_upgrade_count = self._wa_upgrade_count_generic_placement  # type: ignore[method-assign]
-
         if (self.kerrigan_levels_per_mission_completed > 0
             and self.kerrigan_levels_per_mission_completed_cap != 0
         ):
@@ -220,7 +209,7 @@ class SC2Logic:
         return 0
 
     def _wa_upgrade_count_items(self, item: VirtualItem, state: CollectionState) -> int:
-        return state.count(item.name, self.player)  # type: ignore
+        return state.count(item.name, self.player)  # type: ignore[arg-type]
 
     def _wa_upgrade_count_generic_filtering(self, item: VirtualItem, state: CollectionState) -> int:
         return item_tables.WEAPON_ARMOR_UPGRADE_MAX_LEVEL
@@ -1353,7 +1342,7 @@ class SC2Logic:
         return self.zerg_macro_rating(state) + self.soa_passive_power_rating(state)
 
     @series(LogicSeries.MacroPower, SC2Race.ZERG, 3)
-    def terran_soa_power_rating(self, state: CollectionState) -> int:
+    def zerg_soa_power_rating(self, state: CollectionState) -> int:
         return (
             self.zerg_macro_rating(state)
             + self.soa_power_rating(state)
@@ -2080,7 +2069,7 @@ class SC2Logic:
 
     @series(LogicSeries.MacroPower, SC2Race.PROTOSS, 2)
     def protoss_soa_passive_power_rating(self, state: CollectionState) -> int:
-        return self.protoss_macro_rating(self, state) + self.soa_passive_power_rating(state)
+        return self.protoss_macro_rating(state) + self.soa_passive_power_rating(state)
 
     @series(LogicSeries.MacroPower, SC2Race.PROTOSS, 3)
     def protoss_soa_power_rating(self, state: CollectionState) -> int:
@@ -2985,8 +2974,7 @@ class SC2Logic:
 
     def supreme_requirement(self, state: CollectionState) -> bool:
         return (
-            self.grant_story_tech == GrantStoryTech.option_grant
-            or self.kerrigan_items_granted
+            self.kerrigan_items_granted
             or (self.grant_story_tech == GrantStoryTech.option_allow_substitutes
                 and state.has_any((
                     item_names.KERRIGAN_LEAPING_STRIKE,
@@ -4141,4 +4129,17 @@ class SC2Logic:
             return parent(state) >= rating
         self.rating_functions[race, series, rating] = has_rating
         return has_rating
+
+
+def get_required_kerrigan_levels(missions: list[SC2Mission]) -> int:
+    result = 0
+    if SC2Mission.BACK_IN_THE_SADDLE in missions:
+        result = 10
+    if SC2Mission.CONVICTION in missions:
+        result = 25
+    if SC2Mission.SUPREME in missions:
+        result = 35
+    if SC2Mission.THE_INFINITE_CYCLE in missions:
+        result = 70
+    return result
 

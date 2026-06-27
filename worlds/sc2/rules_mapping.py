@@ -184,6 +184,7 @@ class ProtoRule:
         soa_flags = 0
         defense_rating = 0
         macro_rating = 0
+        comp_type = COMP_UPGRADEABLE
         if mission.flags & MissionFlag.NoBuild or first_location:
             num_units = 0
             anti_air = 0
@@ -195,6 +196,8 @@ class ProtoRule:
                 num_units += 1
             if num_units > MAX_UNITS_REQUIRED:
                 num_units = MAX_UNITS_REQUIRED
+            if logic_level < LOGIC_CHAOS:
+                comp_type = self.comp_type
             detection = self.detection
             anti_air = self.rating_from_depth(depth, anti_air_depths)
             aa_min = resolve_aa(self.aa_min, logic_level)
@@ -241,7 +244,7 @@ class ProtoRule:
             num_units,
             anti_air,
             upgrades,
-            COMP_UPGRADEABLE if logic_level >= LOGIC_CHAOS else self.comp_type,
+            comp_type,
             macro_rating,
             soa_flags,
             defense_rating,

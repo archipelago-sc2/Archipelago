@@ -1,15 +1,25 @@
 import itertools
 from dataclasses import fields
+import inspect
 from random import Random
 import unittest
-from typing import List, Set, Iterable
+from typing import Iterable, Callable
 
 from BaseClasses import ItemClassification, MultiWorld
 import Options as CoreOptions
-from .. import options, locations
-from ..item import item_names, item_tables
+from .. import options, rules_mapping, mission_tables, locations
+from ..item import item_tables, virtual_items
 from ..rules import SC2Logic
-from ..mission_tables import SC2Race, MissionFlag, lookup_name_to_mission
+from . import test_base
+
+
+def function_requires_one_argument(function: Callable) -> bool:
+    required_args = [
+        x
+        for x in inspect.signature(function).parameters.values()
+        if x.default is inspect.Parameter.empty
+    ]
+    return len(required_args) == 1
 
 
 class TestInventory:
@@ -18,10 +28,15 @@ class TestInventory:
     """
     def __init__(self) -> None:
         self.random: Random = Random()
-        self.progression_types: Set[ItemClassification] = {ItemClassification.progression, ItemClassification.progression_skip_balancing}
+        self.progression_types: set[ItemClassification] = {
+            ItemClassification.progression, ItemClassification.progression_skip_balancing,
+        }
 
     def is_item_progression(self, item: str) -> bool:
-        return item_tables.item_table[item].classification in self.progression_types
+        return (
+            item in virtual_items.VirtualItem._member_names_
+            or item_tables.item_table[item].classification in self.progression_types
+        )
 
     def random_boolean(self):
         return self.random.choice([True, False])
@@ -31,13 +46,13 @@ class TestInventory:
             raise AssertionError("Logic item {} is not a progression item".format(item))
         return self.random_boolean()
 
-    def has_any(self, items: Set[str], player: int):
+    def has_any(self, items: set[str], player: int):
         non_progression_items = [item for item in items if not self.is_item_progression(item)]
         if len(non_progression_items) > 0:
             raise AssertionError("Logic items {} are not progression items".format(non_progression_items))
         return self.random_boolean()
 
-    def has_all(self, items: Set[str], player: int):
+    def has_all(self, items: set[str], player: int):
         return self.has_any(items, player)
 
     def has_group(self, item_group: str, player: int, count: int = 1):
@@ -110,16 +125,15 @@ class StaticInventory:
 
 class TestRules(unittest.TestCase):
     def setUp(self) -> None:
-        self.required_tactics_values: List[int] = [
-            options.RequiredTactics.option_basic, options.RequiredTactics.option_advanced
+        self.required_tactics_values: list[int] = [
+            options.RequiredTactics.option_basic,
+            options.RequiredTactics.option_advanced,
+            options.RequiredTactics.option_chaos,
         ]
-        self.all_in_map_values: List[int] = [
+        self.all_in_map_values: list[int] = [
             options.AllInMap.option_ground, options.AllInMap.option_air
         ]
-        self.take_over_ai_allies_values: List[int] = [
-            options.TakeOverAIAllies.option_true, options.TakeOverAIAllies.option_false
-        ]
-        self.NUM_TEST_RUNS = 100
+        self.NUM_TEST_RUNS = 150
 
     @staticmethod
     def _get_world(
@@ -135,27 +149,30 @@ class TestRules(unittest.TestCase):
         test_world.options.take_over_ai_allies.value = take_over_ai_allies
         test_world.options.spear_of_adun_passive_ability_presence.value = spear_of_adun_passive_presence
         test_world.options.enabled_campaigns.value = set(options.EnabledCampaigns.valid_keys)
-        test_world.logic = SC2Logic(test_world)  # type: ignore
+        test_world.logic = SC2Logic(test_world)
         return test_world
 
     def test_items_in_rules_are_progression(self):
         test_inventory = TestInventory()
         for option in self.required_tactics_values:
             test_world = self._get_world(required_tactics=option)
-            location_data = locations.get_locations(test_world)
-            for location in location_data:
+            for name, function in test_world.logic.name_to_function.items():
+                if not function_requires_one_argument(function):
+                    continue
                 for _ in range(self.NUM_TEST_RUNS):
-                    location.rule(test_inventory)
+                    function(test_inventory)
 
     def test_items_in_all_in_are_progression(self):
         test_inventory = TestInventory()
         for test_options in itertools.product(self.required_tactics_values, self.all_in_map_values):
             test_world = self._get_world(required_tactics=test_options[0], all_in_map=test_options[1])
-            for location in locations.get_locations(test_world):
-                if 'All-In' not in location.region:
+            for name, function in test_world.logic.name_to_function.items():
+                if not function_requires_one_argument(function):
+                    continue
+                if 'all_in' not in name:
                     continue
                 for _ in range(self.NUM_TEST_RUNS):
-                    location.rule(test_inventory)
+                    function(test_inventory)
 
     # # TODO (Snarky): Make work with Hero Presence
     # def test_items_in_kerriganless_missions_are_progression(self):
@@ -169,37 +186,22 @@ class TestRules(unittest.TestCase):
     #             for _ in range(self.NUM_TEST_RUNS):
     #                 location.rule(test_inventory)
 
-    def test_items_in_ai_takeover_missions_are_progression(self):
-        test_inventory = TestInventory()
-        for test_options in itertools.product(self.required_tactics_values, self.take_over_ai_allies_values):
-            test_world = self._get_world(required_tactics=test_options[0], take_over_ai_allies=test_options[1])
-            for location in locations.get_locations(test_world):
-                mission = lookup_name_to_mission[location.region]
-                if MissionFlag.AiAlly not in mission.flags:
-                    continue
-                for _ in range(self.NUM_TEST_RUNS):
-                    location.rule(test_inventory)
 
-    def test_items_in_hard_rules_are_progression(self):
-        test_inventory = TestInventory()
-        test_world = TestWorld()
-        test_world.options.required_tactics.value = options.RequiredTactics.option_chaos
-        test_world.logic = SC2Logic(test_world)
-        location_data = locations.get_locations(test_world)
-        for location in location_data:
-            if location.hard_rule is not None:
-                for _ in range(10):
-                    location.hard_rule(test_inventory)
-
-    def test_items_in_any_units_rules_are_progression(self):
-        test_inventory = TestInventory()
-        test_world = TestWorld()
-        test_world.options.required_tactics.value = options.RequiredTactics.option_chaos
-        logic = SC2Logic(test_world)
-        test_world.logic = logic
-        for race in (SC2Race.TERRAN, SC2Race.PROTOSS, SC2Race.ZERG):
-            for target in range(1, 5):
-                rule = logic.has_race_units(target, race)
-                for _ in range(10):
-                    rule(test_inventory)
-
+class TestRuleGeneration(test_base.Sc2SetupTestBase):
+    def test_hero_rules_are_ignored_when_not_present(self) -> None:
+        player_options = self.set_options({
+            options.OPTION_NAME[options.KerriganPresence]: set(),
+            options.OPTION_NAME[options.NovaPresence]: set(),
+            options.OPTION_NAME[options.ArtanisPresence]: set(),
+        })
+        rule = rules_mapping.ProtoRule(hero_min=rules_mapping.HERO_COMPETENT)
+        signature = rule.to_signature(
+            player_options,
+            mission_tables.SC2Mission.ZERO_HOUR,
+            locations.Sc2Location.ZERO_HOUR_VICTORY,
+            3,
+            {},
+        )
+        self.assertEqual(signature.kerrigan, 0)
+        self.assertEqual(signature.nova, 0)
+        self.assertEqual(signature.artanis, 0)

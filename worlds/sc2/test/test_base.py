@@ -34,7 +34,7 @@ class Sc2SetupTestBase(unittest.TestCase):
     game = SC2World.game
     player = 1
 
-    def generate_world(self, options: dict[str, Any]) -> None:
+    def set_options(self, player_options: dict[str, Any]) -> options.Starcraft2Options:
         self.multiworld = MultiWorld(1)
         self.multiworld.game[self.player] = self.game
         self.multiworld.player_name = {self.player: "Tester"}
@@ -43,13 +43,19 @@ class Sc2SetupTestBase(unittest.TestCase):
         self.multiworld.seed_name = get_seed_name(random)  # only called to get same RNG progression as Generate.py
         args = Namespace()
         for name, option in AutoWorld.AutoWorldRegister.world_types[self.game].options_dataclass.type_hints.items():
-            new_option = option.from_any(options.get(name, option.default))
-            new_option.verify(SC2World, "Tester", PlandoOptions.items|PlandoOptions.connections|PlandoOptions.texts|PlandoOptions.bosses)
-            setattr(args, name, {
-                1: new_option
-            })
+            new_option = option.from_any(player_options.get(name, option.default))
+            new_option.verify(
+                SC2World,
+                "Tester",
+                PlandoOptions.items|PlandoOptions.connections|PlandoOptions.texts|PlandoOptions.bosses
+            )
+            setattr(args, name, {1: new_option})
         self.multiworld.set_options(args)
         self.world: SC2World = cast(SC2World, self.multiworld.worlds[self.player])
+        return self.world.options
+
+    def generate_world(self, player_options: dict[str, Any]) -> None:
+        self.set_options(player_options)
         self.multiworld.state = CollectionState(self.multiworld)
         try:
             for step in gen_steps:

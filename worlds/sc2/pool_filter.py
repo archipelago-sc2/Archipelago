@@ -360,17 +360,22 @@ class ValidInventory:
 
         # Main cull process
         def remove_random_item(
-            removable: List[StarcraftItem],
+            removable: list[StarcraftItem],
             dont_remove_flags: ItemFilterFlags,
             remove_flag: ItemFilterFlags = ItemFilterFlags.Removed,
         ) -> bool:
             if len(removable) == 0:
                 return False
             item = self.world.random.choice(removable)
+            # Make it less likely to drop w/a items
+            item_info = item_table[item.name]
+            if item_info.type.display_name == ZergItemType.Upgrade.display_name:
+                if self.world.random.random() < 0.4:
+                    return False
             # Do not remove item if it would drop upgrades below minimum
             if min_upgrades_per_unit > 0:
                 group_name = None
-                parent = item_table[item.name].parent
+                parent = item_info.parent
                 if parent is not None:
                     group_name = item_parents.parent_present[parent].constraint_group
                 if group_name is not None:

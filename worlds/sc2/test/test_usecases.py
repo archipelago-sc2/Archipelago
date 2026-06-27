@@ -75,6 +75,7 @@ class TestSupportedUseCases(Sc2SetupTestBase):
 
     def test_terran_with_nco_upgrades_units_only_generates(self):
         world_options = {
+            options.OPTION_NAME[options.RequiredTactics]: RequiredTactics.option_advanced,
             'enabled_campaigns': {
                 SC2Campaign.WOL.campaign_name,
                 SC2Campaign.NCO.campaign_name
@@ -115,8 +116,7 @@ class TestSupportedUseCases(Sc2SetupTestBase):
         self.assertNotIn(item_names.PSI_DISRUPTER, world_item_names)
         self.assertNotIn(item_names.BATTLECRUISER_PROGRESSIVE_MISSILE_PODS, world_item_names)
         self.assertNotIn(item_names.HELLION_INFERNAL_PLATING, world_item_names)
-        self.assertNotIn(item_names.CELLULAR_REACTOR, world_item_names)
-        self.assertNotIn(item_names.TECH_REACTOR, world_item_names)
+        # Note(mm): Macro upgrades may still be required by macro rating functions
 
     def test_nco_and_2_wol_missions_only_can_generate_with_vanilla_items_only(self) -> None:
         world_options = {
@@ -522,7 +522,6 @@ class TestSupportedUseCases(Sc2SetupTestBase):
                 1
             )
 
-
     def test_nova_max_weapons(self):
         target_number: int = 3
         world_options = {
@@ -541,7 +540,6 @@ class TestSupportedUseCases(Sc2SetupTestBase):
         nova_weapons = [item_name for item_name in world_item_names if item_name in item_groups.nova_weapons]
 
         self.assertLessEqual(len(nova_weapons), target_number)
-
 
     def test_nova_max_gadgets(self):
         target_number: int = 3
