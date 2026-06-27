@@ -2309,11 +2309,11 @@ LOCATION_ID_TO_LOCATION = {
     for _location in Sc2Location
 }
 LOCATION_ID_TO_NAME = {
-    _location.id: _location.name
+    _location.id: _location.global_name()
     for _location in Sc2Location
 }
 LOCATION_NAME_TO_ID = {
-    _location.name: _location.id
+    _location.global_name(): _location.id
     for _location in Sc2Location
 }
 BEAT_EVENTS: list[tuple[str, Sc2Location]] = []

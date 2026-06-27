@@ -3,7 +3,7 @@ Location group definitions
 """
 
 from . import locations
-from .mission_tables import lookup_name_to_mission, MissionFlag
+from .mission_tables import MissionFlag
 
 def get_location_groups() -> dict[str, set[str]]:
     result: dict[str, set[str]] = {}
@@ -12,29 +12,27 @@ def get_location_groups() -> dict[str, set[str]]:
         if location_id is None:
             # Beat events
             continue
-        location, is_victory_cache = locations.location_id_to_location(location_id)
-        mission = lookup_name_to_mission.get(location.mission)
-        if mission is None:
-            continue
+        location_info, is_victory_cache = locations.location_id_to_location(location_id)
+        mission = location_info.mission
 
         if (MissionFlag.HasRaceSwap|MissionFlag.RaceSwap) & mission.flags:
             # Location group including race-swapped variants of a location
             agnostic_location_name = (
-                location.name
+                location_name
                 .replace(' (Terran)', '')
                 .replace(' (Protoss)', '')
                 .replace(' (Zerg)', '')
             )
-            result.setdefault(agnostic_location_name, set()).add(location.name)
+            result.setdefault(agnostic_location_name, set()).add(location_name)
 
             # Location group including all locations in all raceswaps
-            result.setdefault(mission.mission_name[:mission.mission_name.find(' (')], set()).add(location.name)
+            result.setdefault(mission.mission_name[:mission.mission_name.find(' (')], set()).add(location_name)
 
         # Location group including all locations in a mission
-        result.setdefault(mission.mission_name, set()).add(location.name)
+        result.setdefault(mission.mission_name, set()).add(location_name)
 
         # Location group by location category
-        location_type = locations.LocationType.VICTORY_CACHE if is_victory_cache else location.type
-        result.setdefault(location_type.name.title(), set()).add(location.name)
+        location_type = locations.LocationType.VICTORY_CACHE if is_victory_cache else location_info.type
+        result.setdefault(location_type.name.title(), set()).add(location_name)
 
     return result
