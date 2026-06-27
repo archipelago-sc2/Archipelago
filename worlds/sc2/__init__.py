@@ -963,10 +963,12 @@ def flag_start_inventory(world: SC2World, item_list: list[FilterItem]) -> None:
     # If starter_unit is off and the first mission doesn't have a no-logic location, force starter_unit on
     if starter_unit == StarterUnit.option_off:
         start_collection_state = CollectionState(world.multiworld)
-        starter_mission_locations = [location.name for location in world.location_cache
-                                     if location.parent_region
-                                     and location.parent_region.name in starter_mission_names
-                                     and location.access_rule(start_collection_state)]
+        starter_mission_locations = [
+            location.name for location in world.location_cache
+            if location.parent_region
+            and location.parent_region.name in starter_mission_names
+            and location.access_rule(start_collection_state)
+        ]
         if not starter_mission_locations:
             # Force early unit if first mission is impossible without one
             starter_unit = StarterUnit.option_any_starter_unit

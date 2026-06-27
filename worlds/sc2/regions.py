@@ -18,14 +18,7 @@ from .mission_order.options import CustomMissionOrder
 from .mission_order import SC2MissionOrder
 from .mission_order.nodes import SC2MOGenMissionOrder
 from .mission_order.mission_pools import SC2MOGenMissionPools, Difficulty
-from .mission_order.generation import (
-    resolve_unlocks,
-    fill_depths,
-    resolve_difficulties,
-    fill_missions,
-    make_connections,
-    resolve_generic_keys,
-)
+from .mission_order import generation
 
 if TYPE_CHECKING:
     from . import SC2World
@@ -62,19 +55,21 @@ def create_mission_order(world: 'SC2World', location_cache: list[Location]) -> S
     mission_order = SC2MOGenMissionOrder(world, mission_order_dict)
 
     # Set up requirements for individual parts of the mission order
-    resolve_unlocks(mission_order)
+    generation.resolve_unlocks(mission_order)
 
     # Ensure total accessibilty and resolve relative difficulties
-    fill_depths(mission_order)
-    resolve_difficulties(mission_order)
+    generation.fill_depths(mission_order)
+    generation.resolve_difficulties(mission_order)
 
     # Build the mission order
-    fill_missions(mission_order, mission_pools, world, [], location_cache)  # TODO set locked missions
-    # todo(mm): Apply rules based on depth
-    make_connections(mission_order, world)
+    region_to_location_data = generation.get_locations_per_region(world)
+    # TODO set locked missions
+    generation.fill_missions(mission_order, mission_pools, world, [], location_cache, region_to_location_data)
+    generation.set_rules(world, mission_order, region_to_location_data)
+    generation.make_connections(mission_order, world)
 
     # Fill in Key requirements now that missions are placed
-    resolve_generic_keys(mission_order)
+    generation.resolve_generic_keys(mission_order)
 
     return SC2MissionOrder(mission_order, mission_pools)
 

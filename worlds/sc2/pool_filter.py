@@ -220,7 +220,11 @@ class ValidInventory:
                 item.filter_flags |= ItemFilterFlags.Requested
 
         # Process Excluded items, validate if the item can get actually excluded
-        excluded_items: List[StarcraftItem] = [starcraft_item for starcraft_item in inventory if ItemFilterFlags.Excluded & starcraft_item.filter_flags]
+        excluded_items: List[StarcraftItem] = [
+            starcraft_item
+            for starcraft_item in inventory
+            if ItemFilterFlags.Excluded & starcraft_item.filter_flags
+        ]
         self.world.random.shuffle(excluded_items)
         for excluded_item in excluded_items:
             if ItemFilterFlags.Unexcludable & excluded_item.filter_flags:

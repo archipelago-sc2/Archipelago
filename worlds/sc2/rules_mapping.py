@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Callable, NamedTuple
+from typing import TYPE_CHECKING, Callable, NamedTuple, overload
 from dataclasses import dataclass
 
 from .rules import SC2Logic, LogicSeries
@@ -67,11 +67,18 @@ class RuleSignature(NamedTuple):
     artanis: int = 0
     nova: int = 0
     kerrigan: int = 0
-    rule: Callable[[SC2Logic, CollectionState], bool] | None = None
+    rule: Callable[[SC2Logic, 'CollectionState'], bool] | None = None
 
-    def resolve(self, logic: SC2Logic) -> Callable[[CollectionState], bool] | None:
-        parts: list[Callable[[CollectionState], bool]] = []
-        addon: Callable[[CollectionState], bool]
+    @overload
+    def resolve(
+        self, logic: SC2Logic, default: Callable[['CollectionState'], bool]
+    ) -> Callable[['CollectionState'], bool]: ...
+
+    def resolve(
+        self, logic: SC2Logic, default=Callable[['CollectionState'], bool] | None
+    ) -> Callable[['CollectionState'], bool] | None:
+        parts: list[Callable[['CollectionState'], bool]] = []
+        addon: Callable[['CollectionState'], bool]
         if self.num_units > 0:
             addon = logic.has_race_units(self.num_units, self.race, self.logic_level)
             parts.append(addon)
@@ -104,6 +111,9 @@ class RuleSignature(NamedTuple):
         if self.rule is not None:
             addon = logic.name_to_function[self.rule.__name__]
             parts.append(addon)
+
+        if not parts:
+            return default
         result = rule_helpers.COUNT_TO_AND_FUNCTION[len(parts)](*parts)
         return result
 
@@ -119,9 +129,9 @@ class ProtoRule:
     """Rating out of 10, static defenses and base improvements"""
     hero_min: int = 0
     detection: int = 0
-    rule: Callable[[SC2Logic, CollectionState], bool] | None = None
-    basic_rule: Callable[[SC2Logic, CollectionState], bool] | None = None
-    hard_rule: Callable[[SC2Logic, CollectionState], bool] | None = None
+    rule: Callable[[SC2Logic, 'CollectionState'], bool] | None = None
+    basic_rule: Callable[[SC2Logic, 'CollectionState'], bool] | None = None
+    hard_rule: Callable[[SC2Logic, 'CollectionState'], bool] | None = None
 
     def __post_init__(self) -> None:
         if self.rule is None:
@@ -145,6 +155,10 @@ class ProtoRule:
         hero_presence: dict[SC2Mission, HeroFlag],
         first_location: bool = False
     ) -> RuleSignature:
+        if first_location:
+            assert location.type != LocationType.MASTERY
+            assert depth == 0
+
         logic_level = int(opt.required_tactics)
         if logic_level == LOGIC_BASIC:
             anti_air_depths=(3, 3, 5)
@@ -162,22 +176,17 @@ class ProtoRule:
         has_soa = 0
         defense_rating = 0
         macro_rating = 0
-        if mission.flags & MissionFlag.NoBuild:
+        if mission.flags & MissionFlag.NoBuild or first_location:
             num_units = 0
             anti_air = 0
             upgrades = 0
             detection = 0
         else:
-            if first_location:
-                assert depth == 0
-                assert location.type != LocationType.MASTERY
-                num_units = 0
-            else:
-                num_units = depth
-                if location.type == LocationType.CHALLENGE:
-                    num_units += 1
-                if num_units > MAX_UNITS_REQUIRED:
-                    num_units = MAX_UNITS_REQUIRED
+            num_units = depth
+            if location.type == LocationType.CHALLENGE:
+                num_units += 1
+            if num_units > MAX_UNITS_REQUIRED:
+                num_units = MAX_UNITS_REQUIRED
             detection = self.detection
             anti_air = self.rating_from_depth(depth, anti_air_depths)
             aa_min = resolve_aa(self.aa_min, logic_level)
@@ -202,16 +211,14 @@ class ProtoRule:
                 macro_rating = max(0, self.macro_rating - ADVANCED_FREE_MACRO_RATING)
 
         # Heroes
-        required_hero_rating = self.rating_from_depth(depth, hero_depths)
-        required_hero_rating = max(self.hero_min, required_hero_rating)
+        if first_location:
+            required_hero_rating = 0
+        else:
+            required_hero_rating = self.rating_from_depth(depth, hero_depths)
+            required_hero_rating = max(self.hero_min, required_hero_rating)
         if MissionFlag.HeroSystemUnsupported & mission.flags:
+            # Hero requirements assumed captured by manual rules; grant story tech usually applies
             heroes = HeroFlag.NONE
-            if MissionFlag.Kerrigan & mission.flags:
-                heroes |= HeroFlag.KERRIGAN
-            if MissionFlag.Nova & mission.flags:
-                heroes |= HeroFlag.NOVA
-            if MissionFlag.Artanis & mission.flags:
-                heroes |= HeroFlag.ARTANIS
         else:
             heroes = hero_presence.get(mission, HeroFlag.NONE)
 
