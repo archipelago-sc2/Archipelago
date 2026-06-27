@@ -176,12 +176,6 @@ class ValidInventory:
                 virtual_items.after_remove_item(self.logical_inventory, item)
                 failed_rules = [(name, requirement) for name, requirement in mission_requirements if not requirement(self)]
                 if failed_rules:
-                    if rules_mapping.DEBUG_RULES:
-                        for failed_name, failed_req in failed_rules[5:]:
-                            logging.getLogger("Starcraft 2").warning(f"{failed_name}:")
-                            for index, subrule in enumerate(rules_mapping.DEBUG_CACHE.get(id(failed_req), [])):
-                                if not subrule(self):
-                                    logging.getLogger("Starcraft 2").warning(f"  {index}: {subrule.__name__}")
                     # If item cannot be removed, lock and revert
                     self.logical_inventory[item.name] += 1
                     virtual_items.after_add_item(self.logical_inventory, item)

@@ -13,10 +13,6 @@ if TYPE_CHECKING:
     from BaseClasses import CollectionState
 
 
-DEBUG_RULES = False
-"""Set this to true to store some extra information on rules for tracking issues"""
-DEBUG_CACHE: dict[int, list[Callable[['CollectionState'], bool]]] = {}
-
 LOGIC_BASIC = 0
 LOGIC_ADVANCED = 1
 LOGIC_CHAOS = 2
@@ -78,6 +74,11 @@ class RuleSignature(NamedTuple):
         self, logic: SC2Logic, default: Callable[['CollectionState'], bool]
     ) -> Callable[['CollectionState'], bool]: ...
 
+    @overload
+    def resolve(
+        self, logic: SC2Logic, default: Callable[['CollectionState'], bool] | None
+    ) -> Callable[['CollectionState'], bool] | None: ...
+
     def resolve(
         self, logic: SC2Logic, default=Callable[['CollectionState'], bool] | None
     ) -> Callable[['CollectionState'], bool] | None:
@@ -121,8 +122,6 @@ class RuleSignature(NamedTuple):
         if not parts:
             return default
         result = rule_helpers.COUNT_TO_AND_FUNCTION[len(parts)](*parts)
-        if DEBUG_RULES:
-            DEBUG_CACHE[id(result)] = parts
         return result
 
 
