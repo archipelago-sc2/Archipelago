@@ -29,7 +29,8 @@ from .mission_tables import (
     lookup_id_to_mission, campaign_race_exceptions,
     SC2Mission, SC2Race,
 )
-from .locations import LocationType, lookup_location_id_to_type, lookup_location_id_to_flags
+from . import locations
+from .locations import LocationType
 from .options import LocationInclusion, MissionOrderScouting
 from . import SC2World
 
@@ -670,37 +671,39 @@ class SC2Manager(GameManager):
     def finish_launching(self, dt):
         self.launching = False
 
-    def sort_unfinished_locations(self, mission_id: int) -> Tuple[List[Tuple[LocationType, str, int]], List[str], int]:
-        locations: List[Tuple[LocationType, str, int]] = []
-        location_name_to_index: Dict[str, int] = {}
+    def sort_unfinished_locations(
+        self, mission_id: int
+    ) -> tuple[list[tuple[LocationType, str, int]], list[str], int]:
+        result: list[tuple[LocationType, str, int]] = []
+        location_name_to_index: dict[str, int] = {}
         for loc in self.ctx.locations_for_mission_id(mission_id):
             if loc in self.ctx.missing_locations:
                 location_name = self.ctx.location_names.lookup_in_game(loc)
-                location_name_to_index[location_name] = len(locations)
-                locations.append((
-                    lookup_location_id_to_type[loc],
+                location_name_to_index[location_name] = len(result)
+                result.append((
+                    locations.location_id_to_type(loc),
                     location_name,
                     loc,
                 ))
-        count = len(locations)
+        count = len(result)
 
         plando_locations = []
-        elements_to_remove: Set[Tuple[LocationType, str, int]] = set()
+        elements_to_remove: set[tuple[LocationType, str, int]] = set()
         for plando_loc_name in self.ctx.plando_locations:
             if plando_loc_name in location_name_to_index:
-                elements_to_remove.add(locations[location_name_to_index[plando_loc_name]])
+                elements_to_remove.add(result[location_name_to_index[plando_loc_name]])
                 plando_locations.append(plando_loc_name)
         for element in elements_to_remove:
-            locations.remove(element)
+            result.remove(element)
 
-        return sorted(locations), plando_locations, count
+        return sorted(result), plando_locations, count
 
-    def any_valuable_locations(self, locations: List[Tuple[LocationType, str, int]]) -> bool:
-        for location_type, _, location_id in locations:
+    def any_valuable_locations(self, available_locations: list[tuple[LocationType, str, int]]) -> bool:
+        for location_type, _, location_id in available_locations:
             if (self.ctx.location_inclusions[location_type] == LocationInclusion.option_enabled
                 and all(
                     self.ctx.location_inclusions_by_flag[flag] == LocationInclusion.option_enabled
-                    for flag in lookup_location_id_to_flags[location_id]
+                    for flag in locations.location_id_to_location(location_id)[0].flags
                 )
             ):
                 return True
@@ -716,7 +719,13 @@ class SC2Manager(GameManager):
             title += ""
         return title
 
-    def is_scoutable(self, remaining_locations, mission_available: bool, layout_locked: bool, campaign_locked: bool) -> bool:
+    def is_scoutable(
+        self,
+        remaining_locations: list[tuple[LocationType, str, int]],
+        mission_available: bool,
+        layout_locked: bool,
+        campaign_locked: bool
+    ) -> bool:
         if self.ctx.mission_order_scouting == MissionOrderScouting.option_all:
             return True
         elif self.ctx.mission_order_scouting == MissionOrderScouting.option_campaign and not campaign_locked:

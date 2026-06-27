@@ -2359,6 +2359,13 @@ def location_id_to_location(location_id: int) -> tuple[Sc2Location, int]:
     return (LOCATION_ID_TO_LOCATION[location_id], 0)
 
 
+def location_id_to_type(location_id: int) -> LocationType:
+    location_info, victory_cache_index = location_id_to_location(location_id)
+    if victory_cache_index:
+        return LocationType.VICTORY_CACHE
+    return location_info.type
+
+
 def get_location_offset(mission_id: int) -> int:
     return (
         SC2WOL_LOC_ID_OFFSET
