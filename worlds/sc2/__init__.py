@@ -41,7 +41,7 @@ from .options import (
     is_mission_in_soa_presence,
 )
 from . import options
-from .rules import SC2Logic
+from .rules import SC2Logic, get_required_kerrigan_levels
 from . import settings
 from .pool_filter import filter_items
 from .mission_tables import SC2Campaign, SC2Mission, SC2Race, MissionFlag
@@ -180,7 +180,7 @@ class SC2World(World):
         self.logic.total_mission_count = self.custom_mission_order.get_mission_count()
         if self.options.required_tactics.value < RequiredTactics.option_chaos:
             if self.options.kerrigan_total_level_cap > 0:
-                required_levels = rules.get_required_kerrigan_levels(
+                required_levels = get_required_kerrigan_levels(
                     self.custom_mission_order.get_used_missions()
                 )
                 if required_levels > self.options.kerrigan_total_level_cap:
@@ -1304,7 +1304,7 @@ def fill_pool_with_kerrigan_levels(world: SC2World, item_pool: list[StarcraftIte
         world.options.kerrigan_levels_per_mission_completed
         * (len(missions) - 1)
     )
-    level_requirement = rules.get_required_kerrigan_levels(missions)
+    level_requirement = get_required_kerrigan_levels(missions)
     starter_levels = level_requirement - item_levels - missions_from_levels
     while starter_levels >= 5:
         item_pool.append(create_item_with_correct_settings(
