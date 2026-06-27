@@ -1,4 +1,5 @@
 import enum
+from typing import Iterable
 from . import item_tables, item_names
 from .item_tables import key_item_table
 from ..mission_tables import campaign_mission_table, SC2Campaign, SC2Mission, SC2Race
@@ -21,11 +22,11 @@ For non-developers the following will be useful:
 """
 
 
-def _intersection(left: list[str], right: list[str]) -> list[str]:
-    return [x for x in left if x in right]
+def _intersection(left: Iterable[str], right: Iterable[str]) -> tuple[str, ...]:
+    return tuple(x for x in left if x in right)
 
 
-item_name_groups: dict[str, list[str]] = {}
+item_name_groups: dict[str, list[str] | tuple[str, ...]] = {}
 
 # Groups for use in world logic
 item_name_groups["Missions"] = ["Beat " + mission.mission_name for mission in SC2Mission]

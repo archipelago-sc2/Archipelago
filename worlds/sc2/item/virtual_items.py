@@ -73,7 +73,7 @@ class LinearEffect:
     magnitude: int = 1
 
 
-LINEAR_EFFECTS = {
+LINEAR_EFFECTS: dict[int | None, LinearEffect] = {
     # Terran Weapon/armour ups
     item_table[item_names.PROGRESSIVE_TERRAN_INFANTRY_WEAPON].code: LinearEffect(VirtualItem.TERRAN_INFANTRY_WEAPON),
     item_table[item_names.PROGRESSIVE_TERRAN_INFANTRY_ARMOR].code: LinearEffect(VirtualItem.TERRAN_INFANTRY_ARMOR),
