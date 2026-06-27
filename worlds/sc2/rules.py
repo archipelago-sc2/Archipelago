@@ -666,18 +666,11 @@ class SC2Logic:
 
     @series(LogicSeries.Detection, SC2Race.TERRAN, 2)
     def terran_basic_detection(self, state: CollectionState) -> bool:
-        return (
-            self.terran_mobile_detector(state)
-            or state.has(item_names.MISSILE_TURRET, self.player)
-        )
+        return state.has_any(item_groups.terran_detection, self.player)
 
     @series(LogicSeries.Detection, SC2Race.TERRAN, 3)
     def terran_mobile_detector(self, state: CollectionState) -> bool:
-        return state.has_any((
-            item_names.RAVEN,
-            item_names.SCIENCE_VESSEL,
-            item_names.COMMAND_CENTER_SCANNER_SWEEP,
-        ), self.player)
+        return state.has_any(item_groups.terran_mobile_detection, self.player)
 
     @series(LogicSeries.MacroPower, SC2Race.TERRAN, 0)
     def terran_macro_rating(self, state: CollectionState) -> int:
@@ -1280,19 +1273,19 @@ class SC2Logic:
     @series(LogicSeries.Detection, SC2Race.ZERG, 2)
     def zerg_basic_detection(self, state: CollectionState) -> bool:
         return (
-            self.zerg_mobile_detector(state)
-            or state.has_any((
-                item_names.SPORE_CRAWLER,
-                item_names.INFESTED_MISSILE_TURRET,
-            ), self.player)
+            state.has_any(item_groups.zerg_detection, self.player)
+            or self._zerg_mobile_multi_item_detection(state)
         )
 
     @series(LogicSeries.Detection, SC2Race.ZERG, 3)
     def zerg_mobile_detector(self, state: CollectionState) -> bool:
         return (
-            state.has_any((item_names.OVERSEER, item_names.BROOD_QUEEN), self.player)
-            or (self.morph_lurker(state) and state.has(item_names.LURKER_SONAR_GLANDS, self.player))
+            state.has_any(item_groups.zerg_mobile_detection, self.player)
+            or self._zerg_mobile_multi_item_detection(state)
         )
+
+    def _zerg_mobile_multi_item_detection(self, state: CollectionState) -> bool:
+        return (self.morph_lurker(state) and state.has(item_names.LURKER_SONAR_GLANDS, self.player))
 
     @series(LogicSeries.MacroPower, SC2Race.ZERG, 0)
     def zerg_macro_rating(self, state: CollectionState) -> int:
@@ -1993,20 +1986,19 @@ class SC2Logic:
     @series(LogicSeries.Detection, SC2Race.PROTOSS, 2)
     def protoss_basic_detection(self, state: CollectionState) -> bool:
         return (
-            self.protoss_mobile_detector(state)
-            or state.has_any((
-                item_names.PHOTON_CANNON,
-            ), self.player)
+            state.has_any(item_groups.protoss_detection, self.player)
+            or self._protoss_mobile_multi_item_detection(state)
         )
 
     @series(LogicSeries.Detection, SC2Race.PROTOSS, 3)
     def protoss_mobile_detector(self, state: CollectionState) -> bool:
         return (
-                state.has_any((
-                item_names.OBSERVER, item_names.ORACLE,
-            ), self.player)
-            or state.has_all((item_names.VANGUARD, item_names.VANGUARD_FLARE), self.player)
+            state.has_any(item_groups.protoss_mobile_detection, self.player)
+            or self._protoss_mobile_multi_item_detection(state)
         )
+
+    def _protoss_mobile_multi_item_detection(self, state: CollectionState) -> bool:
+        return state.has_all((item_names.VANGUARD, item_names.VANGUARD_FLARE), self.player)
 
     @series(LogicSeries.MacroPower, SC2Race.PROTOSS, 0)
     def protoss_macro_rating(self, state: CollectionState) -> int:

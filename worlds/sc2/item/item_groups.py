@@ -96,6 +96,8 @@ class ItemGroupNames:
     TERRAN_CHAOS_STARTER_UNITS = "Terran Chaos Starter Units"
     TERRAN_GENERIC_UPGRADES = "Terran Generic Upgrades"
     """+attack/armour upgrades"""
+    TERRAN_MOBILE_DETECTION = "Terran Mobile Detection"
+    TERRAN_DETECTION = "Terran Detection"
     BARRACKS_UNITS = "Barracks Units"
     FACTORY_UNITS = "Factory Units"
     STARPORT_UNITS = "Starport Units"
@@ -145,6 +147,8 @@ class ItemGroupNames:
     ZERG_NONMORPH_UNITS = "Zerg Non-morph Units"
     ZERG_GENERIC_UPGRADES = "Zerg Generic Upgrades"
     """+attack/armour upgrades"""
+    ZERG_MOBILE_DETECTION = "Zerg Mobile Detection"
+    ZERG_DETECTION = "Zerg Detection"
     HOTS_UNITS = "HotS Units"
     HOTS_BUILDINGS = "HotS Buildings"
     HOTS_STRAINS = "HotS Strains"
@@ -198,6 +202,8 @@ class ItemGroupNames:
     PROTOSS_CHAOS_STARTER_UNITS = "Protoss Chaos Starter Units"
     PROTOSS_GENERIC_UPGRADES = "Protoss Generic Upgrades"
     """+attack/armour upgrades"""
+    PROTOSS_MOBILE_DETECTION = "Protoss Mobile Detection"
+    PROTOSS_DETECTION = "Protoss Detection"
     GATEWAY_UNITS = "Gateway Units"
     ROBO_UNITS = "Robo Units"
     STARGATE_UNITS = "Stargate Units"
@@ -374,6 +380,15 @@ item_name_groups[ItemGroupNames.TERRAN_GENERIC_UPGRADES] = terran_generic_upgrad
     item_name for item_name, item_data in item_tables.item_table.items()
     if item_data.type == item_tables.TerranItemType.Upgrade
 ]
+item_name_groups[ItemGroupNames.TERRAN_MOBILE_DETECTION] = terran_mobile_detection = (
+    item_names.RAVEN,
+    item_names.SCIENCE_VESSEL,
+    item_names.COMMAND_CENTER_SCANNER_SWEEP,
+)
+item_name_groups[ItemGroupNames.TERRAN_DETECTION] = terran_detection = (
+    *terran_mobile_detection,
+    item_names.MISSILE_TURRET,
+)
 barracks_wa_group = [
     item_names.MARINE, item_names.FIREBAT, item_names.MARAUDER,
     item_names.REAPER, item_names.GHOST, item_names.SPECTRE, item_names.HERC,
@@ -875,6 +890,15 @@ item_name_groups[ItemGroupNames.ZERG_GENERIC_UPGRADES] = zerg_generic_upgrades =
     item_name for item_name, item_data in item_tables.item_table.items()
     if item_data.type == item_tables.ZergItemType.Upgrade
 ]
+item_name_groups[ItemGroupNames.ZERG_MOBILE_DETECTION] = zerg_mobile_detection = (
+    item_names.OVERSEER,
+    item_names.BROOD_QUEEN,
+)
+item_name_groups[ItemGroupNames.ZERG_DETECTION] = zerg_detection = (
+    *zerg_mobile_detection,
+    item_names.SPORE_CRAWLER,
+    item_names.INFESTED_MISSILE_TURRET,
+)
 item_name_groups[ItemGroupNames.HOTS_UNITS] = hots_units = [
     item_names.ZERGLING, item_names.SWARM_QUEEN, item_names.ROACH, item_names.HYDRALISK,
     item_names.ABERRATION, item_names.SWARM_HOST, item_names.MUTALISK,
@@ -1298,6 +1322,14 @@ item_name_groups[ItemGroupNames.PROTOSS_GENERIC_UPGRADES] = protoss_generic_upgr
     item_name for item_name, item_data in item_tables.item_table.items()
     if item_data.type == item_tables.ProtossItemType.Upgrade
 ]
+item_name_groups[ItemGroupNames.PROTOSS_MOBILE_DETECTION] = protoss_mobile_detection = (
+    item_names.OBSERVER,
+    item_names.ORACLE,
+)
+item_name_groups[ItemGroupNames.PROTOSS_DETECTION] = protoss_detection = (
+    *protoss_mobile_detection,
+    item_names.PHOTON_CANNON,
+)
 item_name_groups[ItemGroupNames.LOTV_UNITS] = lotv_units = [
     item_names.ZEALOT, item_names.CENTURION, item_names.SENTINEL,
     item_names.STALKER, item_names.DRAGOON, item_names.ADEPT,
