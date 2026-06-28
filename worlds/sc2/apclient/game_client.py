@@ -16,7 +16,7 @@ from NetUtils import ClientStatus, NetworkItem
 from . import banks, user_paths
 from .failable import Error
 from .transfer_data import normalized_unit_types
-from .. import options, locations, item
+from .. import options, locations, item, rules
 from .. import SC2World
 from ..item import item_tables, item_names, item_groups
 from ..item import ZergItemType
@@ -96,9 +96,9 @@ class MissionClient:
 
     def do_setup(self) -> None:
         mission = lookup_id_to_mission[self.mission_id]
-        start_items = calculate_items(self.ctx)
+        start_items = calculate_items(self.ctx, self.mission_id)
         missions_beaten = self.missions_beaten_count()
-        kerrigan_level = get_kerrigan_level(self.ctx, start_items, missions_beaten)
+        kerrigan_level = get_kerrigan_level(self.ctx, start_items, missions_beaten, self.mission_id)
         kerrigan_options = calculate_kerrigan_options(self.ctx)
         hero_presence = self.ctx.hero_presence.get(mission, 0)
         logger.debug(f"Hero settings for current mission: {hero_presence}") # TODO (Snarky): Disable on release
@@ -232,9 +232,9 @@ class MissionClient:
             self.last_received_update = 0
 
         if self.last_received_update < len(self.ctx.items_received):
-            current_items = calculate_items(self.ctx)
+            current_items = calculate_items(self.ctx, self.mission_id)
             missions_beaten = self.missions_beaten_count()
-            kerrigan_level = get_kerrigan_level(self.ctx, current_items, missions_beaten)
+            kerrigan_level = get_kerrigan_level(self.ctx, current_items, missions_beaten, self.mission_id)
             if (error := self.update_core_options(current_items)):
                 logger.error(error.message)
                 return
@@ -717,7 +717,7 @@ compat_stimpack_to_medpack: dict[str, str] = {
 # ################################################################################################ #
 
 
-def calculate_items(ctx: 'SC2Context') -> dict[SC2Race, list[int]]:
+def calculate_items(ctx: 'SC2Context', mission_id: int) -> dict[SC2Race, list[int]]:
     items = ctx.items_received.copy()
     item_list = item_tables.item_table
     def create_network_item(item_name: str) -> NetworkItem:
@@ -747,6 +747,9 @@ def calculate_items(ctx: 'SC2Context') -> dict[SC2Race, list[int]]:
     # API < 5 Stimpack Count (split into non-progressive)
     stimpack_count: dict[str, int] = {}
 
+    # Keep track of items that impact automated grant story tech
+    nova_weapon_count = 0
+
     network_item: NetworkItem
     accumulators: dict[SC2Race, list[int]] = {
         race: [0 for element in item_type_enum_class if element.flag_word >= 0]
@@ -769,6 +772,8 @@ def calculate_items(ctx: 'SC2Context') -> dict[SC2Race, list[int]]:
         if ctx.slot_data_version < 5:
             if name in item_groups.item_name_groups[item_groups.ItemGroupNames.TERRAN_STIMPACKS]:
                 stimpack_count[name] = stimpack_count.get(name, 0) + 1
+            elif name in item_groups.nova_weapons:
+                nova_weapon_count += 1
 
         # exists exactly once
         if item_data.quantity == 1 or name in item_groups.item_name_groups[item_groups.ItemGroupNames.UNRELEASED_ITEMS]:
@@ -812,6 +817,13 @@ def calculate_items(ctx: 'SC2Context') -> dict[SC2Race, list[int]]:
                 accumulators[item_data.race][item_data.type.flag_word] += ctx.research_cost_reduction_per_item
             else:
                 accumulators[item_data.race][item_data.type.flag_word] += 1
+
+    if mission_id in ctx.grant_hero_items:
+        if nova_weapon_count == 0:
+            # todo(mm): Replace this with some other in-game buff when the mod can be updated
+            # Grant rifle
+            item_data = item_tables.item_table[item_names.NOVA_C20A_CANISTER_RIFLE]
+            accumulators[item_data.race][item_data.type.flag_word] |= 1 << item_data.number
 
     # Fix Shields from generic upgrades by unit class (Maximum of ground/air upgrades)
     if shields_from_ground_upgrade > 0 or shields_from_air_upgrade > 0:
@@ -897,7 +909,9 @@ def calc_difficulty(difficulty: int) -> Literal['C', 'N', 'H', 'B', 'X']:
     return 'X'
 
 
-def get_kerrigan_level(ctx: 'SC2Context', items: dict[SC2Race, list[int]], missions_beaten: int) -> int:
+def get_kerrigan_level(
+    ctx: 'SC2Context', items: dict[SC2Race, list[int]], missions_beaten: int, mission_id: int
+) -> int:
     item_value = items[SC2Race.ZERG][ZergItemType.Level.flag_word]
     mission_value = missions_beaten * ctx.kerrigan_levels_per_mission_completed
     if ctx.kerrigan_levels_per_mission_completed_cap != -1:
@@ -905,6 +919,12 @@ def get_kerrigan_level(ctx: 'SC2Context', items: dict[SC2Race, list[int]], missi
     total_value = item_value + mission_value
     if ctx.kerrigan_total_level_cap != -1:
         total_value = min(total_value, ctx.kerrigan_total_level_cap)
+    if mission_id in ctx.grant_hero_items:
+        KERRIGAN_DEFAULT_LEVELS_GRANTED = 3
+        required_levels = rules.get_required_kerrigan_levels([lookup_id_to_mission[mission_id]])
+        required_levels = required_levels or KERRIGAN_DEFAULT_LEVELS_GRANTED
+        if total_value < required_levels:
+            total_value = required_levels
     return total_value
 
 
@@ -926,7 +946,7 @@ def calculate_kerrigan_options(ctx: 'SC2Context') -> int:
 
 def calculate_story_tech(ctx: 'SC2Context', mission: SC2Mission) -> int:
     if (
-        MissionFlag.Nova in mission.flags
+        (MissionFlag.Nova|MissionFlag.Kerrigan) & mission.flags
         and MissionFlag.NoBuild in mission.flags
         and mission.id in ctx.grant_hero_items
     ):
