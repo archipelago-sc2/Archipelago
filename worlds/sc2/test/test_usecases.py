@@ -3,7 +3,7 @@ Unit tests for yaml usecases we want to support
 """
 
 from .test_base import Sc2SetupTestBase
-from .. import get_all_missions, mission_tables, options
+from .. import mission_tables, options
 from ..item import item_groups, item_tables, item_names
 from ..mission_tables import SC2Race, SC2Mission, SC2Campaign, MissionFlag
 from ..options import (
@@ -66,7 +66,7 @@ class TestSupportedUseCases(Sc2SetupTestBase):
 
         self.generate_world(world_options)
         self.assertTrue(self.multiworld.itempool)
-        missions = get_all_missions(self.world.custom_mission_order)
+        missions = self.world.custom_mission_order.get_used_missions()
 
         self.assertNotIn(mission_tables.SC2Mission.THE_ESCAPE, missions)
         self.assertNotIn(mission_tables.SC2Mission.IN_THE_ENEMY_S_SHADOW, missions)
@@ -100,7 +100,7 @@ class TestSupportedUseCases(Sc2SetupTestBase):
         self.generate_world(world_options)
         world_item_names = [item.name for item in self.multiworld.itempool + self.multiworld.precollected_items[1]]
         self.assertTrue(world_item_names)
-        missions = get_all_missions(self.world.custom_mission_order)
+        missions = self.world.custom_mission_order.get_used_missions()
 
         for mission in missions:
             self.assertIn(mission_tables.MissionFlag.Terran, mission.flags)
@@ -159,7 +159,7 @@ class TestSupportedUseCases(Sc2SetupTestBase):
         self.generate_world(world_options)
         world_item_names = [item.name for item in self.multiworld.itempool]
         self.assertTrue(world_item_names)
-        missions = get_all_missions(self.world.custom_mission_order)
+        missions = self.world.custom_mission_order.get_used_missions()
 
         self.assertEqual(len(missions), 7, "Wrong number of missions in free protoss seed")
         for mission in missions:

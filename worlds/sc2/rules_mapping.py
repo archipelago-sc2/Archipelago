@@ -232,15 +232,13 @@ class ProtoRule:
         else:
             required_hero_rating = self.rating_from_depth(depth, hero_depths)
             required_hero_rating = max(self.hero_min, required_hero_rating)
+            if mission in world.logic.grant_hero_items:
+                required_hero_rating = 0
         if MissionFlag.HeroSystemUnsupported & mission.flags:
             # Hero requirements assumed captured by manual rules; grant story tech usually applies
             heroes = HeroFlag.NONE
         else:
             heroes = hero_presence.get(mission, HeroFlag.NONE)
-        nova_rating = 0
-        if HeroFlag.NOVA in heroes:
-            if mission not in world.grant_nova_items:
-                nova_rating = required_hero_rating
 
         return RuleSignature(
             mission.race,
@@ -254,7 +252,7 @@ class ProtoRule:
             defense_rating,
             detection,
             artanis=required_hero_rating if HeroFlag.ARTANIS in heroes else 0,
-            nova=nova_rating,
+            nova=required_hero_rating if HeroFlag.NOVA in heroes else 0,
             kerrigan=required_hero_rating if HeroFlag.KERRIGAN in heroes else 0,
             rule=(
                 self.basic_rule if logic_level == LOGIC_BASIC else

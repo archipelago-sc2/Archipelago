@@ -9,7 +9,7 @@ from .. import (
     RequiredTactics,
 )
 from ..item import item_groups, item_tables, item_names
-from .. import get_all_missions, get_random_first_mission
+from .. import get_random_first_mission
 from ..options import (
     EnabledCampaigns, MissionOrder, ExcludeOverpoweredItems,
     VanillaItemsOnly, MaximumCampaignSize,
@@ -146,7 +146,7 @@ class TestItemFiltering(Sc2SetupTestBase):
             'mission_order': options.MissionOrder.option_grid,
         }
         self.generate_world(world_options)
-        missions = get_all_missions(self.world.custom_mission_order)
+        missions = self.world.custom_mission_order.get_used_missions()
         self.assertTrue(missions)
         self.assertNotIn(mission_tables.SC2Mission.WAKING_THE_ANCIENT, missions)
         self.assertNotIn(mission_tables.SC2Mission.THE_CRUCIBLE, missions)
@@ -473,7 +473,7 @@ class TestItemFiltering(Sc2SetupTestBase):
             'grant_story_tech': options.GrantStoryTech.option_grant,
         }
         self.generate_world(world_options)
-        missions = get_all_missions(self.world.custom_mission_order)
+        missions = self.world.custom_mission_order.get_used_missions()
         self.assertIn(mission_tables.SC2Mission.TEMPLE_OF_UNIFICATION, missions)
         itempool = [item.name for item in self.multiworld.itempool]
         self.assertTrue(itempool)
@@ -643,7 +643,7 @@ class TestItemFiltering(Sc2SetupTestBase):
             },
         }
         self.generate_world(world_options)
-        missions = get_all_missions(self.world.custom_mission_order)
+        missions = self.world.custom_mission_order.get_used_missions()
         self.assertTrue(missions)
         self.assertNotIn(mission_tables.SC2Mission.ZERO_HOUR, missions)
         self.assertNotIn(mission_tables.SC2Mission.ZERO_HOUR_Z, missions)
@@ -662,7 +662,7 @@ class TestItemFiltering(Sc2SetupTestBase):
             },
         }
         self.generate_world(world_options)
-        missions = get_all_missions(self.world.custom_mission_order)
+        missions = self.world.custom_mission_order.get_used_missions()
         self.assertTrue(missions)
         self.assertNotIn(mission_tables.SC2Mission.ZERO_HOUR, missions)
         self.assertIn(mission_tables.SC2Mission.ZERO_HOUR_Z, missions)
@@ -928,18 +928,9 @@ class TestItemFiltering(Sc2SetupTestBase):
                         'type': 'column',
                         'size': 3,
                         'missions': [
-                            {
-                                'index': 0,
-                                'mission_pool': [SC2Mission.LIBERATION_DAY.mission_name]
-                            },
-                            {
-                                'index': 1,
-                                'mission_pool': [SC2Mission.RENDEZVOUS.mission_name]
-                            },
-                            {
-                                'index': 2,
-                                'mission_pool': [SC2Mission.SUPREME.mission_name]
-                            },
+                            {'index': 0,'mission_pool': [SC2Mission.LIBERATION_DAY.mission_name]},
+                            {'index': 1, 'mission_pool': [SC2Mission.RENDEZVOUS.mission_name]},
+                            {'index': 2, 'mission_pool': [SC2Mission.SUPREME.mission_name]},
                         ]
                     }
                 }

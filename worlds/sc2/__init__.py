@@ -110,22 +110,22 @@ class SC2World(World):
 
     item_name_groups = item_groups.item_name_groups  # type: ignore[assignment]
     location_name_groups = location_groups.get_location_groups()
+
+    required_client_version = 0, 6, 4
+
     locked_locations: list[str]
     """Locations locked to contain specific items, such as victory events or forced resources"""
-    location_cache: list[Location]
     final_missions: list[int]
-    required_client_version = 0, 6, 4
     custom_mission_order: SC2MissionOrder
-    logic: 'SC2Logic | None'
-    filler_items_distribution: dict[str, int]
 
     def __init__(self, multiworld: MultiWorld, player: int):
         super(SC2World, self).__init__(multiworld, player)
-        self.location_cache = []
+        self.location_cache: list[Location] = []
         self.locked_locations = []
-        self.filler_items_distribution = FillerItemsDistribution.default
-        self.logic = None
+        self.filler_items_distribution: dict[str, int] = FillerItemsDistribution.default
+        self.logic: 'SC2Logic | None' = None
         self.hero_presence: dict[SC2Mission, HeroFlag] = {}
+        self.remove_kerrigan_items = False
 
     def create_item(self, name: str) -> StarcraftItem:
         data = item_tables.item_table[name]
@@ -218,7 +218,7 @@ class SC2World(World):
         )
         self.hero_presence = calculate_mission_hero_presence(
             campaign_hero_presence,
-            get_all_missions(self.custom_mission_order),
+            self.custom_mission_order.get_used_missions(),
         )
         apply_hero_presence_override(
             self.hero_presence,
@@ -286,7 +286,7 @@ class SC2World(World):
 
         slot_data["plando_locations"] = get_plando_locations(self)
         slot_data["hero_presence"] = pack_hero_presence(self.hero_presence)
-        slot_data["grant_nova_items"] = [mission.id for mission in self.logic.grant_nova_items]
+        slot_data["grant_hero_items"] = [mission.id for mission in self.logic.grant_hero_items]
         slot_data["final_mission_ids"] = self.custom_mission_order.get_final_mission_ids()
         slot_data["custom_mission_order"] = self.custom_mission_order.get_slot_data()
         slot_data["version"] = 5
@@ -478,6 +478,7 @@ def apply_hero_presence_override(
                 continue
             presence[mission] |= hero
 
+
 def apply_custom_mission_order_hero_presence(
     presence: dict[SC2Mission, HeroFlag],
     mission_order: SC2MissionOrder,
@@ -625,7 +626,7 @@ def create_and_flag_explicit_item_locks_and_excludes(world: SC2World) -> list[Fi
 
 def flag_excludes_by_faction_presence(world: SC2World, item_list: list[FilterItem]) -> None:
     """Excludes items based on if their faction has a mission present where they can be used"""
-    missions = get_all_missions(world.custom_mission_order)
+    missions = world.custom_mission_order.get_used_missions()
     if world.options.take_over_ai_allies.value:
         terran_missions = [mission for mission in missions if (MissionFlag.Terran|MissionFlag.AiTerranAlly) & mission.flags]
         zerg_missions = [mission for mission in missions if (MissionFlag.Zerg|MissionFlag.AiZergAlly) & mission.flags]
@@ -757,45 +758,34 @@ def flag_mission_based_item_excludes(world: SC2World, item_list: list[FilterItem
     """
     Excludes items based on mission / campaign presence: Nova Gear, Kerrigan abilities, SOA
     """
-    missions = get_all_missions(world.custom_mission_order)
+    missions = world.custom_mission_order.get_used_missions()
 
-    # Exclude items based on hero presence
-    kerrigan_missions = [
-        mission for mission in missions
-        if ((MissionFlag.HeroSystemUnsupported | MissionFlag.Kerrigan) in mission.flags
-            or (MissionFlag.HeroSystemUnsupported not in mission.flags
-                and HeroFlag.KERRIGAN in world.hero_presence.get(mission, HeroFlag.NONE)
-            )
-        )
-    ]
-    nova_missions = [
-        mission for mission in missions
-        if ((MissionFlag.HeroSystemUnsupported | MissionFlag.Nova) in mission.flags
-            or (MissionFlag.HeroSystemUnsupported not in mission.flags
-                and HeroFlag.NOVA in world.hero_presence.get(mission, HeroFlag.NONE)
-            )
-        )
-    ]
-    artanis_missions = [
-        mission for mission in missions
-        if ((MissionFlag.HeroSystemUnsupported | MissionFlag.Artanis) in mission.flags
-            or (MissionFlag.HeroSystemUnsupported not in mission.flags
-                and HeroFlag.ARTANIS in world.hero_presence.get(mission, HeroFlag.NONE)
-            )
-        )
-    ]
-    kerrigan_build_missions = [mission for mission in kerrigan_missions if MissionFlag.NoBuild not in mission.flags]
-    nova_build_missions = [mission for mission in nova_missions if MissionFlag.NoBuild not in mission.flags]
-    artanis_build_missions = [mission for mission in artanis_missions if MissionFlag.NoBuild not in mission.flags]
+    # Hero items are removed if all of the missions that hero appears in have tech granted
+    # Tech granted calculation happens in mission_order/generation.py
+    remove_kerrigan_items = True
+    remove_nova_items = True
+    remove_artanis_items = True
+    for mission in missions:
+        if mission in world.logic.grant_hero_items:
+            continue
+        if MissionFlag.HeroSystemUnsupported in mission.flags:
+            heroes = HeroFlag.NONE
+            if MissionFlag.Nova in mission.flags:
+                heroes |= HeroFlag.NOVA
+            if MissionFlag.Kerrigan in mission.flags:
+                heroes |= HeroFlag.KERRIGAN
+            if MissionFlag.Artanis in mission.flags:
+                heroes |= HeroFlag.ARTANIS
+        else:
+            heroes = world.hero_presence.get(mission, HeroFlag.NONE)
+        if HeroFlag.NOVA & heroes:
+            remove_nova_items = False
+        if HeroFlag.KERRIGAN & heroes:
+            remove_kerrigan_items = False
+        if HeroFlag.ARTANIS & heroes:
+            remove_artanis_items = False
 
-    # Heroes are considered present, if they appear in any build mission or in more than 1 no-build
-    remove_kerrigan_items = (len(kerrigan_missions) <= 1) and not kerrigan_build_missions
-    remove_nova_items =  (len(nova_missions) <= 1) and not nova_build_missions
-    remove_artanis_items = (len(artanis_missions) <= 1) and not artanis_build_missions
-    assert world.logic is not None
-    world.logic.kerrigan_items_granted = remove_kerrigan_items
-    world.logic.kerrigan_levels_granted = remove_kerrigan_items
-    world.logic.grant_nova_items = set()
+    world.remove_kerrigan_items = remove_kerrigan_items
 
     # TvX build missions -- check flags
     if world.options.take_over_ai_allies:
@@ -894,7 +884,7 @@ def flag_mission_based_item_excludes(world: SC2World, item_list: list[FilterItem
 
 def flag_allowed_orphan_items(world: SC2World, item_list: list[FilterItem]) -> None:
     """Adds the `Allowed_Orphan` flag to items that shouldn't be filtered with their parents, like combat shield"""
-    missions = get_all_missions(world.custom_mission_order)
+    missions = world.custom_mission_order.get_used_missions()
     if SC2Mission.PIERCING_OF_THE_SHROUD in missions:
         for item in item_list:
             if item.name in (
@@ -961,7 +951,7 @@ def flag_start_unit(world: SC2World, item_list: list[FilterItem], starter_unit: 
 
     if first_race == SC2Race.ANY:
         # If the first mission is a logic-less no-build
-        missions = get_all_missions(world.custom_mission_order)
+        missions = world.custom_mission_order.get_used_missions()
         build_missions = [mission for mission in missions if MissionFlag.NoBuild not in mission.flags]
         races = {mission.race for mission in build_missions if mission.race != SC2Race.ANY}
         if races:
@@ -1253,11 +1243,10 @@ def prune_fillers(world):
             MissionFlag.Protoss in mission_flags
             or (world.options.take_over_ai_allies and (MissionFlag.AiProtossAlly in mission_flags))
     )
-    include_kerrigan = not world.logic.kerrigan_items_granted
     generic_upgrade_research = world.options.generic_upgrade_research
     if not include_protoss:
         world.filler_items_distribution.pop(item_names.SHIELD_REGENERATION, 0)
-    if not include_kerrigan:
+    if world.remove_kerrigan_items:
         world.filler_items_distribution.pop(item_names.KERRIGAN_LEVELS_1, 0)
     if (generic_upgrade_research in
             [
@@ -1282,10 +1271,6 @@ def get_random_first_mission(world: SC2World, mission_order: SC2MissionOrder) ->
     return world.random.choice(first_mission_candidates)
 
 
-def get_all_missions(mission_order: SC2MissionOrder) -> list[SC2Mission]:
-    return mission_order.get_used_missions()
-
-
 def create_item_with_correct_settings(player: int, name: str, filter_flags: ItemFilterFlags = ItemFilterFlags.Available) -> StarcraftItem:
     data = item_tables.item_table[name]
 
@@ -1298,8 +1283,7 @@ def create_item_with_correct_settings(player: int, name: str, filter_flags: Item
 
 def fill_pool_with_kerrigan_levels(world: SC2World, item_pool: list[StarcraftItem]):
     item_levels = world.options.kerrigan_level_item_sum.value
-    assert world.logic
-    if world.logic.kerrigan_levels_granted:
+    if world.remove_kerrigan_items:
         return
     missions = world.custom_mission_order.get_used_missions()
     missions_from_levels = (

@@ -823,7 +823,7 @@ class SC2Context(CommonContext):
         self.slot_data_version = 2
         self.grant_story_tech: int = GrantStoryTech.default
         self.grant_story_levels: int = GrantStoryLevels.default
-        self.grant_nova_items: set[int] = set()
+        self.grant_hero_items: set[int] = set()
         self.take_over_ai_allies: int = TakeOverAIAllies.default
         self.spear_of_adun_presence = SpearOfAdunPresence.option_not_present
         self.spear_of_adun_present_in_no_build = SpearOfAdunPresentInNoBuild.option_false
@@ -1080,7 +1080,7 @@ class SC2Context(CommonContext):
             self.enable_morphling = args["slot_data"].get("enable_morphling", EnableMorphling.option_false)
             self.grant_story_tech = args["slot_data"].get("grant_story_tech", GrantStoryTech.option_no_grant)
             self.grant_story_levels = args["slot_data"].get("grant_story_levels", GrantStoryLevels.option_additive)
-            self.grant_nova_items = set(args["slot_data"].get("grant_nova_items", []))
+            self.grant_hero_items = set(args["slot_data"].get("grant_hero_items", []))
             required_tactics = args["slot_data"].get("required_tactics", RequiredTactics.option_basic)
             self.take_over_ai_allies = args["slot_data"].get("take_over_ai_allies", TakeOverAIAllies.option_false)
             self.spear_of_adun_presence = args["slot_data"].get("spear_of_adun_presence", SpearOfAdunPresence.option_not_present)

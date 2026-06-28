@@ -12,6 +12,7 @@ from BaseClasses import Location, Region, Entrance
 from ..mission_tables import SC2Mission, MissionFlag, lookup_name_to_mission, lookup_id_to_mission
 from ..item.item_tables import named_layout_key_item_table, named_campaign_key_item_table
 from ..item import item_names
+from ..tables import HeroFlag
 from .nodes import MissionOrderNode, SC2MOGenMissionOrder, SC2MOGenCampaign, SC2MOGenLayout, SC2MOGenMission
 from .entry_rules import EntryRule, SubRuleEntryRule, ItemEntryRule, CountMissionsEntryRule, BeatMissionsEntryRule
 from .mission_pools import (
@@ -562,15 +563,45 @@ def _create_region(
 
 ########################
 
-def flag_grant_nova_tech(
+def flag_hero_tech(
     world: 'SC2World',
     region_to_location_data: dict[str, list[LocationData]],
     depth_to_missions: dict[int, list[SC2MOGenMission]],
 ) -> None:
-    SOLO_NOVA_MISSIONS = (SC2Mission.THE_ESCAPE, SC2Mission.ENEMY_INTELLIGENCE, SC2Mission.IN_THE_ENEMY_S_SHADOW,)
+    """
+    Set the logic grant_hero_items field such that:
+    * All solo hero missions get tech granted if grant story tech is set to grant tech
+    * The first 3 missions have hero tech granted
+    """
+    assert world.logic is not None
+
     if world.options.grant_story_tech == options.GrantStoryTech.option_grant:
-        # Grant Nova tech for all Nova solo missions
-        for mission in SOLO_NOVA_MISSIONS:
+        # Grant Hero tech for all solo hero missions
+        SOLO_HERO_MISSIONS = [
+            mission for mission in SC2Mission
+            if (MissionFlag.HeroSystemUnsupported & mission.flags)
+            and ((MissionFlag.Nova|MissionFlag.Kerrigan|MissionFlag.Artanis) & mission.flags)
+        ]
+        for x in [
+            # Nova
+            SC2Mission.THE_ESCAPE,
+            SC2Mission.IN_THE_ENEMY_S_SHADOW,
+            # Kerrigan
+            SC2Mission.BACK_IN_THE_SADDLE,
+            SC2Mission.CONVICTION,
+            SC2Mission.SUPREME,
+            SC2Mission.THE_INFINITE_CYCLE,
+        ]:
+            assert x in SOLO_HERO_MISSIONS
+        ENEMY_INTELLIGENCE_VARIANTS = (
+            SC2Mission.ENEMY_INTELLIGENCE,
+            SC2Mission.ENEMY_INTELLIGENCE_Z,
+            SC2Mission.ENEMY_INTELLIGENCE_P,
+        )
+        for enemy_intelligence_variant in ENEMY_INTELLIGENCE_VARIANTS:
+            if world.hero_presence.get(enemy_intelligence_variant, HeroFlag.NONE) != HeroFlag.NONE:
+                SOLO_HERO_MISSIONS.append(enemy_intelligence_variant)
+        for mission in SOLO_HERO_MISSIONS:
             locations_data = region_to_location_data.get(mission)
             if not locations_data:
                 continue
@@ -578,16 +609,33 @@ def flag_grant_nova_tech(
             assert location_data.type == locations.LocationType.VICTORY
             if location_data.location is None:
                 continue
-            world.logic.grant_nova_items.add(mission.id)
-    order = 0
-    for mission in depth_to_missions[0]:
-        mission_data = mission.mission
-        if MissionFlag.NovaStartTech & mission_data.flags:
-            world.logic.grant_nova_items.add(mission_data)
-        order += 1
-        if order >= 3:
-            break
+            world.logic.grant_hero_items.add(mission.id)
 
+    kerrigan_build_missions: set[SC2Mission] = set()
+    kerrigan_nobuild_missions: set[SC2Mission] = set()
+    order = 0
+    for depth, missions in depth_to_missions.items():
+        for mission in missions:
+            mission_data = mission.mission
+            heroes = world.hero_presence.get(mission_data, HeroFlag.NONE)
+            # Grant hero items if the HeroStartTech flag is set and the mission is in the first 3
+            if depth == 0 and order < 3 and MissionFlag.HeroStartTech & mission_data.flags:
+                world.logic.grant_hero_items.add(mission_data)
+            # Check for Kerrigan missions
+            if ((MissionFlag.Kerrigan|MissionFlag.HeroSystemUnsupported) in mission_data.flags
+                or HeroFlag.KERRIGAN in heroes
+            ):
+                if MissionFlag.NoBuild in mission_data.flags:
+                    kerrigan_nobuild_missions.add(mission_data)
+                else:
+                    kerrigan_build_missions.add(mission_data)
+
+    # Grant Kerrigan items in no-builds if she doesn't appear in a build mission or more than 1 build mission
+    # todo(mm): Hero presence isn't initialized yet, move that over from init.py
+    if not kerrigan_build_missions.difference(world.logic.grant_hero_items):
+        if len(kerrigan_nobuild_missions.difference(world.logic.grant_hero_items)) <= 1:
+            for mission in kerrigan_nobuild_missions:
+                world.logic.grant_hero_items.add(mission)
 
 
 def set_rules(
@@ -606,7 +654,7 @@ def set_rules(
         for depth in sorted(depth_to_missions)
     }
     # Note(mm): This has to happen before rule resolution so it can look into world.grant_nova_items
-    flag_grant_nova_tech(world, region_to_location_data, depth_to_missions)
+    flag_hero_tech(world, region_to_location_data, depth_to_missions)
     rule_cache: dict[RuleSignature, Callable[['CollectionState'], bool]] = {}
     NUM_STARTER_MISSION_LOCATIONS = 3
     # Parameter controlling how many missions "fill" a depth level.

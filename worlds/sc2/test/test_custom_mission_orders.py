@@ -75,9 +75,7 @@ class TestCustomMissionOrders(Sc2SetupTestBase):
             self.world.hero_presence[SC2Mission.THE_OUTLAWS],
             HeroFlag.KERRIGAN | HeroFlag.NOVA | HeroFlag.ARTANIS,
         )
-        self.assertFalse(self.world.logic.kerrigan_items_granted)
-        self.assertFalse(self.world.logic.grant_nova_items)
-        self.assertFalse(self.world.logic.artanis_items_granted)
+        self.assertNotIn(SC2Mission.THE_OUTLAWS, self.world.logic.grant_hero_items)
 
     def test_mini_wol_generates(self):
         world_options = {
