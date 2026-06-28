@@ -807,7 +807,6 @@ def set_rules(
     NUM_STARTER_MISSION_LOCATIONS = 3
     # Parameter controlling how many missions "fill" a depth level.
     # For very broad mission orders like blitz or key cage.
-    ORDER_PER_FORCED_DEPTH = 5
     order = 0
     for depth, missions in depth_to_missions.items():
         for mission in missions:
@@ -830,7 +829,8 @@ def set_rules(
                     world,
                     mission_data,
                     location,
-                    max(depth, order // ORDER_PER_FORCED_DEPTH),
+                    depth,
+                    order,
                     world.hero_presence,
                     starter_location,
                 )

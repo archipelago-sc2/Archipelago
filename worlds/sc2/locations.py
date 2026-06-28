@@ -2316,18 +2316,15 @@ LOCATION_NAME_TO_ID = {
     _location.global_name(): _location.id
     for _location in Sc2Location
 }
-BEAT_EVENTS: list[tuple[str, Sc2Location]] = []
 
 
 def _init_tables(
     location_id_to_name: dict[int, str],
     location_name_to_id: dict[str, int],
-    beat_events: list[tuple[str, Sc2Location]]
 ) -> None:
     for location in Sc2Location:
         # Generating Beat event and Victory Cache locations
         if location.type == LocationType.VICTORY:
-            beat_events.append(("Beat " + location.mission.mission_name, location))
             for cache_index in range(NUM_VICTORY_CACHE_LOCATIONS):
                 victory_cache_name = victory_cache_location_name(location, cache_index)
                 victory_cache_id = location.id + VICTORY_CACHE_OFFSET + cache_index
@@ -2335,7 +2332,7 @@ def _init_tables(
                 location_name_to_id[victory_cache_name] = victory_cache_id
 
 
-_init_tables(LOCATION_ID_TO_NAME, LOCATION_NAME_TO_ID, BEAT_EVENTS)
+_init_tables(LOCATION_ID_TO_NAME, LOCATION_NAME_TO_ID)
 del _init_tables
 
 

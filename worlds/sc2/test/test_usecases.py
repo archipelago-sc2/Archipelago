@@ -312,6 +312,7 @@ class TestSupportedUseCases(Sc2SetupTestBase):
             },
             'locked_items': {
                 # One unit of each class to guarantee upgrades are available
+                item_groups.ItemGroupNames.TERRAN_GENERIC_UPGRADES: 1,
                 item_names.MARINE: 1,
                 item_names.VULTURE: 1,
                 item_names.BANSHEE: 1,

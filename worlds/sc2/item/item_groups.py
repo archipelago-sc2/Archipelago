@@ -116,6 +116,7 @@ class ItemGroupNames:
     NOVA_EQUIPMENT = "Nova Equipment"
     NOVA_WEAPONS = "Nova Weapons"
     NOVA_GADGETS = "Nova Gadgets"
+    NOVA_SUITS = "Nova Suits"
     NCO_MAX_PROGRESSIVE_ITEMS = "NCO +Items"
     """NCO item groups that should be set to maximum progressive amounts"""
     NCO_MIN_PROGRESSIVE_ITEMS = "NCO -Items"
@@ -491,6 +492,12 @@ item_name_groups[ItemGroupNames.NOVA_GADGETS] = nova_gadgets = [
     item_names.NOVA_FLASHBANG_GRENADES,
     item_names.NOVA_IONIC_FORCE_FIELD,
     item_names.NOVA_HOLO_DECOY,
+]
+item_name_groups[ItemGroupNames.NOVA_SUITS] = nova_suits = [
+    item_names.NOVA_PROGRESSIVE_STEALTH_SUIT_MODULE,
+    item_names.NOVA_JUMP_SUIT_MODULE,
+    item_names.NOVA_ENERGY_SUIT_MODULE,
+    item_names.NOVA_ARMORED_SUIT_MODULE,
 ]
 item_name_groups[ItemGroupNames.WOL_UNITS] = wol_units = [
     item_names.MARINE, item_names.MEDIC, item_names.FIREBAT, item_names.MARAUDER, item_names.REAPER,

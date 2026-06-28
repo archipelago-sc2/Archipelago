@@ -148,9 +148,9 @@ class ProtoRule:
             self.basic_rule = self.rule
 
     @staticmethod
-    def rating_from_depth(depth: int, thresholds: tuple[int, ...]) -> int:
+    def rating_from_progress(progress: int, thresholds: tuple[int, ...]) -> int:
         for index, threshold in enumerate(reversed(thresholds)):
-            if depth >= threshold:
+            if progress >= threshold:
                 return len(thresholds) - index
         return 0
 
@@ -160,6 +160,7 @@ class ProtoRule:
         mission: SC2Mission,
         location: Sc2Location,
         depth: int,
+        order: int,
         hero_presence: dict[SC2Mission, HeroFlag],
         first_location: bool = False
     ) -> RuleSignature:
@@ -167,19 +168,21 @@ class ProtoRule:
             assert location.type != LocationType.MASTERY
             assert depth == 0
 
+        # rough rating of completed missions normalized for wider mission orders
+        progress = order * 0.75 + depth * 0.25
         logic_level = int(world.options.required_tactics)
         if logic_level == LOGIC_BASIC:
-            anti_air_depths=(3, 3, 5)
-            upgrade_depths=(3, 5, 7)
-            hero_depths=(1, 5)
+            anti_air_depths=(5, 5, 11)
+            upgrade_depths=(6, 10, 16)
+            hero_depths=(2, 7, 20)
         elif logic_level == LOGIC_ADVANCED:
-            anti_air_depths=(3, 3, 6)
-            upgrade_depths=(3, 6, 9)
-            hero_depths=(1, 5)
+            anti_air_depths=(5, 5, 13)
+            upgrade_depths=(6, 12, 18)
+            hero_depths=(2, 8, 22)
         else:  # LOGIC_CHAOS
-            anti_air_depths=(3, NEVER, NEVER)
-            upgrade_depths=(4, 7, 10)
-            hero_depths=(2, 7)
+            anti_air_depths=(5,)
+            upgrade_depths=(6, 13, 20)
+            hero_depths=(3, 14)
 
         soa_flags = 0
         defense_rating = 0
@@ -191,7 +194,7 @@ class ProtoRule:
             upgrades = 0
             detection = 0
         else:
-            num_units = depth
+            num_units = depth or 1
             if location.type == LocationType.CHALLENGE:
                 num_units += 1
             if num_units > MAX_UNITS_REQUIRED:
@@ -199,12 +202,12 @@ class ProtoRule:
             if logic_level < LOGIC_CHAOS:
                 comp_type = self.comp_type
             detection = self.detection
-            anti_air = self.rating_from_depth(depth, anti_air_depths)
+            anti_air = self.rating_from_progress(progress, anti_air_depths)
             aa_min = resolve_aa(self.aa_min, logic_level)
             anti_air = max(anti_air, aa_min)
             if logic_level == LOGIC_CHAOS and anti_air > 1:
                 anti_air = 1
-            upgrades = self.rating_from_depth(depth, upgrade_depths)
+            upgrades = self.rating_from_progress(progress, upgrade_depths)
             upgrades = max(upgrades, self.upgrades_min)
             if location.type == LocationType.MASTERY:
                 num_units = MASTERY_LOCATION_UNITS_REQUIRED
@@ -227,10 +230,10 @@ class ProtoRule:
                 macro_rating = max(0, self.macro_rating - ADVANCED_FREE_MACRO_RATING)
 
         # Heroes
-        if first_location:
+        if first_location or MissionFlag.NoBuild in mission.flags:
             required_hero_rating = 0
         else:
-            required_hero_rating = self.rating_from_depth(depth, hero_depths)
+            required_hero_rating = self.rating_from_progress(depth, hero_depths)
             required_hero_rating = max(self.hero_min, required_hero_rating)
             if mission in world.logic.grant_hero_items:
                 required_hero_rating = 0
@@ -254,6 +257,9 @@ class ProtoRule:
             artanis=required_hero_rating if HeroFlag.ARTANIS in heroes else 0,
             nova=required_hero_rating if HeroFlag.NOVA in heroes else 0,
             kerrigan=required_hero_rating if HeroFlag.KERRIGAN in heroes else 0,
+            # artanis=0,
+            # nova=0,
+            # kerrigan=0,
             rule=(
                 self.basic_rule if logic_level == LOGIC_BASIC else
                 self.rule if logic_level == LOGIC_ADVANCED else

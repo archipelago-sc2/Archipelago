@@ -1655,24 +1655,30 @@ class SC2Logic:
             item_names.KERRIGAN_CRUSHING_GRIP,
         ), self.player):
             return False
-        # Two non-ultimate abilities
-        count = 0
-        for item in kerrigan_non_ultimates:
-            if state.has(item, self.player):
-                count += 1
-            if count >= 2:
-                return True
-        return False
+        return self.kerrigan_levels(state, 5)
 
-    @series(LogicSeries.Artanis, SC2Race.ANY, 1)
-    def basic_artanis(self, state: CollectionState) -> bool:
-        return self.artanis_any_weapon_aspect(state) and (
-            self.advanced_tactics
-            or self.artanis_active_ability_count(state) >= 1
+    @series(LogicSeries.Kerrigan, SC2Race.ANY, 2)
+    def competent_kerrigan(self, state: CollectionState) -> bool:
+        return (
+            self.basic_kerrigan(state)
+            and (
+                state.count_from_list_unique(item_groups.kerrigan_logic_active_abilities, self.player) >= 2
+                or state.has_any(item_groups.kerrigan_passives, self.player)
+            )
+        )
+
+    @series(LogicSeries.Kerrigan, SC2Race.ANY, 3)
+    def ultra_kerrigan(self, state: CollectionState) -> bool:
+        return (
+            self.basic_kerrigan(state)
+            and state.count_from_list_unique(item_groups.kerrigan_logic_active_abilities, self.player) >= 2
+            and state.has_any(item_groups.kerrigan_passives, self.player)
+            # Note(mm): Requiring ultimates doesn't play nice with excluding OP items
         )
 
     @series(LogicSeries.Nova, SC2Race.ANY, 1)
     def nova_any_weapon(self, state: CollectionState) -> bool:
+        # 1 item
         return state.has_any((
             item_names.NOVA_C20A_CANISTER_RIFLE,
             item_names.NOVA_HELLFIRE_SHOTGUN,
@@ -1681,31 +1687,40 @@ class SC2Logic:
             item_names.NOVA_BLAZEFIRE_GUNBLADE,
         ), self.player)
 
-    def two_kerrigan_solo_actives(self, state: CollectionState) -> bool:
-        return state.count_from_list_unique(item_groups.kerrigan_solo_active_abilities, self.player) >= 2
-
-    def two_kerrigan_actives(self, state: CollectionState) -> bool:
-        return state.count_from_list_unique(item_groups.kerrigan_logic_active_abilities, self.player) >= 2
-
     @series(LogicSeries.Nova, SC2Race.ANY, 2)
     def competent_nova(self, state: CollectionState) -> bool:
+        # 2 items
         return (
             self.nova_any_weapon(state)
-            and self.nova_splash(state)
             and (
-                self.nova_full_stealth(state)
+                self.nova_splash(state)
+                or self.nova_any_suit(state)
                 or self.nova_heal(state)
                 or self.nova_dash(state)
             )
         )
 
-    @series(LogicSeries.Kerrigan, SC2Race.ANY, 2)
-    def competent_kerrigan(self, state: CollectionState) -> bool:
+    @series(LogicSeries.Nova, SC2Race.ANY, 3)
+    def ultra_nova(self, state: CollectionState) -> bool:
+        # 3 items
         return (
-            self.basic_kerrigan(state)
-            and state.count_from_list_unique(item_groups.kerrigan_logic_active_abilities, self.player) >= 3
-            and state.count_from_list_unique(item_groups.kerrigan_passives, self.player) >= 1
-            # Note(mm): Requiring ultimates doesn't play nice with excluding OP items
+            self.nova_any_weapon(state)
+            and self.nova_splash(state)
+            and (
+                self.nova_any_suit(state)
+                or self.nova_heal(state)
+                or self.nova_dash(state)
+            )
+        )
+
+    @series(LogicSeries.Artanis, SC2Race.ANY, 1)
+    def basic_artanis(self, state: CollectionState) -> bool:
+        return (
+            self.artanis_any_weapon_aspect(state)
+            and (
+                self.advanced_tactics
+                or self.artanis_active_ability_count(state) >= 1
+            )
         )
 
     @series(LogicSeries.Artanis, SC2Race.ANY, 2)
@@ -1713,8 +1728,22 @@ class SC2Logic:
         return (
             self.artanis_any_weapon_aspect(state)
             and self.artanis_any_defensive_upgrade(state)
+            and self.artanis_active_ability_count(state) >= 1
+        )
+
+    @series(LogicSeries.Artanis, SC2Race.ANY, 3)
+    def ultra_artanis(self, state: CollectionState) -> bool:
+        return (
+            self.artanis_any_weapon_aspect(state)
+            and self.artanis_any_defensive_upgrade(state)
             and self.artanis_active_ability_count(state) >= 2
         )
+
+    def two_kerrigan_solo_actives(self, state: CollectionState) -> bool:
+        return state.count_from_list_unique(item_groups.kerrigan_solo_active_abilities, self.player) >= 2
+
+    def two_kerrigan_actives(self, state: CollectionState) -> bool:
+        return state.count_from_list_unique(item_groups.kerrigan_logic_active_abilities, self.player) >= 2
 
     def nova_any_nobuild_damage(self, state: CollectionState) -> bool:
         return state.has_any((
@@ -1751,6 +1780,9 @@ class SC2Logic:
 
     def nova_dash(self, state: CollectionState) -> bool:
         return state.has_any((item_names.NOVA_MONOMOLECULAR_BLADE, item_names.NOVA_BLINK), self.player)
+
+    def nova_any_suit(self, state: CollectionState) -> bool:
+        return state.has_any(item_groups.nova_suits, self.player)
 
     def nova_full_stealth(self, state: CollectionState) -> bool:
         return state.count(item_names.NOVA_PROGRESSIVE_STEALTH_SUIT_MODULE, self.player) >= 2
@@ -3572,7 +3604,7 @@ class SC2Logic:
         return self.two_kerrigan_solo_actives(state)
 
     def enemy_intelligence_artanis(self, state: CollectionState) -> bool:
-        return True # TODO (Snarky): Revisit once Artanis is implemented
+        return True  # TODO (Snarky): Revisit once Artanis is implemented
 
     def enemy_intelligence_hero(self, state: CollectionState, mission: SC2Mission) -> bool:
         presence = self.get_hero_flag(mission)

@@ -52,7 +52,13 @@ def and_5_rules(
     rule_5: Callable[["CollectionState"], bool],
 ) -> Callable[["CollectionState"], bool]:
     def and_5(state: "CollectionState") -> bool:
-        return rule_1(state) and rule_2(state) and rule_3(state) and rule_4(state) and rule_5(state)
+        return (
+            rule_1(state)
+            and rule_2(state)
+            and rule_3(state)
+            and rule_4(state)
+            and rule_5(state)
+        )
     return and_5
 
 

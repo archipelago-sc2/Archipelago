@@ -200,8 +200,9 @@ class TestRuleGeneration(test_base.Sc2SetupTestBase):
             self.world,
             mission_tables.SC2Mission.ZERO_HOUR,
             locations.Sc2Location.ZERO_HOUR_VICTORY,
-            3,
-            {},
+            depth=3,
+            order=5,
+            hero_presence={},
         )
         self.assertEqual(signature.kerrigan, 0)
         self.assertEqual(signature.nova, 0)
