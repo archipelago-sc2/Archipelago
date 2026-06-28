@@ -83,8 +83,6 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
     grant_story_levels = world.options.grant_story_levels.value
     war_council_nerfs = world.options.war_council_nerfs.value == WarCouncilNerfs.option_true
     assert world.logic
-    kerrigan_items_granted = grant_story_tech  # TODO (Snarky): revisit when handling NCO-only generation
-    nova_items_granted = grant_story_tech
     # General changes for standard tactics
     if world.options.required_tactics.value == RequiredTactics.option_basic:
         pools.move_mission(SC2Mission.SMASH_AND_GRAB, Difficulty.STARTER, Difficulty.EASY)
@@ -128,13 +126,13 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
         # Additional starter mission if player is granted story tech
         pools.move_mission(SC2Mission.ENEMY_WITHIN, Difficulty.EASY, Difficulty.STARTER)
         pools.move_mission(SC2Mission.TEMPLAR_S_RETURN, Difficulty.MEDIUM, Difficulty.STARTER)
-    if grant_story_tech == GrantStoryTech.option_grant or nova_items_granted:
+    if grant_story_tech == GrantStoryTech.option_grant:
         # Additional starter mission if player is granted story tech, or Nova only appears in no-builds
         pools.move_mission(SC2Mission.THE_ESCAPE, Difficulty.MEDIUM, Difficulty.STARTER)
         pools.move_mission(SC2Mission.IN_THE_ENEMY_S_SHADOW, Difficulty.MEDIUM, Difficulty.STARTER)
     if not war_council_nerfs or grant_story_tech == GrantStoryTech.option_grant:
         pools.move_mission(SC2Mission.TEMPLAR_S_RETURN, Difficulty.MEDIUM, Difficulty.STARTER)
-    if (grant_story_tech == GrantStoryTech.option_grant and grant_story_levels) or kerrigan_items_granted:
+    if grant_story_tech == GrantStoryTech.option_grant and grant_story_levels:
         # The player has, all the stuff he needs, provided under these settings
         pools.move_mission(SC2Mission.SUPREME, Difficulty.MEDIUM, Difficulty.STARTER)
         pools.move_mission(SC2Mission.THE_INFINITE_CYCLE, Difficulty.HARD, Difficulty.STARTER)
