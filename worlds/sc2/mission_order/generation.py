@@ -9,10 +9,17 @@ import logging
 from dataclasses import dataclass, field
 
 from BaseClasses import Location, Region, Entrance
-from ..mission_tables import SC2Mission, MissionFlag, lookup_name_to_mission, lookup_id_to_mission
+from ..mission_tables import (
+    SC2Race,
+    SC2Campaign,
+    SC2Mission,
+    MissionFlag,
+    lookup_name_to_mission,
+    lookup_id_to_mission,
+)
 from ..item.item_tables import named_layout_key_item_table, named_campaign_key_item_table
 from ..item import item_names
-from ..tables import HeroFlag
+from ..tables import HeroFlag, HeroOptions
 from .nodes import MissionOrderNode, SC2MOGenMissionOrder, SC2MOGenCampaign, SC2MOGenLayout, SC2MOGenMission
 from .entry_rules import EntryRule, SubRuleEntryRule, ItemEntryRule, CountMissionsEntryRule, BeatMissionsEntryRule
 from .mission_pools import (
@@ -563,6 +570,147 @@ def _create_region(
 
 ########################
 
+
+def initialize_hero_presence(world: 'SC2World', mission_order: SC2MOGenMissionOrder) -> None:
+        campaign_hero_presence = _calculate_hero_presence(
+            world.options.hero_presence.value,
+            world.options.enabled_heroes.value
+        )
+        missions = [mission.mission for mission in mission_order.get_missions() if not mission.option_empty]
+        world.hero_presence = _calculate_mission_hero_presence(
+            campaign_hero_presence,
+            missions,
+        )
+        _apply_hero_presence_override(
+            world.hero_presence,
+            HeroFlag.KERRIGAN,
+            world.options.kerrigan_presence.value,
+            HeroOptions.KERRIGAN in world.options.enabled_heroes.value,
+        )
+        _apply_hero_presence_override(
+            world.hero_presence,
+            HeroFlag.NOVA,
+            world.options.nova_presence.value,
+            HeroOptions.NOVA in world.options.enabled_heroes.value,
+        )
+        _apply_hero_presence_override(
+            world.hero_presence,
+            HeroFlag.ARTANIS,
+            world.options.artanis_presence.value,
+            HeroOptions.ARTANIS in world.options.enabled_heroes.value,
+        )
+        _apply_custom_mission_order_hero_presence(
+            world.hero_presence,
+            mission_order.get_missions(),
+        )
+        world.logic.hero_presence = world.hero_presence
+
+
+def _calculate_hero_presence(presence: int, heroes: set[str]) -> dict[SC2Campaign, dict[SC2Race, HeroFlag]]:
+    races = [race for race in SC2Race if race != SC2Race.ANY]
+    campaigns = [campaign for campaign in SC2Campaign if campaign != SC2Campaign.GLOBAL]
+    kerrigan_flag = HeroFlag.KERRIGAN if HeroOptions.KERRIGAN in heroes else HeroFlag.NONE
+    nova_flag = HeroFlag.NOVA if HeroOptions.NOVA in heroes else HeroFlag.NONE
+    artanis_flag = HeroFlag.ARTANIS if HeroOptions.ARTANIS in heroes else HeroFlag.NONE
+    all_flag = kerrigan_flag | nova_flag | artanis_flag
+    race_flag = {
+        SC2Race.ZERG: kerrigan_flag,
+        SC2Race.TERRAN: nova_flag,
+        SC2Race.PROTOSS: artanis_flag,
+    }
+    result: dict[SC2Campaign, dict[SC2Race, HeroFlag]] = {
+        campaign: {race: HeroFlag.NONE for race in races} for campaign in campaigns
+    }
+    if presence == options.HeroPresence.option_anywhere:
+        for campaign in campaigns:
+            for race in races:
+                result[campaign][race] = all_flag
+    elif presence == options.HeroPresence.option_same_race:
+        for campaign in campaigns:
+            for race in races:
+                result[campaign][race] = race_flag[race]
+    elif presence == options.HeroPresence.option_original_race:
+        for race in races:
+            result[SC2Campaign.HOTS][race] = kerrigan_flag
+            result[SC2Campaign.WOL][race] = nova_flag
+            result[SC2Campaign.NCO][race] = nova_flag
+            result[SC2Campaign.LOTV][race] = artanis_flag
+            result[SC2Campaign.PROLOGUE][race] = artanis_flag
+            result[SC2Campaign.PROPHECY][race] = artanis_flag
+    elif presence == options.HeroPresence.option_vanilla:
+        result[SC2Campaign.HOTS][SC2Race.ZERG] = kerrigan_flag
+        result[SC2Campaign.NCO][SC2Race.TERRAN] = nova_flag
+    elif presence == options.HeroPresence.option_vanilla_raceswap:
+        for race in races:
+            result[SC2Campaign.HOTS][race] = race_flag[race]
+            result[SC2Campaign.NCO][race] = race_flag[race]
+    elif presence == options.HeroPresence.option_vanilla_original_race:
+        for race in races:
+            result[SC2Campaign.HOTS][race] = kerrigan_flag
+            result[SC2Campaign.NCO][race] = nova_flag
+    return result
+
+
+def _calculate_mission_hero_presence(
+    campaign_presence: dict[SC2Campaign, dict[SC2Race, HeroFlag]],
+    missions: list[SC2Mission],
+) -> dict[SC2Mission, HeroFlag]:
+    return {
+        mission: campaign_presence.get(mission.campaign, {}).get(mission.race, HeroFlag.NONE)
+        for mission in missions
+    }
+
+
+def _apply_hero_presence_override(
+    presence: dict[SC2Mission, HeroFlag],
+    hero: HeroFlag,
+    selected_locations: set[str],
+    enabled: bool,
+) -> None:
+    if not selected_locations:
+        return
+
+    for mission in presence:
+        presence[mission] &= ~hero
+
+    if not enabled:
+        return
+
+    for location in selected_locations:
+        target = options.HERO_PRESENCE_OPTION_KEYS[location]
+        for mission in presence:
+            if target.campaign is not None and mission.campaign != target.campaign:
+                continue
+            if target.race is not None and mission.race != target.race:
+                continue
+            if target.build_filter == options.HeroPresenceBuildFilter.BUILD and MissionFlag.NoBuild in mission.flags:
+                continue
+            if target.build_filter == options.HeroPresenceBuildFilter.NO_BUILD and MissionFlag.NoBuild not in mission.flags:
+                continue
+            presence[mission] |= hero
+
+
+def _apply_custom_mission_order_hero_presence(
+    presence: dict[SC2Mission, HeroFlag],
+    mission_slots: list[SC2MOGenMission],
+) -> None:
+    hero_flags = {
+        HeroOptions.KERRIGAN: HeroFlag.KERRIGAN,
+        HeroOptions.NOVA: HeroFlag.NOVA,
+        HeroOptions.ARTANIS: HeroFlag.ARTANIS,
+    }
+    for mission_slot in mission_slots:
+        if mission_slot.option_empty or mission_slot.option_heroes is None:
+            continue
+
+        flag = HeroFlag.NONE
+        for hero in mission_slot.option_heroes:
+            flag |= hero_flags[hero]
+        presence[mission_slot.mission] = flag
+
+
+########################
+
 def flag_hero_tech(
     world: 'SC2World',
     region_to_location_data: dict[str, list[LocationData]],
@@ -631,7 +779,6 @@ def flag_hero_tech(
                     kerrigan_build_missions.add(mission_data)
 
     # Grant Kerrigan items in no-builds if she doesn't appear in a build mission or more than 1 build mission
-    # todo(mm): Hero presence isn't initialized yet, move that over from init.py
     if not kerrigan_build_missions.difference(world.logic.grant_hero_items):
         if len(kerrigan_nobuild_missions.difference(world.logic.grant_hero_items)) <= 1:
             for mission in kerrigan_nobuild_missions:

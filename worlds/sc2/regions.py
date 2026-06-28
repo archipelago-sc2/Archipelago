@@ -65,6 +65,7 @@ def create_mission_order(world: 'SC2World', location_cache: list[Location]) -> S
     region_to_location_data = generation.get_locations_per_region(world)
     # TODO set locked missions
     generation.fill_missions(mission_order, mission_pools, world, [], location_cache, region_to_location_data)
+    generation.initialize_hero_presence(world, mission_order)
     generation.set_rules(world, mission_order, region_to_location_data)
     generation.make_connections(mission_order, world)
 

@@ -189,11 +189,12 @@ class TestRules(unittest.TestCase):
 
 class TestRuleGeneration(test_base.Sc2SetupTestBase):
     def test_hero_rules_are_ignored_when_not_present(self) -> None:
-        player_options = self.set_options({
+        player_options = {
             options.OPTION_NAME[options.KerriganPresence]: set(),
             options.OPTION_NAME[options.NovaPresence]: set(),
             options.OPTION_NAME[options.ArtanisPresence]: set(),
-        })
+        }
+        self.generate_world(player_options)
         rule = rules_mapping.ProtoRule(hero_min=rules_mapping.HERO_COMPETENT)
         signature = rule.to_signature(
             self.world,

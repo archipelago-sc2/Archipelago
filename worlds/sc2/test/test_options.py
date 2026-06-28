@@ -1,6 +1,8 @@
 import unittest
 
-from .. import apply_hero_presence_override, calculate_hero_presence, calculate_mission_hero_presence, locations
+from ..mission_order.generation import (
+    _apply_hero_presence_override, _calculate_hero_presence, _calculate_mission_hero_presence
+)
 from ..client import SC2Context
 from .. import options
 from ..item import item_parents
@@ -74,18 +76,18 @@ class TestOptions(unittest.TestCase):
         self.assertEqual(options.MAX_UPGRADES_OPTION, max(upgrade_group_to_count.values()))
 
     def test_kerrigan_presence_override_replaces_preset_kerrigan(self) -> None:
-        campaign_presence = calculate_hero_presence(
+        campaign_presence = _calculate_hero_presence(
             options.HeroPresence.option_anywhere,
             {options.HeroOptions.KERRIGAN, options.HeroOptions.NOVA},
         )
-        hero_presence = calculate_mission_hero_presence(campaign_presence, [
+        hero_presence = _calculate_mission_hero_presence(campaign_presence, [
             SC2Mission.THE_OUTLAWS_P,
             SC2Mission.LIBERATION_DAY_P,
             SC2Mission.RENDEZVOUS_T,
             SC2Mission.RENDEZVOUS,
         ])
 
-        apply_hero_presence_override(
+        _apply_hero_presence_override(
             hero_presence,
             HeroFlag.KERRIGAN,
             {"Wings of Liberty Protoss", "Heart of the Swarm Terran"},
@@ -99,23 +101,23 @@ class TestOptions(unittest.TestCase):
         self.assertIn(HeroFlag.NOVA, hero_presence[SC2Mission.RENDEZVOUS])
 
     def test_kerrigan_presence_override_empty_keeps_preset(self) -> None:
-        campaign_presence = calculate_hero_presence(
+        campaign_presence = _calculate_hero_presence(
             options.HeroPresence.option_vanilla,
             {options.HeroOptions.KERRIGAN},
         )
-        hero_presence = calculate_mission_hero_presence(campaign_presence, [SC2Mission.RENDEZVOUS])
+        hero_presence = _calculate_mission_hero_presence(campaign_presence, [SC2Mission.RENDEZVOUS])
 
-        apply_hero_presence_override(hero_presence, HeroFlag.KERRIGAN, set(), True)
+        _apply_hero_presence_override(hero_presence, HeroFlag.KERRIGAN, set(), True)
 
         self.assertIn(HeroFlag.KERRIGAN, hero_presence[SC2Mission.RENDEZVOUS])
 
     def test_kerrigan_presence_override_can_target_build_missions(self) -> None:
-        hero_presence = calculate_mission_hero_presence(
-            calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.KERRIGAN}),
+        hero_presence = _calculate_mission_hero_presence(
+            _calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.KERRIGAN}),
             [SC2Mission.THE_OUTLAWS_P, SC2Mission.LIBERATION_DAY_P],
         )
 
-        apply_hero_presence_override(
+        _apply_hero_presence_override(
             hero_presence,
             HeroFlag.KERRIGAN,
             {"Wings of Liberty Protoss Build"},
@@ -126,12 +128,12 @@ class TestOptions(unittest.TestCase):
         self.assertNotIn(HeroFlag.KERRIGAN, hero_presence[SC2Mission.LIBERATION_DAY_P])
 
     def test_kerrigan_presence_override_can_target_no_build_missions(self) -> None:
-        hero_presence = calculate_mission_hero_presence(
-            calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.KERRIGAN}),
+        hero_presence = _calculate_mission_hero_presence(
+            _calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.KERRIGAN}),
             [SC2Mission.THE_OUTLAWS_P, SC2Mission.LIBERATION_DAY_P],
         )
 
-        apply_hero_presence_override(
+        _apply_hero_presence_override(
             hero_presence,
             HeroFlag.KERRIGAN,
             {"Wings of Liberty Protoss No Build"},
@@ -142,12 +144,12 @@ class TestOptions(unittest.TestCase):
         self.assertIn(HeroFlag.KERRIGAN, hero_presence[SC2Mission.LIBERATION_DAY_P])
 
     def test_kerrigan_presence_override_can_target_full_campaign(self) -> None:
-        hero_presence = calculate_mission_hero_presence(
-            calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.KERRIGAN}),
+        hero_presence = _calculate_mission_hero_presence(
+            _calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.KERRIGAN}),
             [SC2Mission.RENDEZVOUS_T, SC2Mission.RENDEZVOUS, SC2Mission.RENDEZVOUS_P],
         )
 
-        apply_hero_presence_override(
+        _apply_hero_presence_override(
             hero_presence,
             HeroFlag.KERRIGAN,
             {"Heart of the Swarm"},
@@ -159,12 +161,12 @@ class TestOptions(unittest.TestCase):
         self.assertIn(HeroFlag.KERRIGAN, hero_presence[SC2Mission.RENDEZVOUS_P])
 
     def test_kerrigan_presence_override_can_target_race_across_campaigns(self) -> None:
-        hero_presence = calculate_mission_hero_presence(
-            calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.KERRIGAN}),
+        hero_presence = _calculate_mission_hero_presence(
+            _calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.KERRIGAN}),
             [SC2Mission.RENDEZVOUS, SC2Mission.LIBERATION_DAY, SC2Mission.FOR_AIUR],
         )
 
-        apply_hero_presence_override(
+        _apply_hero_presence_override(
             hero_presence,
             HeroFlag.KERRIGAN,
             {"Zerg"},
@@ -242,12 +244,12 @@ class TestOptions(unittest.TestCase):
         )
 
     def test_kerrigan_presence_override_can_target_campaign_build_type(self) -> None:
-        hero_presence = calculate_mission_hero_presence(
-            calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.KERRIGAN}),
+        hero_presence = _calculate_mission_hero_presence(
+            _calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.KERRIGAN}),
             [SC2Mission.RENDEZVOUS, SC2Mission.ENEMY_WITHIN, SC2Mission.ENEMY_WITHIN_T],
         )
 
-        apply_hero_presence_override(
+        _apply_hero_presence_override(
             hero_presence,
             HeroFlag.KERRIGAN,
             {"Heart of the Swarm No Build"},
@@ -259,12 +261,12 @@ class TestOptions(unittest.TestCase):
         self.assertIn(HeroFlag.KERRIGAN, hero_presence[SC2Mission.ENEMY_WITHIN_T])
 
     def test_nova_presence_override_can_target_campaign_no_build(self) -> None:
-        hero_presence = calculate_mission_hero_presence(
-            calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.NOVA}),
+        hero_presence = _calculate_mission_hero_presence(
+            _calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.NOVA}),
             [SC2Mission.THE_ESCAPE, SC2Mission.IN_THE_ENEMY_S_SHADOW, SC2Mission.ENEMY_INTELLIGENCE],
         )
 
-        apply_hero_presence_override(
+        _apply_hero_presence_override(
             hero_presence,
             HeroFlag.NOVA,
             {"Nova Covert Ops No Build"},
@@ -276,12 +278,12 @@ class TestOptions(unittest.TestCase):
         self.assertNotIn(HeroFlag.NOVA, hero_presence[SC2Mission.ENEMY_INTELLIGENCE])
 
     def test_artanis_presence_override_can_target_race_across_campaigns(self) -> None:
-        hero_presence = calculate_mission_hero_presence(
-            calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.ARTANIS}),
+        hero_presence = _calculate_mission_hero_presence(
+            _calculate_hero_presence(options.HeroPresence.option_vanilla, {options.HeroOptions.ARTANIS}),
             [SC2Mission.THE_GROWING_SHADOW, SC2Mission.THE_OUTLAWS_P, SC2Mission.THE_OUTLAWS],
         )
 
-        apply_hero_presence_override(
+        _apply_hero_presence_override(
             hero_presence,
             HeroFlag.ARTANIS,
             {"Protoss"},

@@ -86,10 +86,10 @@ class TestItemFiltering(Sc2SetupTestBase):
                 item_names.SCIENCE_VESSEL: -1,
             },
             # Terran-only
-            'enabled_campaigns': {
-                SC2Campaign.WOL.campaign_name,
-                SC2Campaign.NCO.campaign_name
-            },
+            options.OPTION_NAME[options.RequiredTactics]: options.RequiredTactics.option_chaos,
+            options.OPTION_NAME[options.SelectedRaces]: {SC2Race.TERRAN.get_title()},
+            options.OPTION_NAME[options.EnabledCampaigns]: options.EnabledCampaigns.valid_keys,
+            options.OPTION_NAME[options.EnableRaceSwapVariants]: options.EnableRaceSwapVariants.option_shuffle_all,
         }
         self.generate_world(world_options)
         self.assertTrue(self.multiworld.itempool)

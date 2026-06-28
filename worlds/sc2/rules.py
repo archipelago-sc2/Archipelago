@@ -1703,9 +1703,9 @@ class SC2Logic:
     def competent_kerrigan(self, state: CollectionState) -> bool:
         return (
             self.basic_kerrigan(state)
-            and state.count_from_list_unique(item_groups.kerrigan_logic_active_abilities, self.player) >= 2
+            and state.count_from_list_unique(item_groups.kerrigan_logic_active_abilities, self.player) >= 3
             and state.count_from_list_unique(item_groups.kerrigan_passives, self.player) >= 1
-            and state.count_from_list_unique(item_groups.kerrigan_logic_ultimates, self.player) >= 1
+            # Note(mm): Requiring ultimates doesn't play nice with excluding OP items
         )
 
     @series(LogicSeries.Artanis, SC2Race.ANY, 2)
