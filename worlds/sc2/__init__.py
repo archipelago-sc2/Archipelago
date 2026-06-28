@@ -286,6 +286,7 @@ class SC2World(World):
 
         slot_data["plando_locations"] = get_plando_locations(self)
         slot_data["hero_presence"] = pack_hero_presence(self.hero_presence)
+        slot_data["grant_nova_items"] = [mission.id for mission in self.logic.grant_nova_items]
         slot_data["final_mission_ids"] = self.custom_mission_order.get_final_mission_ids()
         slot_data["custom_mission_order"] = self.custom_mission_order.get_slot_data()
         slot_data["version"] = 5
@@ -794,6 +795,7 @@ def flag_mission_based_item_excludes(world: SC2World, item_list: list[FilterItem
     assert world.logic is not None
     world.logic.kerrigan_items_granted = remove_kerrigan_items
     world.logic.kerrigan_levels_granted = remove_kerrigan_items
+    world.logic.grant_nova_items = set()
 
     # TvX build missions -- check flags
     if world.options.take_over_ai_allies:

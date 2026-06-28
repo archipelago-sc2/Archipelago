@@ -928,7 +928,7 @@ def calculate_story_tech(ctx: 'SC2Context', mission: SC2Mission) -> int:
     if (
         MissionFlag.Nova in mission.flags
         and MissionFlag.NoBuild in mission.flags
-        and ctx.nova_items_granted
+        and mission.id in ctx.grant_nova_items
     ):
         result = options.GrantStoryTech.option_grant
     else:

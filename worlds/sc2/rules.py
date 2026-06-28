@@ -106,7 +106,7 @@ class SC2Logic:
         self.kerrigan_items_granted = False
         self.kerrigan_levels_granted = False
         self.kerrigan_build_missions = False
-        self.nova_items_granted = False
+        self.grant_nova_items = set()
         self.artanis_items_granted = False
 
         # Conditionally set to False by the world after culling items
@@ -3303,11 +3303,7 @@ class SC2Logic:
         The NCO first mission requires having too much stuff first before actually able to do anything
         :return:
         """
-        return (
-            self.grant_story_tech == GrantStoryTech.option_grant
-            or self.mission_order == MissionOrder.option_vanilla and self.enabled_campaigns == {SC2Campaign.NCO}
-            or self.nova_items_granted
-        )
+        return SC2Mission.THE_ESCAPE in self.grant_nova_items
 
     def the_escape_first_stage_requirement(self, state: CollectionState) -> bool:
         return (
@@ -3329,8 +3325,7 @@ class SC2Logic:
 
     def the_escape_hard_rule(self, state: CollectionState) -> bool:
         return (
-            self.grant_story_tech == GrantStoryTech.option_grant
-            or self.nova_items_granted
+            SC2Mission.THE_ESCAPE in self.grant_nova_items
             or self.nova_any_nobuild_damage(state)
         )
 
@@ -3341,12 +3336,11 @@ class SC2Logic:
             (
                 HeroFlag.NOVA in presence
                 and state.has(item_names.NOVA_JUMP_SUIT_MODULE, self.player)
-                and (state.has_any((
+                and state.has_any((
                     item_names.NOVA_DOMINATION,
                     item_names.NOVA_C20A_CANISTER_RIFLE,
                     item_names.NOVA_PULSE_GRENADES,
                 ), self.player)
-                )
             )
             or (
                 HeroFlag.KERRIGAN in presence
@@ -3417,10 +3411,15 @@ class SC2Logic:
             ), self.player)
         )
 
-    def sudden_strike_hero(self, state: CollectionState, presence: HeroFlag) -> bool:
+    def sudden_strike_hero(self, state: CollectionState, presence: HeroFlag, mission: SC2Mission) -> bool:
         return (
             presence == HeroFlag.NONE
-            or (HeroFlag.NOVA in presence and self.sudden_strike_nova(state))
+            or (HeroFlag.NOVA in presence
+                and (
+                    self.sudden_strike_nova(state)
+                    or mission in self.grant_nova_items
+                )
+            )
             or (HeroFlag.KERRIGAN in presence and self.sudden_strike_kerrigan(state))
             or (HeroFlag.ARTANIS in presence and self.sudden_strike_artanis(state))
         )
@@ -3428,7 +3427,7 @@ class SC2Logic:
     def terran_sudden_strike_requirement(self, state: CollectionState) -> bool:
         presence = self.get_hero_flag(SC2Mission.SUDDEN_STRIKE)
         return (
-            self.sudden_strike_hero(state, presence)
+            self.sudden_strike_hero(state, presence, SC2Mission.SUDDEN_STRIKE)
             and self.terran_able_to_snipe_defiler(state, presence)
             and (self.terran_cliffjumper(state) or state.has(item_names.BANSHEE, self.player))
         )
@@ -3436,14 +3435,14 @@ class SC2Logic:
     def zerg_sudden_strike_requirement(self, state: CollectionState) -> bool:
         presence = self.get_hero_flag(SC2Mission.SUDDEN_STRIKE_Z)
         return (
-            self.sudden_strike_hero(state, presence)
+            self.sudden_strike_hero(state, presence, SC2Mission.SUDDEN_STRIKE_Z)
             and self.zerg_handle_defiler(state, presence)
         )
 
     def protoss_sudden_strike_requirement(self, state: CollectionState) -> bool:
         presence = self.get_hero_flag(SC2Mission.SUDDEN_STRIKE_P)
         return (
-            self.sudden_strike_hero(state, presence)
+            self.sudden_strike_hero(state, presence, SC2Mission.SUDDEN_STRIKE_Z)
             and self.protoss_handle_defiler(state, presence)
         )
 
@@ -3653,15 +3652,13 @@ class SC2Logic:
 
     def enemy_shadow_tripwires_tool(self, state: CollectionState) -> bool:
         return (
-            self.grant_story_tech == GrantStoryTech.option_grant
-            or self.nova_items_granted
+            SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
             or state.has_any({item_names.NOVA_FLASHBANG_GRENADES, item_names.NOVA_BLINK, item_names.NOVA_DOMINATION}, self.player)
         )
 
     def enemy_shadow_door_unlocks_tool(self, state: CollectionState) -> bool:
         return (
-            self.grant_story_tech == GrantStoryTech.option_grant
-            or self.nova_items_granted
+            SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
             or state.has_any((item_names.NOVA_DOMINATION, item_names.NOVA_BLINK, item_names.NOVA_JUMP_SUIT_MODULE), self.player)
         )
 
@@ -3669,8 +3666,7 @@ class SC2Logic:
         return (
             self.enemy_shadow_second_stage(state)
             and (
-                self.grant_story_tech == GrantStoryTech.option_grant
-                or self.nova_items_granted
+                SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
                 or state.has(item_names.NOVA_BLINK, self.player)
                 or (
                     self.advanced_tactics
@@ -3685,8 +3681,7 @@ class SC2Logic:
 
     def enemy_shadow_nova_damage_and_blazefire_unlock(self, state: CollectionState) -> bool:
         return (
-            self.grant_story_tech == GrantStoryTech.option_grant
-            or self.nova_items_granted
+            SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
             or (
                 self.nova_any_nobuild_damage(state)
                 and (
@@ -3698,8 +3693,7 @@ class SC2Logic:
 
     def enemy_shadow_domination(self, state: CollectionState) -> bool:
         return (
-            self.grant_story_tech == GrantStoryTech.option_grant
-            or self.nova_items_granted
+            SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
             or (
                 self.nova_ranged_weapon(state)
                 and (
@@ -3714,8 +3708,7 @@ class SC2Logic:
         return (
             self.enemy_shadow_domination(state)
             and (
-                self.grant_story_tech == GrantStoryTech.option_grant
-                or self.nova_items_granted
+                SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
                 or (
                     self.nova_full_stealth(state) and self.enemy_shadow_tripwires_tool(state)
                     or (self.nova_heal(state) and self.nova_splash(state))
@@ -3727,10 +3720,13 @@ class SC2Logic:
         return (
             self.enemy_shadow_first_stage(state)
             and (
-                self.grant_story_tech == GrantStoryTech.option_grant
-                or self.nova_items_granted
-                or (self.nova_splash(state) or self.nova_heal(state) or self.nova_escape_assist(state))
-                and (self.advanced_tactics or state.has(item_names.NOVA_GHOST_VISOR, self.player))
+                SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
+                or (
+                    (
+                        self.nova_splash(state) or self.nova_heal(state) or self.nova_escape_assist(state)
+                    )
+                    and (self.advanced_tactics or state.has(item_names.NOVA_GHOST_VISOR, self.player))
+                )
             )
         )
 
@@ -3738,8 +3734,7 @@ class SC2Logic:
         return (
             self.enemy_shadow_second_stage(state)
             and (
-                self.grant_story_tech == GrantStoryTech.option_grant
-                or self.nova_items_granted
+                SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
                 or self.enemy_shadow_door_unlocks_tool(state)
             )
         )
@@ -3749,8 +3744,7 @@ class SC2Logic:
         Used for any units logic for beating Stone. Shotgun may not be possible; may need feedback.
         """
         return (
-            self.grant_story_tech == GrantStoryTech.option_grant
-            or self.nova_items_granted
+            SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
             or state.has_any((
                 item_names.NOVA_DOMINATION,
                 item_names.NOVA_BLAZEFIRE_GUNBLADE,
@@ -3784,16 +3778,14 @@ class SC2Logic:
         return (
             self.enemy_shadow_can_reach_stone(state)
             and (
-                self.grant_story_tech == GrantStoryTech.option_grant
-                or self.nova_items_granted
+                SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
                 or (self.nova_heal(state) and self.nova_beat_stone(state))
             )
         )
 
     def enemy_shadow_hard_rule(self, state: CollectionState) -> bool:
         return (
-            self.grant_story_tech == GrantStoryTech.option_grant
-            or self.nova_items_granted
+            SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
             or self.nova_any_nobuild_damage(state)
         )
 
@@ -3802,7 +3794,7 @@ class SC2Logic:
 
     def enemy_shadow_victory_hard_rule(self, state: CollectionState) -> bool:
         return (
-            self.nova_items_granted
+            SC2Mission.IN_THE_ENEMY_S_SHADOW in self.grant_nova_items
             or (
                 self.nova_beat_stone(state)
                 and self.enemy_shadow_door_unlocks_tool(state)

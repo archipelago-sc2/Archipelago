@@ -76,7 +76,7 @@ class TestCustomMissionOrders(Sc2SetupTestBase):
             HeroFlag.KERRIGAN | HeroFlag.NOVA | HeroFlag.ARTANIS,
         )
         self.assertFalse(self.world.logic.kerrigan_items_granted)
-        self.assertFalse(self.world.logic.nova_items_granted)
+        self.assertFalse(self.world.logic.grant_nova_items)
         self.assertFalse(self.world.logic.artanis_items_granted)
 
     def test_mini_wol_generates(self):

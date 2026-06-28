@@ -196,7 +196,7 @@ class TestRuleGeneration(test_base.Sc2SetupTestBase):
         })
         rule = rules_mapping.ProtoRule(hero_min=rules_mapping.HERO_COMPETENT)
         signature = rule.to_signature(
-            player_options,
+            self.world,
             mission_tables.SC2Mission.ZERO_HOUR,
             locations.Sc2Location.ZERO_HOUR_VICTORY,
             3,

@@ -11,6 +11,7 @@ from . import options
 
 if TYPE_CHECKING:
     from BaseClasses import CollectionState
+    from . import SC2World
 
 
 LOGIC_BASIC = 0
@@ -155,7 +156,7 @@ class ProtoRule:
 
     def to_signature(
         self,
-        opt: options.Starcraft2Options,
+        world: 'SC2World',
         mission: SC2Mission,
         location: Sc2Location,
         depth: int,
@@ -166,7 +167,7 @@ class ProtoRule:
             assert location.type != LocationType.MASTERY
             assert depth == 0
 
-        logic_level = int(opt.required_tactics)
+        logic_level = int(world.options.required_tactics)
         if logic_level == LOGIC_BASIC:
             anti_air_depths=(3, 3, 5)
             upgrade_depths=(3, 5, 7)
@@ -210,10 +211,10 @@ class ProtoRule:
                 upgrades = max(upgrades, 3)
             soa_flags = (
                 options.is_mission_in_soa_presence(
-                    opt.spear_of_adun_presence.value, mission, options.SpearOfAdunPresence,
+                    world.options.spear_of_adun_presence.value, mission, options.SpearOfAdunPresence,
                 )
                 | options.is_mission_in_soa_presence(
-                    opt.spear_of_adun_passive_ability_presence.value,
+                    world.options.spear_of_adun_passive_ability_presence.value,
                     mission,
                     options.SpearOfAdunPassiveAbilityPresence,
                 ) << 1
@@ -236,6 +237,10 @@ class ProtoRule:
             heroes = HeroFlag.NONE
         else:
             heroes = hero_presence.get(mission, HeroFlag.NONE)
+        nova_rating = 0
+        if HeroFlag.NOVA in heroes:
+            if mission not in world.grant_nova_items:
+                nova_rating = required_hero_rating
 
         return RuleSignature(
             mission.race,
@@ -249,7 +254,7 @@ class ProtoRule:
             defense_rating,
             detection,
             artanis=required_hero_rating if HeroFlag.ARTANIS in heroes else 0,
-            nova=required_hero_rating if HeroFlag.NOVA in heroes else 0,
+            nova=nova_rating,
             kerrigan=required_hero_rating if HeroFlag.KERRIGAN in heroes else 0,
             rule=(
                 self.basic_rule if logic_level == LOGIC_BASIC else
@@ -645,16 +650,16 @@ LOCATION_TO_RULE: dict[Sc2Location, ProtoRule] = {
     Sc2Location.INFESTED_NORTH_GARRISON: ProtoRule(aa_min=AA_VARIABLE, basic_rule=SC2Logic.zerg_infested_garrison_claimer),
     Sc2Location.INFESTED_CLOSE_SOUTHWEST_GARRISON: ProtoRule(aa_min=AA_VARIABLE, basic_rule=SC2Logic.zerg_infested_garrison_claimer),
     Sc2Location.INFESTED_FAR_SOUTHWEST_GARRISON: ProtoRule(aa_min=AA_VARIABLE, basic_rule=SC2Logic.zerg_infested_garrison_claimer),
-    Sc2Location.HAND_OF_DARKNESS_VICTORY: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, hero_min=HERO_BASIC, macro_rating=4),
-    Sc2Location.HAND_OF_DARKNESS_NORTH_BRUTALISK: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, hero_min=HERO_BASIC, macro_rating=4),
-    Sc2Location.HAND_OF_DARKNESS_SOUTH_BRUTALISK: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, hero_min=HERO_BASIC, macro_rating=4),
-    Sc2Location.HAND_OF_DARKNESS_KILL_1_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, hero_min=HERO_BASIC, macro_rating=4),
-    Sc2Location.HAND_OF_DARKNESS_KILL_2_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, hero_min=HERO_BASIC, macro_rating=4),
-    Sc2Location.HAND_OF_DARKNESS_KILL_3_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, hero_min=HERO_BASIC, macro_rating=4),
-    Sc2Location.HAND_OF_DARKNESS_KILL_4_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, hero_min=HERO_BASIC, macro_rating=4),
-    Sc2Location.HAND_OF_DARKNESS_KILL_5_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, hero_min=HERO_BASIC, macro_rating=4),
-    Sc2Location.HAND_OF_DARKNESS_KILL_6_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, hero_min=HERO_BASIC, macro_rating=4),
-    Sc2Location.HAND_OF_DARKNESS_KILL_7_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, hero_min=HERO_BASIC, macro_rating=4),
+    Sc2Location.HAND_OF_DARKNESS_VICTORY: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, macro_rating=4),
+    Sc2Location.HAND_OF_DARKNESS_NORTH_BRUTALISK: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, macro_rating=4),
+    Sc2Location.HAND_OF_DARKNESS_SOUTH_BRUTALISK: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, macro_rating=4),
+    Sc2Location.HAND_OF_DARKNESS_KILL_1_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, macro_rating=4),
+    Sc2Location.HAND_OF_DARKNESS_KILL_2_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, macro_rating=4),
+    Sc2Location.HAND_OF_DARKNESS_KILL_3_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, macro_rating=4),
+    Sc2Location.HAND_OF_DARKNESS_KILL_4_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, macro_rating=4),
+    Sc2Location.HAND_OF_DARKNESS_KILL_5_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, macro_rating=4),
+    Sc2Location.HAND_OF_DARKNESS_KILL_6_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, macro_rating=4),
+    Sc2Location.HAND_OF_DARKNESS_KILL_7_HYBRID: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, macro_rating=4),
     Sc2Location.PHANTOMS_OF_THE_VOID_VICTORY: ProtoRule(comp_type=COMP_COMPETENT, aa_min=AA_VARIABLE),
     Sc2Location.PHANTOMS_OF_THE_VOID_NORTHWEST_CRYSTAL: ProtoRule(comp_type=COMP_COMPETENT, aa_min=AA_VARIABLE),
     Sc2Location.PHANTOMS_OF_THE_VOID_NORTHEAST_CRYSTAL: ProtoRule(comp_type=COMP_COMPETENT, aa_min=AA_VARIABLE),
@@ -700,11 +705,11 @@ LOCATION_TO_RULE: dict[Sc2Location, ProtoRule] = {
     Sc2Location.THE_RECKONING_EAST_LANE: ProtoRule(upgrades_min=3, comp_type=COMP_ULTIMATE, aa_min=AA_COMPETENT, macro_rating=5, rule=SC2Logic.the_reckoning_ally_requirement),
     Sc2Location.THE_RECKONING_ODIN: ProtoRule(upgrades_min=3, comp_type=COMP_ULTIMATE, aa_min=AA_COMPETENT, macro_rating=5, rule=SC2Logic.the_reckoning_ally_requirement),
     Sc2Location.THE_RECKONING_TRASH_THE_ODIN_EARLY: ProtoRule(upgrades_min=3, comp_type=COMP_ULTIMATE, aa_min=AA_COMPETENT, macro_rating=10, rule=SC2Logic.the_reckoning_ally_requirement),
-    Sc2Location.DARK_WHISPERS_VICTORY: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC, hero_min=HERO_BASIC),
-    Sc2Location.DARK_WHISPERS_FIRST_PRISONER_GROUP: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC, hero_min=HERO_BASIC),
-    Sc2Location.DARK_WHISPERS_SECOND_PRISONER_GROUP: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC, hero_min=HERO_BASIC),
-    Sc2Location.DARK_WHISPERS_FIRST_PYLON: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC, hero_min=HERO_BASIC),
-    Sc2Location.DARK_WHISPERS_SECOND_PYLON: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC, hero_min=HERO_BASIC),
+    Sc2Location.DARK_WHISPERS_VICTORY: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC),
+    Sc2Location.DARK_WHISPERS_FIRST_PRISONER_GROUP: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC),
+    Sc2Location.DARK_WHISPERS_SECOND_PRISONER_GROUP: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC),
+    Sc2Location.DARK_WHISPERS_FIRST_PYLON: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC),
+    Sc2Location.DARK_WHISPERS_SECOND_PYLON: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC),
     Sc2Location.DARK_WHISPERS_ZERG_BASE: ProtoRule(upgrades_min=2, comp_type=COMP_ULTIMATE, aa_min=AA_COMPETENT, macro_rating=6),
     Sc2Location.GHOSTS_IN_THE_FOG_VICTORY: ProtoRule(comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, rule=SC2Logic.protoss_mineral_dump),
     Sc2Location.GHOSTS_IN_THE_FOG_SOUTH_ROCK_FORMATION: ProtoRule(comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, rule=SC2Logic.protoss_mineral_dump),
@@ -899,7 +904,7 @@ LOCATION_TO_RULE: dict[Sc2Location, ProtoRule] = {
     Sc2Location.SUDDEN_STRIKE_RESEARCH_CENTER: ProtoRule(defense_rating=5, rule=SC2Logic.terran_sudden_strike_requirement),
     Sc2Location.SUDDEN_STRIKE_WEAPONRY_LABS: ProtoRule(defense_rating=5, rule=SC2Logic.terran_sudden_strike_requirement),
     Sc2Location.SUDDEN_STRIKE_BRUTALISK: ProtoRule(defense_rating=5, rule=SC2Logic.terran_sudden_strike_requirement),
-    Sc2Location.SUDDEN_STRIKE_GAS_PICKUPS: ProtoRule(hero_min=HERO_BASIC, basic_rule=SC2Logic.terran_sudden_strike_requirement),
+    Sc2Location.SUDDEN_STRIKE_GAS_PICKUPS: ProtoRule(basic_rule=SC2Logic.terran_sudden_strike_requirement),
     Sc2Location.SUDDEN_STRIKE_PROTECT_BUILDINGS: ProtoRule(defense_rating=5, rule=SC2Logic.terran_sudden_strike_requirement),
     Sc2Location.SUDDEN_STRIKE_ZERG_BASE: ProtoRule(upgrades_min=2, comp_type=COMP_ULTIMATE, aa_min=AA_COMPETENT, macro_rating=8, defense_rating=5, hero_min=HERO_COMPETENT, rule=SC2Logic.terran_sudden_strike_requirement),
     Sc2Location.ENEMY_INTELLIGENCE_VICTORY: ProtoRule(comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT, hero_min=HERO_BASIC, defense_rating=5, rule=SC2Logic.terran_enemy_intelligence_second_stage_requirement, hard_rule=SC2Logic.terran_enemy_intelligence_hard_rule),

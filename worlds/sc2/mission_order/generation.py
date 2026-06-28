@@ -18,7 +18,7 @@ from .mission_pools import (
     SC2MOGenMissionPools, Difficulty, modified_difficulty_thresholds, STANDARD_DIFFICULTY_FILL_ORDER
 )
 from .options import GENERIC_KEY_NAME, GENERIC_PROGRESSIVE_KEY_NAME
-from ..options import LocationInclusion
+from .. import options
 from .. import locations
 from ..rules_mapping import RuleSignature, LOCATION_TO_RULE
 from ..rule_helpers import and_2_rules, and_3_rules
@@ -455,10 +455,10 @@ def get_locations_per_region(world: 'SC2World') -> dict[str, list[LocationData]]
     result: dict[str, list[LocationData]] = {}
 
     # Filtering out excluded locations
-    excluded_location_types = locations.get_location_types(world, LocationInclusion.option_disabled)
-    excluded_location_flags = locations.get_location_flags(world, LocationInclusion.option_disabled)
-    chance_location_types = locations.get_location_types(world, LocationInclusion.option_half_chance)
-    chance_location_flags = locations.get_location_flags(world, LocationInclusion.option_half_chance)
+    excluded_location_types = locations.get_location_types(world, options.LocationInclusion.option_disabled)
+    excluded_location_flags = locations.get_location_flags(world, options.LocationInclusion.option_disabled)
+    chance_location_types = locations.get_location_types(world, options.LocationInclusion.option_half_chance)
+    chance_location_flags = locations.get_location_flags(world, options.LocationInclusion.option_half_chance)
     plando_locations = locations.get_plando_locations(world)
     exclude_locations = world.options.exclude_locations.value
 
@@ -562,6 +562,33 @@ def _create_region(
 
 ########################
 
+def flag_grant_nova_tech(
+    world: 'SC2World',
+    region_to_location_data: dict[str, list[LocationData]],
+    depth_to_missions: dict[int, list[SC2MOGenMission]],
+) -> None:
+    SOLO_NOVA_MISSIONS = (SC2Mission.THE_ESCAPE, SC2Mission.ENEMY_INTELLIGENCE, SC2Mission.IN_THE_ENEMY_S_SHADOW,)
+    if world.options.grant_story_tech == options.GrantStoryTech.option_grant:
+        # Grant Nova tech for all Nova solo missions
+        for mission in SOLO_NOVA_MISSIONS:
+            locations_data = region_to_location_data.get(mission)
+            if not locations_data:
+                continue
+            location_data = locations_data[0]
+            assert location_data.type == locations.LocationType.VICTORY
+            if location_data.location is None:
+                continue
+            world.logic.grant_nova_items.add(mission.id)
+    order = 0
+    for mission in depth_to_missions[0]:
+        mission_data = mission.mission
+        if MissionFlag.NovaStartTech & mission_data.flags:
+            world.logic.grant_nova_items.add(mission_data)
+        order += 1
+        if order >= 3:
+            break
+
+
 
 def set_rules(
     world: 'SC2World',
@@ -573,14 +600,20 @@ def set_rules(
         if slot.option_empty:
             continue
         depth_to_missions.setdefault(slot.min_depth, []).append(slot)
+    # Sort by difficulty so easier missions get a lower order
+    depth_to_missions = {
+        depth: sorted(depth_to_missions[depth], key=lambda mission: mission.mission.pool)
+        for depth in sorted(depth_to_missions)
+    }
+    # Note(mm): This has to happen before rule resolution so it can look into world.grant_nova_items
+    flag_grant_nova_tech(world, region_to_location_data, depth_to_missions)
     rule_cache: dict[RuleSignature, Callable[['CollectionState'], bool]] = {}
     NUM_STARTER_MISSION_LOCATIONS = 3
     # Parameter controlling how many missions "fill" a depth level.
     # For very broad mission orders like blitz or key cage.
     ORDER_PER_FORCED_DEPTH = 5
     order = 0
-    for depth in sorted(depth_to_missions):
-        missions = sorted(depth_to_missions[depth], key=lambda mission: mission.mission.pool)
+    for depth, missions in depth_to_missions.items():
         for mission in missions:
             mission_data = mission.mission
             mission_locations = region_to_location_data[mission_data.mission_name]
@@ -598,7 +631,7 @@ def set_rules(
                     and order < NUM_STARTER_MISSION_LOCATIONS
                 )
                 signature = rule.to_signature(
-                    world.options,
+                    world,
                     mission_data,
                     location,
                     max(depth, order // ORDER_PER_FORCED_DEPTH),
