@@ -257,9 +257,6 @@ class ProtoRule:
             artanis=required_hero_rating if HeroFlag.ARTANIS in heroes else 0,
             nova=required_hero_rating if HeroFlag.NOVA in heroes else 0,
             kerrigan=required_hero_rating if HeroFlag.KERRIGAN in heroes else 0,
-            # artanis=0,
-            # nova=0,
-            # kerrigan=0,
             rule=(
                 self.basic_rule if logic_level == LOGIC_BASIC else
                 self.rule if logic_level == LOGIC_ADVANCED else

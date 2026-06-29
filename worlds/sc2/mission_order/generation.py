@@ -768,7 +768,15 @@ def flag_hero_tech(
             mission_data = mission.mission
             heroes = world.hero_presence.get(mission_data, HeroFlag.NONE)
             # Grant hero items if the HeroStartTech flag is set and the mission is in the first 3
-            if depth == 0 and order < MAX_GRANT_BREADTH and MissionFlag.HeroStartTech & mission_data.flags:
+            if (
+                depth == 0
+                and order < MAX_GRANT_BREADTH
+                and (
+                    len(heroes) >= 2
+                    or world.options.extra_locations.value != options.LocationInclusion.option_enabled
+                )
+                and MissionFlag.HeroStartTech & mission_data.flags
+            ):
                 world.logic.grant_hero_items.add(mission_data)
             # Check for Kerrigan missions
             if ((MissionFlag.Kerrigan|MissionFlag.HeroSystemUnsupported) in mission_data.flags
