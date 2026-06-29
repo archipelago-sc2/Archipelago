@@ -557,11 +557,10 @@ def _create_region(
             if victory_cache_locations >= target_victory_cache_locations:
                 continue
             victory_cache_locations += 1
-        if world.options.required_tactics.value == world.options.required_tactics.option_chaos:
-            if mission_needs_unit and not unit_given and location_data.type == easiest_category:
-                # Ensure there is at least one no-logic location if the first mission is a build mission
-                location_data.flags |= FLAG_EASIEST_LOCATION
-                unit_given = True
+        if mission_needs_unit and not unit_given and location_data.type == easiest_category:
+            # Ensure there is at least one no-logic location if the first mission is a build mission
+            location_data.flags |= FLAG_EASIEST_LOCATION
+            unit_given = True
         location = _create_location(world.player, location_data, region, location_cache)
         region.locations.append(location)
 

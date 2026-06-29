@@ -518,9 +518,7 @@ class SC2Logic:
                 # Mercs
                 item_names.WAR_PIGS,
                 item_names.SPARTAN_COMPANY,
-                item_names.HELS_ANGELS,
                 item_names.WINGED_NIGHTMARES,
-                item_names.BRYNHILDS,
                 # RG
                 item_names.SON_OF_KORHAL,
                 item_names.BULWARK_COMPANY,
@@ -555,6 +553,9 @@ class SC2Logic:
                         item_names.EMPERORS_SHADOW,
                         item_names.EMPERORS_GUARDIAN,
                         item_names.NIGHT_HAWK,
+                        # Mercs
+                        item_names.HELS_ANGELS,  # air-to-air
+                        item_names.BRYNHILDS,  # air-to-air
                     ), self.player)
                     or state.has_all((item_names.REAPER, item_names.REAPER_JET_PACK_OVERDRIVE), self.player)
                 )
@@ -633,6 +634,7 @@ class SC2Logic:
                 self.advanced_tactics
                 and state.has_any((
                     item_names.VIKING,
+                    item_names.SKY_FURY,
                     item_names.PRIDE_OF_AUGUSTGRAD,
                 ), self.player)
             )
@@ -737,10 +739,22 @@ class SC2Logic:
         # Manned Bunker
         if state.has(item_names.BUNKER, self.player):
             if (state.has_any((
-                item_names.MARINE, item_names.DOMINION_TROOPER, item_names.MARAUDER,
+                item_names.MARINE, item_names.DOMINION_TROOPER, item_names.MARAUDER, item_names.REAPER,
             ), self.player)):
                 rating += 3
             elif state.has(item_names.FIREBAT, self.player):
+                rating += 1
+            elif state.has_all((
+                item_names.SPECTRE,
+                item_names.SPECTRE_IMPALER_ROUNDS,
+                item_names.SPECTRE_RESOURCE_EFFICIENCY,
+            ), self.player):
+                rating += 1
+            elif state.has_all((
+                item_names.GHOST,
+                item_names.GHOST_OCULAR_IMPLANTS,
+                item_names.GHOST_RESOURCE_EFFICIENCY,
+            ), self.player):
                 rating += 1
 
         return rating
@@ -3924,7 +3938,13 @@ class SC2Logic:
         return state.has_any(item_groups.zerg_basic_starter_units, self.player)
 
     def has_zerg_advanced_starter_unit(self, state: CollectionState) -> bool:
-        return state.has_any(item_groups.zerg_advanced_starter_units, self.player)
+        return (
+            state.has_any(item_groups.zerg_advanced_starter_units, self.player)
+            or self.morph_ravager(state)
+            or self.morph_igniter(state)
+            or self.morph_lurker(state)
+            or self.morph_impaler(state)
+        )
 
     def has_zerg_chaos_starter_unit(self, state: CollectionState) -> bool:
         return (

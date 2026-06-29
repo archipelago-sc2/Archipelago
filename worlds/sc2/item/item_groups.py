@@ -290,21 +290,23 @@ _terran_core_units = {
     item_names.VULTURE: LogicRating.BASIC_STARTER,
     item_names.GOLIATH: LogicRating.BASIC_STARTER,
     item_names.DIAMONDBACK: LogicRating.BASIC_STARTER,
+    item_names.SIEGE_TANK: LogicRating.BASIC_STARTER,
     item_names.WARHOUND: LogicRating.BASIC_STARTER,
     item_names.VIKING: LogicRating.BASIC_STARTER,
+    # Note(mm): Iffy on this one, as it can't block zerglings on e.g. Evacuation, and has a 60s build time
+    item_names.BANSHEE: LogicRating.BASIC_STARTER,
 
     item_names.MEDIC: LogicRating.BASIC_EXTRA,  # No attack
     item_names.AEGIS_GUARD: LogicRating.BASIC_EXTRA,
     item_names.FIELD_RESPONSE_THETA: LogicRating.BASIC_EXTRA,  # Healer
+    item_names.MEDIVAC: LogicRating.BASIC_EXTRA,  # Healer
     item_names.BULWARK_COMPANY: LogicRating.BASIC_EXTRA,
     item_names.SHOCK_DIVISION: LogicRating.BASIC_EXTRA,
     item_names.NIGHT_HAWK: LogicRating.BASIC_EXTRA,
     item_names.NIGHT_WOLF: LogicRating.BASIC_EXTRA,
     item_names.PRIDE_OF_AUGUSTGRAD: LogicRating.BASIC_EXTRA,
     item_names.SKY_FURY: LogicRating.BASIC_EXTRA,
-    item_names.SIEGE_TANK: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,      # Tech time
     item_names.THOR: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,            # Tech time
-    item_names.BANSHEE: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,         # Tech time
     item_names.BATTLECRUISER: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,   # Tech time
     item_names.SON_OF_KORHAL: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
 
@@ -319,7 +321,6 @@ _terran_core_units = {
     item_names.WIDOW_MINE: LogicRating.ADVANCED_EXTRA,          # Weak, no building attack baseline
     item_names.RAVEN: LogicRating.ADVANCED_EXTRA,               # Caster
     item_names.SCIENCE_VESSEL: LogicRating.ADVANCED_EXTRA,      # Caster
-    item_names.MEDIVAC: LogicRating.ADVANCED_EXTRA,             # Healer
     item_names.LIBERATOR: LogicRating.ADVANCED_EXTRA,           # Technical, no building attack baseline
     item_names.VALKYRIE: LogicRating.ADVANCED_EXTRA,            # Air-to-air
     item_names.EMPERORS_SHADOW: LogicRating.ADVANCED_EXTRA,     # Caster, expensive
@@ -840,18 +841,20 @@ _zerg_core_units = {
     item_names.PYGALISK: LogicRating.BASIC_STARTER,
     item_names.INFESTED_DIAMONDBACK: LogicRating.BASIC_STARTER,
 
-    # item_names.PRIMAL_IGNITER: LogicRating.BASIC_EXTRA,
-    # item_names.LURKER: LogicRating.BASIC_EXTRA,
-    # item_names.IMPALER: LogicRating.BASIC_EXTRA,
     # item_names.BROOD_LORD: LogicRating.BASIC_EXTRA,
     # item_names.GUARDIAN: LogicRating.BASIC_EXTRA,
     # item_names.TYRANNOZOR: LogicRating.BASIC_EXTRA,
+    # item_names.PRIMAL_IGNITER: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
+    # item_names.LURKER: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
+    # item_names.IMPALER: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
     item_names.ZERGLING: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
     item_names.MUTALISK: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
     item_names.SWARM_HOST: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
     item_names.ULTRALISK: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
     item_names.INFESTED_MARINE: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
     item_names.INFESTED_BANSHEE: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
+
+    # item_names.RAVAGER: LogicRating.ADVANCED_STARTER,
 
     item_names.INFESTOR: LogicRating.ADVANCED_EXTRA,  # Caster
     item_names.HIVE_QUEEN: LogicRating.ADVANCED_EXTRA,  # Caster
@@ -861,7 +864,6 @@ _zerg_core_units = {
     item_names.BULLFROG: LogicRating.ADVANCED_EXTRA,
     item_names.CORRUPTOR: LogicRating.ADVANCED_EXTRA,  # Air-to-air
     item_names.INFESTED_LIBERATOR: LogicRating.ADVANCED_EXTRA,  # Air-to-air
-    # item_names.RAVAGER: LogicRating.ADVANCED_EXTRA,
     # item_names.VIPER: LogicRating.ADVANCED_EXTRA,
     # item_names.DEVOURER: LogicRating.ADVANCED_EXTRA,
 

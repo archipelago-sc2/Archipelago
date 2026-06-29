@@ -510,7 +510,7 @@ item_table = {
                  classification=ItemClassification.progression, parent=item_names.BATTLECRUISER, quantity=2),
     item_names.GHOST_OCULAR_IMPLANTS:
         ItemData(320 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_4, 2, SC2Race.TERRAN,
-                 parent=item_names.GHOST),
+                 classification=ItemClassification.progression_skip_balancing, parent=item_names.GHOST),
     item_names.GHOST_CRIUS_SUIT:
         ItemData(321 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_4, 3, SC2Race.TERRAN,
                  parent=item_names.GHOST),
@@ -630,7 +630,7 @@ item_table = {
                  classification=ItemClassification.progression, parent=item_names.GHOST),
     item_names.SPECTRE_IMPALER_ROUNDS:
         ItemData(360 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Armory_5, 11, SC2Race.TERRAN,
-                 parent=item_names.SPECTRE),
+                 classification=ItemClassification.progression_skip_balancing, parent=item_names.SPECTRE),
     item_names.THOR_PROGRESSIVE_HIGH_IMPACT_PAYLOAD:
         ItemData(361 + SC2WOL_ITEM_ID_OFFSET, TerranItemType.Progressive, 14, SC2Race.TERRAN,
                  classification=ItemClassification.progression, parent=item_names.THOR, quantity=2),
