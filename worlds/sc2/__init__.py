@@ -147,7 +147,7 @@ class SC2World(World):
 
     @classmethod
     def stage_assert_generate(cls, multiworld: MultiWorld) -> None:
-        if not logger.handlers:
+        if not logger.handlers or logging.getLogger().level > logging.INFO:
             import datetime
             timestamp = datetime.datetime.now().strftime('%Y-%m-%dT%H_%M_%S')
             handler = logging.FileHandler(

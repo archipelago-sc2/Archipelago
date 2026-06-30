@@ -855,7 +855,7 @@ def set_rules(
                 if (location_data.type == locations.LocationType.VICTORY
                     or (order < 3 and location_data.type != locations.LocationType.EVENT)
                 ):
-                    logger.debug(f"{location.global_name():45} | {signature}")
+                    logger.debug(f"{location.global_name():45} | {f'{order}, d{depth}':9} | {signature}")
                 location_data.location.access_rule = rule_func
             order += 1
     return
