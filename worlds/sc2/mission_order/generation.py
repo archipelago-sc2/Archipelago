@@ -28,12 +28,15 @@ from .mission_pools import (
 from .options import GENERIC_KEY_NAME, GENERIC_PROGRESSIVE_KEY_NAME
 from .. import options
 from .. import locations
-from ..rules_mapping import RuleSignature, LOCATION_TO_RULE
+from ..rules_mapping import RuleSignature, EMPTY_RULE, LOCATION_TO_RULE
 from ..rule_helpers import and_2_rules, and_3_rules
 
 if TYPE_CHECKING:
     from .. import SC2World
     from BaseClasses import CollectionState
+
+
+logger = logging.getLogger("Starcraft 2")
 
 
 @dataclass(slots=True)
@@ -412,7 +415,7 @@ def fill_missions(
         locked_mission = lookup_id_to_mission[locked]
         allowed_slots = [slot for slot in allowed_slots if slot in all_slots]
         if len(allowed_slots) == 0:
-            logging.warning(f"SC2: Locked mission \"{locked_mission.mission_name}\" is not allowed in any remaining spot and will not be placed.")
+            logger.warning(f"SC2: Locked mission \"{locked_mission.mission_name}\" is not allowed in any remaining spot and will not be placed.")
             continue
         # This inherits the earlier sorting, but is now sorted again by relative difficulty
         # The result is a sorting in order of nearest difficulty (preferring lower), then by smallest pool, then randomly
@@ -808,29 +811,33 @@ def set_rules(
         depth: sorted(depth_to_missions[depth], key=lambda mission: mission.mission.pool)
         for depth in sorted(depth_to_missions)
     }
-    # Note(mm): This has to happen before rule resolution so it can look into world.grant_nova_items
+    order = 0
+    for depth, missions in depth_to_missions.items():
+        for mission in missions:
+            logger.debug(f"player {world.player} | {order:3} | depth {depth:3} | {mission.mission.mission_name}")
+            order += 1
+
+    # Note(mm): This has to happen before rule resolution so it can look into logic.grant_hero_items
     flag_hero_tech(world, region_to_location_data, depth_to_missions)
     rule_cache: dict[RuleSignature, Callable[['CollectionState'], bool]] = {}
-    NUM_STARTER_MISSION_LOCATIONS = 3
-    # Parameter controlling how many missions "fill" a depth level.
-    # For very broad mission orders like blitz or key cage.
+    NUM_STARTER_LOCATION_MISSIONS = 3
     order = 0
     for depth, missions in depth_to_missions.items():
         for mission in missions:
             mission_data = mission.mission
             mission_locations = region_to_location_data[mission_data.mission_name]
             for location_data in mission_locations:
+                if location_data.location is None:
+                    continue
                 if isinstance(location_data.info, (EventData, VictoryCacheData)):
                     location = location_data.info.victory_location
                 else:
                     location = location_data.info
-                rule = LOCATION_TO_RULE.get(location)
-                if rule is None:
-                    continue
+                rule = LOCATION_TO_RULE.get(location, EMPTY_RULE)
                 starter_location = (
                     (location_data.flags & FLAG_EASIEST_LOCATION)
                     and depth == 0
-                    and order < NUM_STARTER_MISSION_LOCATIONS
+                    and order < NUM_STARTER_LOCATION_MISSIONS
                 )
                 signature = rule.to_signature(
                     world,
@@ -845,8 +852,11 @@ def set_rules(
                 if rule_func is None:
                     rule_func = signature.resolve(world.logic, Location.access_rule)
                     rule_cache[signature] = rule_func
-                if location_data.location is not None:
-                    location_data.location.access_rule = rule_func
+                if (location_data.type == locations.LocationType.VICTORY
+                    or (order < 3 and location_data.type != locations.LocationType.EVENT)
+                ):
+                    logger.debug(f"{location.global_name():45} | {signature}")
+                location_data.location.access_rule = rule_func
             order += 1
     return
 

@@ -125,6 +125,15 @@ class RuleSignature(NamedTuple):
         result = rule_helpers.COUNT_TO_AND_FUNCTION[len(parts)](*parts)
         return result
 
+    def __str__(self) -> str:
+        fields = [
+            f'{f}={self[index]}'
+            for index, f in enumerate(self._fields[:-1])
+            if self[index] and (f != "power_comp" or self[index] > COMP_UPGRADEABLE)]
+        if self.rule:
+            fields.append(f'rule={self.rule.__name__}')
+        return f"RuleSignature({', '.join(fields)})"
+
 
 @dataclass(slots=True, kw_only=True)
 class ProtoRule:
@@ -263,6 +272,9 @@ class ProtoRule:
                 self.hard_rule
             )
         )
+
+
+EMPTY_RULE = ProtoRule()
 
 
 LOCATION_TO_RULE: dict[Sc2Location, ProtoRule] = {

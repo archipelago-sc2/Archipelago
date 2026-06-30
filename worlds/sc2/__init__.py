@@ -1,12 +1,15 @@
 from dataclasses import fields
 import logging
+import os
 
 from collections import Counter
 from typing import Any, ClassVar, Callable, Mapping
 from math import floor, ceil
 from BaseClasses import Item, MultiWorld, Location, Tutorial, ItemClassification, CollectionState
 from Options import OptionError
+import Utils
 from worlds.AutoWorld import WebWorld, World
+
 from . import location_groups
 from .item.item_groups import unreleased_items, war_council_upgrades, disabled_items
 from .item import (
@@ -44,7 +47,7 @@ from .rules import SC2Logic, get_required_kerrigan_levels
 from . import settings
 from .pool_filter import filter_items
 from .mission_tables import SC2Campaign, SC2Mission, SC2Race, MissionFlag
-from .tables import HeroOptions, HeroFlag
+from .tables import HeroFlag
 from .regions import create_mission_order
 from .mission_order import SC2MissionOrder
 from worlds.LauncherComponents import components, Component, launch as launch_component
@@ -141,6 +144,31 @@ class SC2World(World):
         if change:
             virtual_items.after_remove_item(state.prog_items[item.player], item)
         return change
+
+    @classmethod
+    def stage_assert_generate(cls, multiworld: MultiWorld) -> None:
+        if not logger.handlers:
+            import datetime
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%dT%H_%M_%S')
+            handler = logging.FileHandler(
+                os.path.join(
+                    Utils.user_path("logs"),
+                    f"Generate_Starcraft2_{timestamp}_{multiworld.seed}.log"
+                ),
+                mode="w",
+                encoding="utf-8"
+            )
+            handler.level = logging.DEBUG
+            formatter = logging.Formatter(fmt='[%(asctime)s] %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.level = logging.DEBUG
+            # It seems the root logger is configured with a level on the logger rather than the handlers,
+            # so it spews out debug messages from any child logger at debug level
+            root_logger = logging.getLogger()
+            for handler in root_logger.handlers:
+                if handler.level == logging.NOTSET:
+                    handler.level = root_logger.level
 
     def generate_early(self) -> None:
         # Do some options validation/recovery here
