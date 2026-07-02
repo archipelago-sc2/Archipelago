@@ -703,7 +703,7 @@ class SC2Manager(GameManager):
             if (self.ctx.location_inclusions[location_type] == LocationInclusion.option_enabled
                 and all(
                     self.ctx.location_inclusions_by_flag[flag] == LocationInclusion.option_enabled
-                    for flag in locations.location_id_to_location(location_id)[0].flags
+                    for flag in locations.location_id_to_flags(location_id)
                 )
             ):
                 return True

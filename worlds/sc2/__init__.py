@@ -27,7 +27,8 @@ from .locations import (
     get_location_flags,
     get_plando_locations,
     is_victory_cache,
-    location_id_to_location,
+    location_id_to_type,
+    location_id_to_flags,
     LocationType,
     LOCATION_NAME_TO_ID,
     VICTORY_MODULO,
@@ -1052,10 +1053,10 @@ def flag_and_add_resource_locations(world: SC2World, item_list: list[FilterItem]
             continue
         if location.name not in plando_locations:
             # The location is not plando'd
-            location_info, is_victory_cache = location_id_to_location(location.address)
-            location_type = LocationType.VICTORY_CACHE if is_victory_cache else location_info.type
+            location_type = location_id_to_type(location.address)
+            location_flags = location_id_to_flags(location.address)
             if (location_type in filler_location_types
-                or (location_info.flags & filler_location_flags)
+                or (location_flags & filler_location_flags)
             ):
                 item_name = world.get_filler_item_name()
                 item = create_item_with_correct_settings(world.player, item_name)

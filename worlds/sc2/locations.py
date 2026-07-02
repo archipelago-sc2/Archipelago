@@ -18,6 +18,8 @@ SC2_RACESWAP_LOC_ID_OFFSET = SC2NCO_LOC_ID_OFFSET + 900
 
 VICTORY_MODULO = 100
 VICTORY_CACHE_OFFSET = 90
+STARTER_CACHE_OFFSET = 80
+MAX_NUM_STARTER_CACHE_LOCATIONS = 4
 NUM_VICTORY_CACHE_LOCATIONS = 10
 
 
@@ -28,7 +30,8 @@ class LocationType(enum.IntEnum):
     CHALLENGE = 3  # Challenging objectives, often harder than just completing a mission, and often associated with Achievements
     MASTERY = 4  # Extremely challenging objectives often associated with Masteries and Feats of Strength in the original campaign
     VICTORY_CACHE = 5  # Bonus locations for beating a mission
-    EVENT = 6  # Used to mark AP events for logic, basically permanently plandoed locations
+    STARTER_CACHE = 6  # Bonus locations for starting a mission
+    EVENT = 7  # Used to mark AP events for logic, basically permanently plandoed locations
 
 
 class LocationFlag(enum.IntFlag):
@@ -44,6 +47,11 @@ class LocationFlag(enum.IntFlag):
 def victory_cache_location_name(location: 'Sc2Location', index: int) -> str:
     """Get the location name for a victory cache location given the mission and the cache's (0-based) index"""
     return f"{location.global_name()} Cache ({index + 1})"
+
+
+def starter_cache_location_name(mission: SC2Mission, index: int) -> str:
+    """Get the location name for a starter cache location given the mission and the cache's (0-based) index"""
+    return f"{mission.mission_name}: Starter Cache ({index + 1})"
 
 
 def get_location_types(world: "SC2World", inclusion_type: int) -> set[LocationType]:
@@ -2323,13 +2331,18 @@ def _init_tables(
     location_name_to_id: dict[str, int],
 ) -> None:
     for location in Sc2Location:
-        # Generating Beat event and Victory Cache locations
+        # Generating Starter and Victory Cache locations
         if location.type == LocationType.VICTORY:
             for cache_index in range(NUM_VICTORY_CACHE_LOCATIONS):
                 victory_cache_name = victory_cache_location_name(location, cache_index)
                 victory_cache_id = location.id + VICTORY_CACHE_OFFSET + cache_index
                 location_id_to_name[victory_cache_id] = victory_cache_name
                 location_name_to_id[victory_cache_name] = victory_cache_id
+            for cache_index in range(MAX_NUM_STARTER_CACHE_LOCATIONS):
+                starter_cache_name = starter_cache_location_name(location.mission, cache_index)
+                starter_cache_id = location.id + STARTER_CACHE_OFFSET + cache_index
+                location_id_to_name[starter_cache_id] = starter_cache_name
+                location_name_to_id[starter_cache_name] = starter_cache_id
 
 
 _init_tables(LOCATION_ID_TO_NAME, LOCATION_NAME_TO_ID)
@@ -2341,26 +2354,26 @@ def is_victory_cache(location_id: int) -> bool:
     return objective_id >= VICTORY_CACHE_OFFSET
 
 
-def location_id_to_location(location_id: int) -> tuple[Sc2Location, int]:
-    """
-    Returns a tuple of Sc2Location enum entry and victory cache index.
-    For victory cache IDs, the location will be the corresponding victory location.
-    For non-victory cache IDs, the cache index will always be 0.
-    """
+def location_id_to_type(location_id: int) -> LocationType:
     objective_id = location_id % VICTORY_MODULO
     if objective_id >= VICTORY_CACHE_OFFSET:
-        return (
-            LOCATION_ID_TO_LOCATION[location_id - objective_id],
-            objective_id - VICTORY_CACHE_OFFSET + 1
-        )
-    return (LOCATION_ID_TO_LOCATION[location_id], 0)
-
-
-def location_id_to_type(location_id: int) -> LocationType:
-    location_info, victory_cache_index = location_id_to_location(location_id)
-    if victory_cache_index:
         return LocationType.VICTORY_CACHE
-    return location_info.type
+    elif objective_id >= STARTER_CACHE_OFFSET:
+        return LocationType.STARTER_CACHE
+    return LOCATION_ID_TO_LOCATION[location_id].type
+
+
+def location_id_to_flags(location_id: int) -> LocationFlag:
+    objective_id = location_id % VICTORY_MODULO
+    if objective_id >= VICTORY_CACHE_OFFSET:
+        return LOCATION_ID_TO_LOCATION[location_id - objective_id].flags
+    elif objective_id >= STARTER_CACHE_OFFSET:
+        return LocationFlag.NONE
+    return LOCATION_ID_TO_LOCATION[location_id].flags
+
+
+def location_id_to_mission(location_id: int) -> SC2Mission:
+    return LOCATION_ID_TO_LOCATION[location_id - (location_id % VICTORY_MODULO)].mission
 
 
 def get_location_offset(mission_id: int) -> int:

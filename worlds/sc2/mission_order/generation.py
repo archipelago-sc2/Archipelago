@@ -25,10 +25,11 @@ from .entry_rules import EntryRule, SubRuleEntryRule, ItemEntryRule, CountMissio
 from .mission_pools import (
     SC2MOGenMissionPools, Difficulty, modified_difficulty_thresholds, STANDARD_DIFFICULTY_FILL_ORDER
 )
+from Options import OptionError
 from .options import GENERIC_KEY_NAME, GENERIC_PROGRESSIVE_KEY_NAME
 from .. import options
 from .. import locations
-from ..rules_mapping import RuleSignature, EMPTY_RULE, LOCATION_TO_RULE
+from ..rules_mapping import RuleSignature, NO_LOGIC_RULE_SIGNATURE, EMPTY_RULE, LOCATION_TO_RULE
 from ..rule_helpers import and_2_rules, and_3_rules
 
 if TYPE_CHECKING:
@@ -50,15 +51,17 @@ class VictoryCacheData:
     victory_location: locations.Sc2Location
 
 
-FLAG_EASIEST_LOCATION = 0b01
+@dataclass(slots=True)
+class StarterCacheData:
+    index: int
+    victory_location: locations.Sc2Location
 
 
 @dataclass(slots=True)
 class LocationData:
-    info: locations.Sc2Location | EventData | VictoryCacheData
+    info: locations.Sc2Location | EventData | VictoryCacheData | StarterCacheData
     type: locations.LocationType = field(init=False)
     location: Location | None = None
-    depth: int | None = None
     flags: int = 0
 
     def __post_init__(self) -> None:
@@ -66,6 +69,8 @@ class LocationData:
             self.type = locations.LocationType.EVENT
         elif isinstance(self.info, VictoryCacheData):
             self.type = locations.LocationType.VICTORY_CACHE
+        elif isinstance(self.info, StarterCacheData):
+            self.type = locations.LocationType.STARTER_CACHE
         else:
             self.type = self.info.type
 
@@ -74,6 +79,8 @@ class LocationData:
             return f"Beat {self.info.victory_location.mission.mission_name}"
         elif isinstance(self.info, VictoryCacheData):
             return locations.victory_cache_location_name(self.info.victory_location, self.info.index)
+        elif isinstance(self.info, StarterCacheData):
+            return locations.starter_cache_location_name(self.info.victory_location.mission, self.info.index)
         else:
             return self.info.global_name()
 
@@ -82,6 +89,8 @@ class LocationData:
             return None
         elif isinstance(self.info, VictoryCacheData):
             return self.info.victory_location.id + locations.VICTORY_CACHE_OFFSET + self.info.index
+        elif isinstance(self.info, StarterCacheData):
+            return self.info.victory_location.id + locations.STARTER_CACHE_OFFSET + self.info.index
         else:
             return self.info.id
 
@@ -537,33 +546,12 @@ def _create_region(
         target_victory_cache_locations = slot.option_victory_cache
     victory_cache_locations = 0
 
-    # If the first mission is a build mission,
-    # require a unit everywhere except one location in the easiest category
-    mission_needs_unit = False
-    unit_given = False
-    easiest_category = LocationType.MASTERY
-    if slot is not None and slot.min_depth == 0:
-        mission = lookup_name_to_mission.get(region.name)
-        if mission is not None and MissionFlag.NoBuild not in mission.flags:
-            mission_needs_unit = True
-            for location_data in locations_per_region.get(name, ()):
-                if location_data.type == LocationType.VICTORY:
-                    pass
-                elif location_data.type < easiest_category:
-                    easiest_category = location_data.type
-            if easiest_category >= LocationType.CHALLENGE:
-                easiest_category = LocationType.VICTORY
-
     for location_data in locations_per_region.get(name, ()):
         assert slot is not None
         if location_data.type == LocationType.VICTORY_CACHE:
             if victory_cache_locations >= target_victory_cache_locations:
                 continue
             victory_cache_locations += 1
-        if mission_needs_unit and not unit_given and location_data.type == easiest_category:
-            # Ensure there is at least one no-logic location if the first mission is a build mission
-            location_data.flags |= FLAG_EASIEST_LOCATION
-            unit_given = True
         location = _create_location(world.player, location_data, region, location_cache)
         region.locations.append(location)
 
@@ -574,38 +562,39 @@ def _create_region(
 
 
 def initialize_hero_presence(world: 'SC2World', mission_order: SC2MOGenMissionOrder) -> None:
-        campaign_hero_presence = _calculate_hero_presence(
-            world.options.hero_presence.value,
-            world.options.enabled_heroes.value
-        )
-        missions = [mission.mission for mission in mission_order.get_missions() if not mission.option_empty]
-        world.hero_presence = _calculate_mission_hero_presence(
-            campaign_hero_presence,
-            missions,
-        )
-        _apply_hero_presence_override(
-            world.hero_presence,
-            HeroFlag.KERRIGAN,
-            world.options.kerrigan_presence.value,
-            HeroOptions.KERRIGAN in world.options.enabled_heroes.value,
-        )
-        _apply_hero_presence_override(
-            world.hero_presence,
-            HeroFlag.NOVA,
-            world.options.nova_presence.value,
-            HeroOptions.NOVA in world.options.enabled_heroes.value,
-        )
-        _apply_hero_presence_override(
-            world.hero_presence,
-            HeroFlag.ARTANIS,
-            world.options.artanis_presence.value,
-            HeroOptions.ARTANIS in world.options.enabled_heroes.value,
-        )
-        _apply_custom_mission_order_hero_presence(
-            world.hero_presence,
-            mission_order.get_missions(),
-        )
-        world.logic.hero_presence = world.hero_presence
+    campaign_hero_presence = _calculate_hero_presence(
+        world.options.hero_presence.value,
+        world.options.enabled_heroes.value
+    )
+    missions = [mission.mission for mission in mission_order.get_missions() if not mission.option_empty]
+    world.hero_presence = _calculate_mission_hero_presence(
+        campaign_hero_presence,
+        missions,
+    )
+    _apply_hero_presence_override(
+        world.hero_presence,
+        HeroFlag.KERRIGAN,
+        world.options.kerrigan_presence.value,
+        HeroOptions.KERRIGAN in world.options.enabled_heroes.value,
+    )
+    _apply_hero_presence_override(
+        world.hero_presence,
+        HeroFlag.NOVA,
+        world.options.nova_presence.value,
+        HeroOptions.NOVA in world.options.enabled_heroes.value,
+    )
+    _apply_hero_presence_override(
+        world.hero_presence,
+        HeroFlag.ARTANIS,
+        world.options.artanis_presence.value,
+        HeroOptions.ARTANIS in world.options.enabled_heroes.value,
+    )
+    _apply_custom_mission_order_hero_presence(
+        world.hero_presence,
+        mission_order.get_missions(),
+    )
+    assert world.logic
+    world.logic.hero_presence = world.hero_presence
 
 
 def _calculate_hero_presence(presence: int, heroes: set[str]) -> dict[SC2Campaign, dict[SC2Race, HeroFlag]]:
@@ -752,22 +741,22 @@ def flag_hero_tech(
             if world.hero_presence.get(enemy_intelligence_variant, HeroFlag.NONE) != HeroFlag.NONE:
                 SOLO_HERO_MISSIONS.append(enemy_intelligence_variant)
         for mission in SOLO_HERO_MISSIONS:
-            locations_data = region_to_location_data.get(mission)
+            locations_data = region_to_location_data.get(mission.mission_name)
             if not locations_data:
                 continue
             location_data = locations_data[0]
             assert location_data.type == locations.LocationType.VICTORY
             if location_data.location is None:
                 continue
-            world.logic.grant_hero_items.add(mission.id)
+            world.logic.grant_hero_items.add(mission)
 
     kerrigan_build_missions: set[SC2Mission] = set()
     kerrigan_nobuild_missions: set[SC2Mission] = set()
     order = 0
     MAX_GRANT_BREADTH = 2
     for depth, missions in depth_to_missions.items():
-        for mission in missions:
-            mission_data = mission.mission
+        for mission_slot in missions:
+            mission_data = mission_slot.mission
             heroes = world.hero_presence.get(mission_data, HeroFlag.NONE)
             # Grant hero items if the HeroStartTech flag is set and the mission is in the first 3
             if (
@@ -800,7 +789,9 @@ def set_rules(
     world: 'SC2World',
     mission_order: SC2MOGenMissionOrder,
     region_to_location_data: dict[str, list[LocationData]],
+    location_cache: list[Location],
 ) -> None:
+    assert world.logic
     depth_to_missions: dict[int, list[SC2MOGenMission]] = {}
     for slot in mission_order.get_missions():
         if slot.option_empty:
@@ -813,32 +804,38 @@ def set_rules(
     }
     order = 0
     for depth, missions in depth_to_missions.items():
-        for mission in missions:
-            logger.debug(f"player {world.player} | {order:3} | depth {depth:3} | {mission.mission.mission_name}")
+        for mission_slot in missions:
+            logger.debug(f"player {world.player} | {order:3} | depth {depth:3} | {mission_slot.mission.mission_name}")
             order += 1
 
     # Note(mm): This has to happen before rule resolution so it can look into logic.grant_hero_items
     flag_hero_tech(world, region_to_location_data, depth_to_missions)
+
+    items_per_wa_upgrade = (
+        0 if world.options.generic_upgrade_missions > 0 else
+        1 if world.options.generic_upgrade_items.value in (
+            options.GenericUpgradeItems.option_bundle_unit_class,
+            options.GenericUpgradeItems.option_bundle_all,
+        ) else
+        2
+    )
+
     rule_cache: dict[RuleSignature, Callable[['CollectionState'], bool]] = {}
-    NUM_STARTER_LOCATION_MISSIONS = 3
     order = 0
     for depth, missions in depth_to_missions.items():
-        for mission in missions:
-            mission_data = mission.mission
+        for mission_slot in missions:
+            mission_data = mission_slot.mission
             mission_locations = region_to_location_data[mission_data.mission_name]
+
+            # Collect the signatures
+            location_to_signature: dict[locations.Sc2Location, RuleSignature] = {}
             for location_data in mission_locations:
                 if location_data.location is None:
                     continue
-                if isinstance(location_data.info, (EventData, VictoryCacheData)):
-                    location = location_data.info.victory_location
-                else:
-                    location = location_data.info
+                if isinstance(location_data.info, (EventData, VictoryCacheData, StarterCacheData)):
+                    continue
+                location = location_data.info
                 rule = LOCATION_TO_RULE.get(location, EMPTY_RULE)
-                starter_location = (
-                    (location_data.flags & FLAG_EASIEST_LOCATION)
-                    and depth == 0
-                    and order < NUM_STARTER_LOCATION_MISSIONS
-                )
                 signature = rule.to_signature(
                     world,
                     mission_data,
@@ -846,8 +843,58 @@ def set_rules(
                     depth,
                     order,
                     world.hero_presence,
-                    starter_location,
                 )
+                assert location not in location_to_signature or location_to_signature[location] == signature
+                location_to_signature[location] = signature
+
+            # Check if starter locations need to be added
+            if depth == 0:
+                item_counts = sorted([
+                    signature.estimate_items_required(items_per_wa_upgrade)
+                    for location, signature in location_to_signature.items()
+                    if location.type in (
+                        locations.LocationType.VICTORY,
+                        locations.LocationType.VANILLA,
+                        locations.LocationType.EXTRA,
+                    )
+                ])
+                starter_locations = 0
+                for index, item_requirement in enumerate(item_counts):
+                    if item_requirement > index:
+                        starter_locations = max(starter_locations, item_requirement - index)
+                if starter_locations > 0:
+                    logger.debug(f"{mission_data.mission_name} requires {starter_locations} starter locations")
+                if starter_locations > locations.MAX_NUM_STARTER_CACHE_LOCATIONS:
+                    raise OptionError(
+                        f"Mission {mission_data.mission_name} isn't a valid starter mission; "
+                        f"it would require {starter_locations} starter locations, "
+                        f"but the maximum is {locations.MAX_NUM_STARTER_CACHE_LOCATIONS}.\n"
+                        f"==> Required item counts per location: {item_counts}"
+                    )
+                assert isinstance(mission_locations[0].info, locations.Sc2Location)
+                for index in range(starter_locations):
+                    new_location_data = LocationData(StarterCacheData(index, mission_locations[0].info))
+                    new_location = _create_location(
+                        world.player,
+                        new_location_data,
+                        mission_slot.region,
+                        location_cache
+                    )
+                    mission_slot.region.locations.append(new_location)
+                    mission_locations.append(new_location_data)
+
+            # Set the rules
+            for location_data in mission_locations:
+                if location_data.location is None:
+                    continue
+                if isinstance(location_data.info, (EventData, VictoryCacheData, StarterCacheData)):
+                    location = location_data.info.victory_location
+                else:
+                    location = location_data.info
+                if isinstance(location_data.info, StarterCacheData):
+                    signature = NO_LOGIC_RULE_SIGNATURE
+                else:
+                    signature = location_to_signature[location]
                 rule_func = rule_cache.get(signature)
                 if rule_func is None:
                     rule_func = signature.resolve(world.logic, Location.access_rule)
@@ -855,11 +902,10 @@ def set_rules(
                 if (location_data.type == locations.LocationType.VICTORY
                     or (order < 3 and location_data.type != locations.LocationType.EVENT)
                 ):
-                    logger.debug(f"{location.global_name():45} | {f'{order}, d{depth}':9} | {signature}")
+                    logger.debug(f"{location_data.name():45} | {f'{order}, d{depth}':9} | {signature}")
                 location_data.location.access_rule = rule_func
             order += 1
     return
-
 
 
 ########################

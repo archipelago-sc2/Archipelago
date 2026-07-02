@@ -80,11 +80,12 @@ class RuleSignature(NamedTuple):
             + (items_per_wa_upgrade * self.upgrades)
             + (self.power_comp + 1 if self.power_comp > COMP_UPGRADEABLE else 0)
             + (self.macro_rating // 2)
-            + (self.defense_rating // 2)
+            + (self.defense_rating)
             + (self.detection > 0)
             + self.nova
             + self.artanis
             + self.kerrigan
+            + (1 if self.rule is not None else 0)
         )
 
     @overload
@@ -150,6 +151,9 @@ class RuleSignature(NamedTuple):
         if self.rule:
             fields.append(f'rule={self.rule.__name__}')
         return f"RuleSignature({', '.join(fields)})"
+
+
+NO_LOGIC_RULE_SIGNATURE = RuleSignature(SC2Race.ANY)
 
 
 @dataclass(slots=True, kw_only=True)
@@ -339,13 +343,13 @@ LOCATION_TO_RULE: dict[Sc2Location, ProtoRule] = {
     Sc2Location.EVACUATION_WESTERN_ZERG_BASE: ProtoRule(comp_type=COMP_ULTIMATE, upgrades_min=2, aa_min=AA_COMPETENT),
     Sc2Location.EVACUATION_EASTERN_ZERG_BASE: ProtoRule(comp_type=COMP_ULTIMATE, upgrades_min=2, aa_min=AA_COMPETENT),
     Sc2Location.OUTBREAK_VICTORY: ProtoRule(upgrades_min=1, defense_rating=4),
-    Sc2Location.OUTBREAK_LEFT_INFESTOR: ProtoRule(upgrades_min=1, defense_rating=4),
-    Sc2Location.OUTBREAK_RIGHT_INFESTOR: ProtoRule(upgrades_min=1, defense_rating=4),
-    Sc2Location.OUTBREAK_NORTH_INFESTED_COMMAND_CENTER: ProtoRule(upgrades_min=1, defense_rating=4),
-    Sc2Location.OUTBREAK_SOUTH_INFESTED_COMMAND_CENTER: ProtoRule(upgrades_min=1, defense_rating=4),
-    Sc2Location.OUTBREAK_NORTHWEST_BAR: ProtoRule(upgrades_min=1, defense_rating=4),
-    Sc2Location.OUTBREAK_NORTH_BAR: ProtoRule(upgrades_min=1, defense_rating=4),
-    Sc2Location.OUTBREAK_SOUTH_BAR: ProtoRule(upgrades_min=1, defense_rating=4),
+    Sc2Location.OUTBREAK_LEFT_INFESTOR: ProtoRule(defense_rating=4),
+    Sc2Location.OUTBREAK_RIGHT_INFESTOR: ProtoRule(defense_rating=4),
+    # Sc2Location.OUTBREAK_NORTH_INFESTED_COMMAND_CENTER: ProtoRule(),
+    Sc2Location.OUTBREAK_SOUTH_INFESTED_COMMAND_CENTER: ProtoRule(defense_rating=4),
+    Sc2Location.OUTBREAK_NORTHWEST_BAR: ProtoRule(defense_rating=4),
+    # Sc2Location.OUTBREAK_NORTH_BAR: ProtoRule(),
+    Sc2Location.OUTBREAK_SOUTH_BAR: ProtoRule(defense_rating=4),
     Sc2Location.SAFE_HAVEN_VICTORY: ProtoRule(aa_min=AA_COMPETENT),
     Sc2Location.SAFE_HAVEN_NORTH_NEXUS: ProtoRule(aa_min=AA_COMPETENT),
     Sc2Location.SAFE_HAVEN_EAST_NEXUS: ProtoRule(aa_min=AA_COMPETENT),
@@ -1091,21 +1095,21 @@ LOCATION_TO_RULE: dict[Sc2Location, ProtoRule] = {
     Sc2Location.EVACUATION_P_WESTERN_ZERG_BASE: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC),
     Sc2Location.EVACUATION_P_EASTERN_ZERG_BASE: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_BASIC),
     Sc2Location.OUTBREAK_Z_VICTORY: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
-    Sc2Location.OUTBREAK_Z_LEFT_INFESTOR: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
-    Sc2Location.OUTBREAK_Z_RIGHT_INFESTOR: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
-    Sc2Location.OUTBREAK_Z_NORTH_INFESTED_COMMAND_CENTER: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
-    Sc2Location.OUTBREAK_Z_SOUTH_INFESTED_COMMAND_CENTER: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
-    Sc2Location.OUTBREAK_Z_NORTHWEST_BAR: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
-    Sc2Location.OUTBREAK_Z_NORTH_BAR: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
-    Sc2Location.OUTBREAK_Z_SOUTH_BAR: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
+    Sc2Location.OUTBREAK_Z_LEFT_INFESTOR: ProtoRule(defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
+    Sc2Location.OUTBREAK_Z_RIGHT_INFESTOR: ProtoRule(defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
+    # Sc2Location.OUTBREAK_Z_NORTH_INFESTED_COMMAND_CENTER: ProtoRule(),
+    Sc2Location.OUTBREAK_Z_SOUTH_INFESTED_COMMAND_CENTER: ProtoRule(defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
+    Sc2Location.OUTBREAK_Z_NORTHWEST_BAR: ProtoRule(rule=SC2Logic.zerg_outbreak_requirement),
+    # Sc2Location.OUTBREAK_Z_NORTH_BAR: ProtoRule(),
+    Sc2Location.OUTBREAK_Z_SOUTH_BAR: ProtoRule(defense_rating=4, rule=SC2Logic.zerg_outbreak_requirement),
     Sc2Location.OUTBREAK_P_VICTORY: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
-    Sc2Location.OUTBREAK_P_LEFT_INFESTOR: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
-    Sc2Location.OUTBREAK_P_RIGHT_INFESTOR: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
-    Sc2Location.OUTBREAK_P_NORTH_INFESTED_COMMAND_CENTER: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
-    Sc2Location.OUTBREAK_P_SOUTH_INFESTED_COMMAND_CENTER: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
-    Sc2Location.OUTBREAK_P_NORTHWEST_BAR: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
-    Sc2Location.OUTBREAK_P_NORTH_BAR: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
-    Sc2Location.OUTBREAK_P_SOUTH_BAR: ProtoRule(upgrades_min=1, defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
+    Sc2Location.OUTBREAK_P_LEFT_INFESTOR: ProtoRule(defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
+    Sc2Location.OUTBREAK_P_RIGHT_INFESTOR: ProtoRule(defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
+    # Sc2Location.OUTBREAK_P_NORTH_INFESTED_COMMAND_CENTER: ProtoRule(),
+    Sc2Location.OUTBREAK_P_SOUTH_INFESTED_COMMAND_CENTER: ProtoRule(defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
+    Sc2Location.OUTBREAK_P_NORTHWEST_BAR: ProtoRule(rule=SC2Logic.protoss_outbreak_requirement),
+    # Sc2Location.OUTBREAK_P_NORTH_BAR: ProtoRule(),
+    Sc2Location.OUTBREAK_P_SOUTH_BAR: ProtoRule(defense_rating=4, rule=SC2Logic.protoss_outbreak_requirement),
     Sc2Location.SAFE_HAVEN_Z_VICTORY: ProtoRule(aa_min=AA_COMPETENT),
     Sc2Location.SAFE_HAVEN_Z_NORTH_NEXUS: ProtoRule(aa_min=AA_COMPETENT),
     Sc2Location.SAFE_HAVEN_Z_EAST_NEXUS: ProtoRule(aa_min=AA_COMPETENT),

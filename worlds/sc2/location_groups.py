@@ -12,8 +12,7 @@ def get_location_groups() -> dict[str, set[str]]:
         if location_id is None:
             # Beat events
             continue
-        location_info, is_victory_cache = locations.location_id_to_location(location_id)
-        mission = location_info.mission
+        mission = locations.location_id_to_mission(location_id)
 
         if (MissionFlag.HasRaceSwap|MissionFlag.RaceSwap) & mission.flags:
             # Location group including race-swapped variants of a location
@@ -32,7 +31,7 @@ def get_location_groups() -> dict[str, set[str]]:
         result.setdefault(mission.mission_name, set()).add(location_name)
 
         # Location group by location category
-        location_type = locations.LocationType.VICTORY_CACHE if is_victory_cache else location_info.type
+        location_type = locations.location_id_to_type(location_id)
         result.setdefault(location_type.name.title(), set()).add(location_name)
 
     return result

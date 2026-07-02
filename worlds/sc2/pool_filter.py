@@ -536,7 +536,7 @@ def filter_items(world: 'SC2World', location_cache: list[Location], item_pool: l
     reserved_filler_count = len(excluded_locations)
     target_nonfiller_item_count = inventory_size - reserved_filler_count
     filler_amount = (inventory_size * world.options.filler_percentage) // 100
-    cached_mission_requirements: dict[int, tuple[Callable[['CollectionState'], bool]], list[str]] = {}
+    cached_mission_requirements: dict[int, tuple[Callable[['CollectionState'], bool], list[str]]] = {}
     for location in location_cache:
         if location.access_rule is not Location.access_rule:
             cached_mission_requirements.setdefault(id(location.access_rule), (location.access_rule, []))[1].append(location.name)
