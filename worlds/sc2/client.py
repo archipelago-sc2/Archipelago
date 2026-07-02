@@ -33,7 +33,7 @@ from .options import (
     MissionOrder, KerriganPrimalStatus, EnableMorphling, GameDifficulty,
     GameSpeed, GenericUpgradeItems, GenericUpgradeResearch, ColorChoice, GenericUpgradeMissions, MaxUpgradeLevel,
     LocationInclusion, ExtraLocations, MasteryLocations, SpeedrunLocations, PreventativeLocations, ChallengeLocations,
-    VanillaLocations, BasebustLocations, EnabledHeroes, HeroPresence,
+    VanillaLocations, BasebustLocations, EnabledHeroes,
     GrantStoryTech, GrantStoryLevels, TakeOverAIAllies, RequiredTactics,
     SpearOfAdunPresence, SpearOfAdunPresentInNoBuild, SpearOfAdunPassiveAbilityPresence,
     SpearOfAdunPassivesPresentInNoBuild, EnableVoidTrade, VoidTradeAgeLimit, void_trade_age_limits_ms, VoidTradeWorkers,
@@ -52,7 +52,8 @@ from .settings import Starcraft2Settings
 import nest_asyncio
 from .item import item_tables
 from .locations import (
-    SC2WOL_LOC_ID_OFFSET, LocationType, LocationFlag, SC2HOTS_LOC_ID_OFFSET, get_location_id, VICTORY_MODULO
+    SC2WOL_LOC_ID_OFFSET, LocationType, LocationFlag, SC2HOTS_LOC_ID_OFFSET, get_location_id, VICTORY_MODULO,
+    location_id_to_type,
 )
 from .mission_tables import (
     lookup_id_to_mission, SC2Campaign, MissionInfo,
@@ -1132,6 +1133,7 @@ class SC2Context(CommonContext):
             self.location_inclusions = {
                 LocationType.VICTORY: LocationInclusion.option_enabled, # Victory checks are always enabled
                 LocationType.VICTORY_CACHE: LocationInclusion.option_enabled, # Victory checks are always enabled
+                LocationType.STARTER_CACHE: LocationInclusion.option_enabled, # Cache checks are always enabled
                 LocationType.VANILLA: args["slot_data"].get("vanilla_locations", VanillaLocations.default),
                 LocationType.EXTRA: args["slot_data"].get("extra_locations", ExtraLocations.default),
                 LocationType.CHALLENGE: args["slot_data"].get("challenge_locations", ChallengeLocations.default),
@@ -1286,6 +1288,14 @@ class SC2Context(CommonContext):
                 sc2_logger.error(mission_client.message)
                 return False
             self.mission_client = mission_client
+            starter_cache_locations: list[int] = []
+            for objective_id in self.mission_id_to_location_ids[mission_id]:
+                location_id = get_location_id(mission_id, objective_id)
+                location_type = location_id_to_type(location_id)
+                if location_type == LocationType.STARTER_CACHE:
+                    starter_cache_locations.append(location_id)
+            if starter_cache_locations:
+                async_start(self.send_msgs([{"cmd": "LocationChecks", "locations": starter_cache_locations}]))
             return True
         else:
             sc2_logger.info(f"{lookup_id_to_mission[mission_id].mission_name} is not currently unlocked.")
