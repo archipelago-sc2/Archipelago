@@ -803,8 +803,8 @@ def set_rules(
         for depth in sorted(depth_to_missions)
     }
     order = 0
-    for depth, missions in depth_to_missions.items():
-        for mission_slot in missions:
+    for depth, mission_slots in depth_to_missions.items():
+        for mission_slot in mission_slots:
             logger.debug(f"player {world.player} | {order:3} | depth {depth:3} | {mission_slot.mission.mission_name}")
             order += 1
 
@@ -821,14 +821,15 @@ def set_rules(
     )
 
     rule_cache: dict[RuleSignature, Callable[['CollectionState'], bool]] = {}
-    order = 0
-    for depth, missions in depth_to_missions.items():
-        for mission_slot in missions:
+    first_order_of_depth = 0
+    for depth, mission_slots in depth_to_missions.items():
+        # Collect the signatures
+        location_to_signature: dict[locations.Sc2Location, RuleSignature] = {}
+        for order_in_depth, mission_slot in enumerate(mission_slots):
+            order = first_order_of_depth + order_in_depth
             mission_data = mission_slot.mission
             mission_locations = region_to_location_data[mission_data.mission_name]
 
-            # Collect the signatures
-            location_to_signature: dict[locations.Sc2Location, RuleSignature] = {}
             for location_data in mission_locations:
                 if location_data.location is None:
                     continue
@@ -847,43 +848,53 @@ def set_rules(
                 assert location not in location_to_signature or location_to_signature[location] == signature
                 location_to_signature[location] = signature
 
-            # Check if starter locations need to be added
-            if depth == 0:
-                item_counts = sorted([
-                    signature.estimate_items_required(items_per_wa_upgrade)
-                    for location, signature in location_to_signature.items()
-                    if location.type in (
-                        locations.LocationType.VICTORY,
-                        locations.LocationType.VANILLA,
-                        locations.LocationType.EXTRA,
-                    )
-                ])
-                starter_locations = 0
-                for index, item_requirement in enumerate(item_counts):
-                    if item_requirement > index:
-                        starter_locations = max(starter_locations, item_requirement - index)
-                if starter_locations > 0:
-                    logger.debug(f"{mission_data.mission_name} requires {starter_locations} starter locations")
-                if starter_locations > locations.MAX_NUM_STARTER_CACHE_LOCATIONS:
-                    raise OptionError(
-                        f"Mission {mission_data.mission_name} isn't a valid starter mission; "
-                        f"it would require {starter_locations} starter locations, "
-                        f"but the maximum is {locations.MAX_NUM_STARTER_CACHE_LOCATIONS}.\n"
-                        f"==> Required item counts per location: {item_counts}"
-                    )
+        # Check if starter locations need to be added
+        if depth == 0:
+            item_counts = sorted([
+                signature.estimate_items_required(items_per_wa_upgrade)
+                for location, signature in location_to_signature.items()
+                if location.type in (
+                    locations.LocationType.VICTORY,
+                    locations.LocationType.VANILLA,
+                    locations.LocationType.EXTRA,
+                )
+            ])
+            starter_locations = 0
+            for index, item_requirement in enumerate(item_counts):
+                if item_requirement > index:
+                    starter_locations = max(starter_locations, item_requirement - index)
+            if starter_locations > 0:
+                logger.debug(f"The {len(mission_slots)} starter missions require {starter_locations} starter locations")
+            max_num_starter_locations = len(mission_slots) * locations.MAX_NUM_STARTER_CACHE_LOCATIONS
+            if starter_locations > max_num_starter_locations:
+                raise OptionError(
+                    f"Mission {mission_data.mission_name} isn't a valid starter mission; "
+                    f"it would require {starter_locations} starter locations, "
+                    f"but the maximum is {max_num_starter_locations} for {len(mission_slots)} "
+                    f"mission{'s' if len(mission_slots) > 1 else ''}.\n"
+                    f"==> Required item counts per location: {item_counts}"
+                )
+            for index in range(starter_locations):
+                starter_cache_index, mission_index = divmod(index, len(mission_slots))
+                mission_slot = mission_slots[mission_index]
+                mission_locations = region_to_location_data[mission_slot.mission.mission_name]
                 assert isinstance(mission_locations[0].info, locations.Sc2Location)
-                for index in range(starter_locations):
-                    new_location_data = LocationData(StarterCacheData(index, mission_locations[0].info))
-                    new_location = _create_location(
-                        world.player,
-                        new_location_data,
-                        mission_slot.region,
-                        location_cache
-                    )
-                    mission_slot.region.locations.append(new_location)
-                    mission_locations.append(new_location_data)
+                new_location_data = LocationData(
+                    StarterCacheData(starter_cache_index, mission_locations[0].info)
+                )
+                new_location = _create_location(
+                    world.player,
+                    new_location_data,
+                    mission_slot.region,
+                    location_cache
+                )
+                mission_slot.region.locations.append(new_location)
+                mission_locations.append(new_location_data)
 
-            # Set the rules
+        # Set the rules
+        for order_in_depth, mission_slot in enumerate(mission_slots):
+            order = first_order_of_depth + order_in_depth
+            mission_locations = region_to_location_data[mission_slot.mission.mission_name]
             for location_data in mission_locations:
                 if location_data.location is None:
                     continue
@@ -895,16 +906,17 @@ def set_rules(
                     signature = NO_LOGIC_RULE_SIGNATURE
                 else:
                     signature = location_to_signature[location]
-                rule_func = rule_cache.get(signature)
-                if rule_func is None:
-                    rule_func = signature.resolve(world.logic, Location.access_rule)
-                    rule_cache[signature] = rule_func
                 if (location_data.type == locations.LocationType.VICTORY
                     or (order < 3 and location_data.type != locations.LocationType.EVENT)
                 ):
                     logger.debug(f"{location_data.name():45} | {f'{order}, d{depth}':9} | {signature}")
+
+                rule_func = rule_cache.get(signature)
+                if rule_func is None:
+                    rule_func = signature.resolve(world.logic, Location.access_rule)
+                    rule_cache[signature] = rule_func
                 location_data.location.access_rule = rule_func
-            order += 1
+        first_order_of_depth = order + 1
     return
 
 

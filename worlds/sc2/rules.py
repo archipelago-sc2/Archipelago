@@ -867,13 +867,11 @@ class SC2Logic:
         return (
             state.has_any((
                 item_names.MARINE_COMBAT_SHIELD,
+                item_names.MARINE_STIMPACK,
                 item_names.MARINE_MAGRAIL_MUNITIONS,
                 item_names.MARINE_MEDPACK,
                 item_names.MEDIC_STABILIZER_MEDPACKS,
             ), self.player)
-            or (state.has_all((item_names.MARINE_STIMPACK, item_names.MARINE_MEDPACK), self.player)
-                and state.has_group("Missions", self.player, 1)
-            )
             or (self.advanced_tactics
                 and state.has(item_names.MARINE_LASER_TARGETING_SYSTEM, self.player)
             )
