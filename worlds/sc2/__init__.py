@@ -29,7 +29,6 @@ from .locations import (
     is_victory_cache,
     location_id_to_type,
     location_id_to_flags,
-    LocationType,
     LOCATION_NAME_TO_ID,
     VICTORY_MODULO,
 )
@@ -201,6 +200,20 @@ class SC2World(World):
                     "Either include more campaigns, include more races, or enable race swap."
                 )
             self.options.enabled_campaigns.value = enabled_campaigns
+
+        # NCO-only requires no-builds to be able to actually generate
+        if (self.options.required_tactics < options.RequiredTactics.option_chaos
+            and not self.options.shuffle_no_build
+            and (
+                (self.options.enabled_campaigns.value - {SC2Campaign.EPILOGUE.campaign_name})
+                == {SC2Campaign.NCO.campaign_name}
+            )
+        ):
+            logger.warning(
+                "NCO-only cannot generate without no-build missions; forcing no-build shuffling back on. "
+                "Note this check is disabled on chaos logic."
+            )
+            self.options.shuffle_no_build.value = options.ShuffleNoBuild.option_true
 
     def create_regions(self) -> None:
         self.logic = SC2Logic(self)

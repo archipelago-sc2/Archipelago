@@ -68,8 +68,6 @@ class TestSupportedUseCases(Sc2SetupTestBase):
         self.assertTrue(self.multiworld.itempool)
         missions = self.world.custom_mission_order.get_used_missions()
 
-        self.assertNotIn(mission_tables.SC2Mission.THE_ESCAPE, missions)
-        self.assertNotIn(mission_tables.SC2Mission.IN_THE_ENEMY_S_SHADOW, missions)
         for mission in missions:
             self.assertEqual(mission_tables.SC2Campaign.NCO, mission.campaign)
 
