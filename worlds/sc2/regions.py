@@ -125,11 +125,23 @@ def adjust_mission_pools(world: 'SC2World', pools: SC2MOGenMissionPools) -> None
     if grant_story_tech == GrantStoryTech.option_grant:
         # Additional starter mission if player is granted story tech
         pools.move_mission(SC2Mission.ENEMY_WITHIN, Difficulty.EASY, Difficulty.STARTER)
+        pools.move_mission(SC2Mission.ENEMY_WITHIN_T, Difficulty.EASY, Difficulty.STARTER)
+        pools.move_mission(SC2Mission.ENEMY_WITHIN_P, Difficulty.EASY, Difficulty.STARTER)
         pools.move_mission(SC2Mission.TEMPLAR_S_RETURN, Difficulty.MEDIUM, Difficulty.STARTER)
     if grant_story_tech == GrantStoryTech.option_grant:
         # Additional starter mission if player is granted story tech, or Nova only appears in no-builds
         pools.move_mission(SC2Mission.THE_ESCAPE, Difficulty.MEDIUM, Difficulty.STARTER)
         pools.move_mission(SC2Mission.IN_THE_ENEMY_S_SHADOW, Difficulty.MEDIUM, Difficulty.STARTER)
+    if (
+        world.options.required_tactics.value < RequiredTactics.option_chaos
+        and ((enabled_campaigns - {SC2Campaign.EPILOGUE}) == {SC2Campaign.NCO})
+    ):
+        # NCO-only will always start with a no-build
+        # Note(mm): Moving these to starter instead of easy breaks mini_campaign generation
+        # As the campaign is short enough it starts at easy, and if there are no eay missions it will
+        # fallback to Medium before Starter
+        pools.move_mission(SC2Mission.THE_ESCAPE, Difficulty.MEDIUM, Difficulty.EASY)
+        pools.move_mission(SC2Mission.IN_THE_ENEMY_S_SHADOW, Difficulty.MEDIUM, Difficulty.EASY)
     if not war_council_nerfs or grant_story_tech == GrantStoryTech.option_grant:
         pools.move_mission(SC2Mission.TEMPLAR_S_RETURN, Difficulty.MEDIUM, Difficulty.STARTER)
     if grant_story_tech == GrantStoryTech.option_grant and grant_story_levels:

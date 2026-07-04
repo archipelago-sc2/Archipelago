@@ -189,10 +189,10 @@ class SC2World(World):
                     enabled_campaigns.discard(SC2Campaign.PROPHECY.campaign_name)
                     enabled_campaigns.discard(SC2Campaign.PROLOGUE.campaign_name)
                     enabled_campaigns.discard(SC2Campaign.LOTV.campaign_name)
-            # Epilogue and NCO don't have raceswaps currently
-            if SC2Race.TERRAN.get_title() not in self.options.selected_races.value:
-                enabled_campaigns.discard(SC2Campaign.NCO.campaign_name)
-            if len(self.options.selected_races.value) < 3:
+            if (SC2Campaign.WOL not in enabled_campaigns
+                or SC2Campaign.HOTS not in enabled_campaigns
+                or SC2Campaign.LOTV not in enabled_campaigns
+            ):
                 enabled_campaigns.discard(SC2Campaign.EPILOGUE.campaign_name)
             if not enabled_campaigns:
                 raise OptionError(
@@ -229,7 +229,7 @@ class SC2World(World):
                         f"Kerrigan level cap {self.options.kerrigan_total_level_cap.value} was too low for "
                         f"required amount {required_levels}. Raising the global cap to {required_levels}."
                     )
-                    self.options.kerrigan_total_level_cap = required_levels
+                    self.options.kerrigan_total_level_cap.value = required_levels
                     self.logic.kerrigan_total_level_cap = required_levels
         # TODO (Snarky): Make work with Hero Presence
         # if (
