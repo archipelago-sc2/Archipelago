@@ -256,10 +256,11 @@ class TestSupportedUseCases(Sc2SetupTestBase):
 
     def test_excluding_faction_on_vanilla_order_excludes_epilogue(self) -> None:
         world_options = {
-            'selected_races': {
+            options.OPTION_NAME[options.SelectedRaces]: {
                 SC2Race.TERRAN.get_title(),
                 SC2Race.PROTOSS.get_title(),
             },
+            options.OPTION_NAME[options.EnableRaceSwapVariants]: options.EnableRaceSwapVariants.option_disabled,
             'enabled_campaigns': EnabledCampaigns.valid_keys,
             'mission_order': options.MissionOrder.option_vanilla,
         }

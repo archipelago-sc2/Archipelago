@@ -183,12 +183,15 @@ class SC2World(World):
             if self.options.enable_race_swap.value == options.EnableRaceSwapVariants.option_disabled:
                 if SC2Race.TERRAN.get_title() not in self.options.selected_races.value:
                     enabled_campaigns.discard(SC2Campaign.WOL.campaign_name)
+                    enabled_campaigns.discard(SC2Campaign.EPILOGUE.campaign_name)
                 if SC2Race.ZERG.get_title() not in self.options.selected_races.value:
                     enabled_campaigns.discard(SC2Campaign.HOTS.campaign_name)
+                    enabled_campaigns.discard(SC2Campaign.EPILOGUE.campaign_name)
                 if SC2Race.PROTOSS.get_title() not in self.options.selected_races.value:
                     enabled_campaigns.discard(SC2Campaign.PROPHECY.campaign_name)
                     enabled_campaigns.discard(SC2Campaign.PROLOGUE.campaign_name)
                     enabled_campaigns.discard(SC2Campaign.LOTV.campaign_name)
+                    enabled_campaigns.discard(SC2Campaign.EPILOGUE.campaign_name)
             if not enabled_campaigns:
                 raise OptionError(
                     "Campaign and race exclusions remove all possible missions from the pool. "
