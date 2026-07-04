@@ -189,11 +189,6 @@ class SC2World(World):
                     enabled_campaigns.discard(SC2Campaign.PROPHECY.campaign_name)
                     enabled_campaigns.discard(SC2Campaign.PROLOGUE.campaign_name)
                     enabled_campaigns.discard(SC2Campaign.LOTV.campaign_name)
-            if (SC2Campaign.WOL not in enabled_campaigns
-                or SC2Campaign.HOTS not in enabled_campaigns
-                or SC2Campaign.LOTV not in enabled_campaigns
-            ):
-                enabled_campaigns.discard(SC2Campaign.EPILOGUE.campaign_name)
             if not enabled_campaigns:
                 raise OptionError(
                     "Campaign and race exclusions remove all possible missions from the pool. "
