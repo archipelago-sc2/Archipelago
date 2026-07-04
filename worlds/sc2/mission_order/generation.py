@@ -864,7 +864,7 @@ def set_rules(
                 if item_requirement > index:
                     starter_locations = max(starter_locations, item_requirement - index)
             if starter_locations > 0:
-                logger.debug(f"The {len(mission_slots)} starter missions require {starter_locations} starter locations")
+                logger.info(f"Player {world.player} is getting {starter_locations} starter locations for {len(mission_slots)} starter missions")
             max_num_starter_locations = len(mission_slots) * locations.MAX_NUM_STARTER_CACHE_LOCATIONS
             if starter_locations > max_num_starter_locations:
                 raise OptionError(
