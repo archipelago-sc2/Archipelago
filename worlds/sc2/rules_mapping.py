@@ -37,6 +37,7 @@ FLAG_NO_LOGIC_TRACKS = 0b1
 
 MAX_UNITS_REQUIRED = 5
 MASTERY_LOCATION_UNITS_REQUIRED = 6
+DEPTH_0_FREE_DEFENSE_RATING = 1
 ADVANCED_FREE_DEFENSE_RATING = 2
 ADVANCED_FREE_MACRO_RATING = 2
 
@@ -81,6 +82,8 @@ class RuleSignature(NamedTuple):
             + (self.power_comp + 1 if self.power_comp > COMP_UPGRADEABLE else 0)
             + (self.macro_rating // 2)
             + (self.defense_rating)
+            # Some defense ratings require item combos
+            + (self.defense_rating > 0)
             + (self.detection > 0)
             + self.nova
             + self.artanis
@@ -179,7 +182,7 @@ class ProtoRule:
             self.basic_rule = self.rule
 
     @staticmethod
-    def rating_from_progress(progress: int, thresholds: tuple[int, ...]) -> int:
+    def rating_from_progress(progress: float, thresholds: tuple[int, ...]) -> int:
         for index, threshold in enumerate(reversed(thresholds)):
             if progress >= threshold:
                 return len(thresholds) - index
@@ -199,21 +202,27 @@ class ProtoRule:
             assert location.type != LocationType.MASTERY
             assert depth == 0
 
-        # rough rating of completed missions normalized for wider mission orders
-        progress = order * 0.75 + depth * 0.25
+        # rough rating of completed missions normalized for narrower mission orders to progress slower
+        if depth == 0:
+            progress = order * 0.8
+        else:
+            progress = order - depth * 0.2
         logic_level = int(world.options.required_tactics)
+        anti_air_depths: tuple[int, ...]
+        upgrade_depths: tuple[int, ...]
+        hero_depths: tuple[int, ...]
         if logic_level == LOGIC_BASIC:
-            anti_air_depths=(5, 5, 11)
-            upgrade_depths=(6, 10, 16)
-            hero_depths=(2, 7, 20)
+            anti_air_depths = (5, 5, 11)
+            upgrade_depths = (6, 10, 16)
+            hero_depths = (2, 7, 20)
         elif logic_level == LOGIC_ADVANCED:
-            anti_air_depths=(5, 5, 13)
-            upgrade_depths=(6, 12, 18)
-            hero_depths=(2, 8, 22)
+            anti_air_depths = (5, 5, 13)
+            upgrade_depths = (6, 12, 18)
+            hero_depths = (2, 8, 22)
         else:  # LOGIC_CHAOS
-            anti_air_depths=(5,)
-            upgrade_depths=(6, 13, 20)
-            hero_depths=(3, 14)
+            anti_air_depths = (5,)
+            upgrade_depths = (6, 13, 20)
+            hero_depths = (3, 14)
 
         soa_flags = 0
         defense_rating = 0
@@ -264,6 +273,9 @@ class ProtoRule:
             elif logic_level == LOGIC_ADVANCED:
                 defense_rating = max(0, self.defense_rating - ADVANCED_FREE_DEFENSE_RATING)
                 macro_rating = max(0, self.macro_rating - ADVANCED_FREE_MACRO_RATING)
+            if depth == 0:
+                defense_rating -= DEPTH_0_FREE_DEFENSE_RATING
+                defense_rating = max(0, defense_rating)
 
         # Heroes
         required_hero_rating = 0
