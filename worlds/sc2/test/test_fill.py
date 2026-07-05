@@ -5,13 +5,11 @@ import logging
 import logging.handlers
 import io
 
-from Fill import FillError
 from . import test_base
 from .. import options, mission_tables
 
 
 class TestFill(test_base.Sc2SetupTestBase):
-    NUM_FILLS = 5
     BASE_OPTIONS = {
         options.OPTION_NAME[options.RequiredTactics]: options.RequiredTactics.option_basic,
         options.OPTION_NAME[options.HeroPresence]: options.HeroPresence.option_anywhere,
@@ -53,43 +51,70 @@ class TestFill(test_base.Sc2SetupTestBase):
         return result
 
     @staticmethod
-    def _plando_first_mission(mission: mission_tables.SC2Mission) -> dict:
+    def _plando_first_missions(*missions: mission_tables.SC2Mission) -> dict:
         return {
             "Test Campaign": {
                 "Test Layout": {
                     "type": "column",
                     "size": 5,
-                    "mission_pool": f"{mission.race.get_title()} Missions",
                     "missions": [
-                        {"index": 0, "mission_pool": mission.mission_name},
+                        {"index": index, "mission_pool": mission.mission_name}
+                        for index, mission in enumerate(missions)
                     ]
                 }
             }
         }
 
     def test_stress_fill_one_build_starter_mission_with_3_heroes(self) -> None:
+        NUM_FILLS = 5
         world_options = {
             **self.BASE_OPTIONS,
+            # options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_gauntlet,
             options.OPTION_NAME[options.MaximumCampaignSize]: 10,
         }
         logger = logging.getLogger()
         try:
-            for attempt in range(self.NUM_FILLS):
-                logger.info(f"Fill attempt {attempt+1} / {self.NUM_FILLS}")
+            for attempt in range(NUM_FILLS):
+                logger.info(f"Fill attempt {attempt+1} / {NUM_FILLS}")
                 self.generate_world(world_options)
                 self.fill_after_generation()
                 self.handler.buffer.clear()
-        except FillError as ex:
+        except Exception as ex:
             self.handler.flush()
             ex.add_note(self._get_formatted_logs())
             raise ex
+
+    def test_fill_all_races_outbreak(self) -> None:
+        world_options = {
+            **self.BASE_OPTIONS,
+            options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
+            options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
+                mission_tables.SC2Mission.OUTBREAK,
+                mission_tables.SC2Mission.OUTBREAK_P,
+                mission_tables.SC2Mission.OUTBREAK_Z,
+                mission_tables.SC2Mission.THE_GREAT_TRAIN_ROBBERY,
+                # Give an extra mission before the third Outbreak
+                # The extra unit requirement puts outbreak 3rd as over the starter location cap
+                # This is fair to leave unsupported on basic logic
+                mission_tables.SC2Mission.THE_GREAT_TRAIN_ROBBERY_P,
+            ),
+        }
+        try:
+            self.generate_world(world_options)
+            self.fill_after_generation()
+            self.handler.buffer.clear()
+        except Exception as ex:
+            self.handler.flush()
+            ex.add_note(self._get_formatted_logs())
+            raise ex
+        self.handler.buffer.clear()
 
     def test_fill_terran_outbreak_first(self) -> None:
         world_options = {
             **self.BASE_OPTIONS,
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
-            options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_mission(
+            options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
                 mission_tables.SC2Mission.OUTBREAK
             ),
         }
@@ -97,7 +122,7 @@ class TestFill(test_base.Sc2SetupTestBase):
             self.generate_world(world_options)
             self.fill_after_generation()
             self.handler.buffer.clear()
-        except FillError as ex:
+        except Exception as ex:
             self.handler.flush()
             ex.add_note(self._get_formatted_logs())
             raise ex
@@ -107,7 +132,7 @@ class TestFill(test_base.Sc2SetupTestBase):
         world_options = {
             **self.BASE_OPTIONS,
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
-            options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_mission(
+            options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
                 mission_tables.SC2Mission.OUTBREAK_P
             ),
         }
@@ -115,7 +140,7 @@ class TestFill(test_base.Sc2SetupTestBase):
             self.generate_world(world_options)
             self.fill_after_generation()
             self.handler.buffer.clear()
-        except FillError as ex:
+        except Exception as ex:
             self.handler.flush()
             ex.add_note(self._get_formatted_logs())
             raise ex
@@ -125,7 +150,7 @@ class TestFill(test_base.Sc2SetupTestBase):
         world_options = {
             **self.BASE_OPTIONS,
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
-            options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_mission(
+            options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
                 mission_tables.SC2Mission.OUTBREAK_Z
             ),
         }
@@ -133,7 +158,33 @@ class TestFill(test_base.Sc2SetupTestBase):
             self.generate_world(world_options)
             self.fill_after_generation()
             self.handler.buffer.clear()
-        except FillError as ex:
+        except Exception as ex:
+            self.handler.flush()
+            ex.add_note(self._get_formatted_logs())
+            raise ex
+        self.handler.buffer.clear()
+
+    def test_fill_with_vanilla_and_extra_locations_excluded(self) -> None:
+        world_options = {
+            **self.BASE_OPTIONS,
+            options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
+            options.OPTION_NAME[options.ExtraLocations]: options.LocationInclusion.option_disabled,
+            options.OPTION_NAME[options.VanillaLocations]: options.LocationInclusion.option_disabled,
+            options.OPTION_NAME[options.VictoryCache]: 3,
+            options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
+            options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
+                mission_tables.SC2Mission.THE_OUTLAWS,
+                mission_tables.SC2Mission.OUTBREAK,
+                mission_tables.SC2Mission.THE_GREAT_TRAIN_ROBBERY,
+                mission_tables.SC2Mission.HAVENS_FALL,
+                mission_tables.SC2Mission.SHATTER_THE_SKY,
+            ),
+        }
+        try:
+            self.generate_world(world_options)
+            self.fill_after_generation()
+            self.handler.buffer.clear()
+        except Exception as ex:
             self.handler.flush()
             ex.add_note(self._get_formatted_logs())
             raise ex

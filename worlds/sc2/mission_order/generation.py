@@ -7,6 +7,7 @@ The functions here are called from ..regions.py.
 from typing import Any, Callable, TYPE_CHECKING
 import logging
 from dataclasses import dataclass, field
+from collections import Counter
 
 from BaseClasses import Location, Region, Entrance
 from ..mission_tables import (
@@ -785,6 +786,15 @@ def flag_hero_tech(
                 world.logic.grant_hero_items.add(mission)
 
 
+def _log_location_rule(
+    location_data: LocationData, order: int, depth: int, signature: RuleSignature | None = None
+) -> None:
+    if signature is not None:
+        logger.debug(f"{location_data.name():45} | {f'{order}, d{depth}':9} | {signature}")
+    else:
+        logger.debug(f"{location_data.name():45} | {f'{order}, d{depth}':9} |")
+
+
 def set_rules(
     world: 'SC2World',
     mission_order: SC2MOGenMissionOrder,
@@ -819,12 +829,32 @@ def set_rules(
         ) else
         2
     )
+    extra_locations_on = world.options.extra_locations.value == options.LocationInclusion.option_enabled
+    vanilla_locations_on = world.options.extra_locations.value == options.LocationInclusion.option_enabled
+    max_starter_cache_locations_per_mission = {
+        (True, True): 4,
+        (False, True): 6,
+        (True, False): 7,
+        (False, False): locations.MAX_NUM_STARTER_CACHE_LOCATIONS,
+    }[vanilla_locations_on, extra_locations_on]
+    assert max_starter_cache_locations_per_mission <= locations.MAX_NUM_STARTER_CACHE_LOCATIONS
+    if not (extra_locations_on and vanilla_locations_on):
+        logger.info(
+            f"Setting the max starter cache location count to {max_starter_cache_locations_per_mission} "
+            f"since vanilla or extra locations are excluded."
+        )
 
     rule_cache: dict[RuleSignature, Callable[['CollectionState'], bool]] = {}
     first_order_of_depth = 0
+    # Starter location tracking
+    cumulative_used_locations: Counter[SC2Race] = Counter()
+    cumulative_locations = 0
+    cumulative_starter_locations = 0
+    starter_location_bank = 0
     for depth, mission_slots in depth_to_missions.items():
         # Collect the signatures
         location_to_signature: dict[locations.Sc2Location, RuleSignature] = {}
+        location_to_count: Counter[locations.Sc2Location] = Counter()
         for order_in_depth, mission_slot in enumerate(mission_slots):
             order = first_order_of_depth + order_in_depth
             mission_data = mission_slot.mission
@@ -833,7 +863,12 @@ def set_rules(
             for location_data in mission_locations:
                 if location_data.location is None:
                     continue
-                if isinstance(location_data.info, (EventData, VictoryCacheData, StarterCacheData)):
+                if isinstance(location_data.info, (EventData, StarterCacheData)):
+                    continue
+                if isinstance(location_data.info, VictoryCacheData):
+                    location_to_count[location_data.info.victory_location] += 1
+                    if order < 3:
+                        _log_location_rule(location_data, order, depth, signature)
                     continue
                 location = location_data.info
                 rule = LOCATION_TO_RULE.get(location, EMPTY_RULE)
@@ -847,32 +882,84 @@ def set_rules(
                 )
                 assert location not in location_to_signature or location_to_signature[location] == signature
                 location_to_signature[location] = signature
+                location_to_count[location] += 1
+                if (location_data.type == locations.LocationType.VICTORY
+                    or (order < 3 and location_data.type != locations.LocationType.EVENT)
+                ):
+                    _log_location_rule(location_data, order, depth, signature)
 
         # Check if starter locations need to be added
-        if depth == 0:
-            item_counts = sorted([
-                signature.estimate_items_required(items_per_wa_upgrade)
-                for location, signature in location_to_signature.items()
-                if location.type in (
-                    locations.LocationType.VICTORY,
-                    locations.LocationType.VANILLA,
-                    locations.LocationType.EXTRA,
-                )
-            ])
-            starter_locations = 0
-            for index, item_requirement in enumerate(item_counts):
-                if item_requirement > index:
-                    starter_locations = max(starter_locations, item_requirement - index)
+        if depth == 0 or order < 3:
+            # Consider each faction separately.
+            # Factions that are beatable just with their own locations can donate extra locations to
+            # missions of factions.
+            # This can technically result in starter location overestimation due to hero items being reusable
+            starter_locations_per_race: dict[SC2Race, int] = {}
+            for race in SC2Race.actual_races():
+                item_counts: list[int] = []
+                for location, signature in location_to_signature.items():
+                    if signature.race != race:
+                        continue
+                    if (location.type == locations.LocationType.VANILLA
+                        or location.type == locations.LocationType.EXTRA
+                    ):
+                        item_counts.append(signature.estimate_items_required(items_per_wa_upgrade))
+                    elif location.type == locations.LocationType.VICTORY:
+                        item_count = signature.estimate_items_required(items_per_wa_upgrade)
+                        item_counts.extend([item_count] * location_to_count[location])
+
+                item_counts.sort()
+                additional_items_required = 0
+                for index, item_requirement in enumerate(item_counts):
+                    if item_requirement:
+                        # Potential pinch point
+                        additional_items_required = max(additional_items_required, item_requirement - index)
+                if not item_counts:
+                    continue
+                if additional_items_required:
+                    starter_locations_per_race[race] = (
+                        additional_items_required - cumulative_used_locations[race]
+                    )
+                else:
+                    # If there is no pinch point, then extra locations can be "donated" to other missions
+                    starter_locations_per_race[race] = item_counts[-1] - len(item_counts)
+                cumulative_used_locations[race] = max(item_counts[-1], cumulative_used_locations[race])
+                cumulative_locations += len(item_counts)
+            starter_locations = sum(starter_locations_per_race.values())
+            if starter_location_bank > 0:
+                # Draw from the bank provided by previous missions
+                starter_locations -= starter_location_bank
+            if starter_locations < 0:
+                starter_locations = 0
+            cumulative_starter_locations += starter_locations
+            starter_location_bank = (
+                -sum(cumulative_used_locations.values())
+                + cumulative_locations
+                + cumulative_starter_locations
+            )
             if starter_locations > 0:
-                logger.info(f"Player {world.player} is getting {starter_locations} starter locations for {len(mission_slots)} starter missions")
-            max_num_starter_locations = len(mission_slots) * locations.MAX_NUM_STARTER_CACHE_LOCATIONS
+                logger.info(
+                    f"Player {world.player} is getting {starter_locations} starter locations "
+                    f"for {len(mission_slots)} missions at depth {depth}. "
+                    f"Item requirements per race: "
+                    + ", ".join((f"{race.get_title()}: {count}" for race, count in starter_locations_per_race.items()))
+                )
+            max_num_starter_locations = len(mission_slots) * max_starter_cache_locations_per_mission
             if starter_locations > max_num_starter_locations:
+                if len(mission_slots) == 1:
+                    missions_string = f"Mission {mission_slots[0].mission.mission_name} isn't a valid starter mission"
+                else:
+                    missions_string = (
+                        f"Missions {', '.join(mission_slot.mission.mission_name for mission_slot in mission_slots)} "
+                        f"aren't valid starter missions together"
+                    )
                 raise OptionError(
-                    f"Mission {mission_data.mission_name} isn't a valid starter mission; "
-                    f"it would require {starter_locations} starter locations, "
+                    f"{missions_string} at depth {depth}. "
+                    f"It would require {starter_locations} starter locations, "
                     f"but the maximum is {max_num_starter_locations} for {len(mission_slots)} "
                     f"mission{'s' if len(mission_slots) > 1 else ''}.\n"
-                    f"==> Required item counts per location: {item_counts}"
+                    f"==> Required starter location counts per faction: "
+                    + ", ".join((f"{race.get_title()}: {count}" for race, count in starter_locations_per_race.items()))
                 )
             for index in range(starter_locations):
                 starter_cache_index, mission_index = divmod(index, len(mission_slots))
@@ -904,12 +991,9 @@ def set_rules(
                     location = location_data.info
                 if isinstance(location_data.info, StarterCacheData):
                     signature = NO_LOGIC_RULE_SIGNATURE
+                    _log_location_rule(location_data, order, depth)
                 else:
                     signature = location_to_signature[location]
-                if (location_data.type == locations.LocationType.VICTORY
-                    or (order < 3 and location_data.type != locations.LocationType.EVENT)
-                ):
-                    logger.debug(f"{location_data.name():45} | {f'{order}, d{depth}':9} | {signature}")
 
                 rule_func = rule_cache.get(signature)
                 if rule_func is None:

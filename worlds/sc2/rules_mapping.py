@@ -77,7 +77,7 @@ class RuleSignature(NamedTuple):
     def estimate_items_required(self, items_per_wa_upgrade: int) -> int:
         return (
             self.num_units
-            + self.anti_air
+            + (2 if self.anti_air == AA_COMPETENT else 1 if self.anti_air else 0)
             + (items_per_wa_upgrade * self.upgrades)
             + (self.power_comp + 1 if self.power_comp > COMP_UPGRADEABLE else 0)
             + (self.macro_rating // 2)
@@ -677,13 +677,13 @@ LOCATION_TO_RULE: dict[Sc2Location, ProtoRule] = {
     Sc2Location.WAKING_THE_ANCIENT_SOUTH_MAIN_PRIMAL_HIVE: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT),
     Sc2Location.WAKING_THE_ANCIENT_EAST_MAIN_PRIMAL_HIVE: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT),
     Sc2Location.WAKING_THE_ANCIENT_FLAWLESS: ProtoRule(upgrades_min=1, comp_type=COMP_COMPETENT, aa_min=AA_COMPETENT),
-    Sc2Location.THE_CRUCIBLE_VICTORY: ProtoRule(aa_min=AA_COMPETENT, defense_rating=7),
-    Sc2Location.THE_CRUCIBLE_TYRANNOZOR: ProtoRule(aa_min=AA_COMPETENT, defense_rating=7),
+    Sc2Location.THE_CRUCIBLE_VICTORY: ProtoRule(aa_min=AA_COMPETENT, defense_rating=5),
+    Sc2Location.THE_CRUCIBLE_TYRANNOZOR: ProtoRule(aa_min=AA_COMPETENT, defense_rating=5),
     Sc2Location.THE_CRUCIBLE_REACH_THE_POOL: ProtoRule(flags=FLAG_NO_LOGIC_TRACKS),
-    Sc2Location.THE_CRUCIBLE_15_MINUTES_REMAINING: ProtoRule(aa_min=AA_COMPETENT, defense_rating=7),
-    Sc2Location.THE_CRUCIBLE_5_MINUTES_REMAINING: ProtoRule(aa_min=AA_COMPETENT, defense_rating=7),
-    Sc2Location.THE_CRUCIBLE_PINCER_ATTACK: ProtoRule(aa_min=AA_COMPETENT, defense_rating=7),
-    Sc2Location.THE_CRUCIBLE_YAGDRA_CLAIMS_BRAKKS_PACK: ProtoRule(aa_min=AA_COMPETENT, defense_rating=7),
+    Sc2Location.THE_CRUCIBLE_15_MINUTES_REMAINING: ProtoRule(aa_min=AA_COMPETENT, defense_rating=5),
+    Sc2Location.THE_CRUCIBLE_5_MINUTES_REMAINING: ProtoRule(aa_min=AA_COMPETENT, defense_rating=5),
+    Sc2Location.THE_CRUCIBLE_PINCER_ATTACK: ProtoRule(aa_min=AA_COMPETENT, defense_rating=5),
+    Sc2Location.THE_CRUCIBLE_YAGDRA_CLAIMS_BRAKKS_PACK: ProtoRule(aa_min=AA_COMPETENT, defense_rating=5),
     Sc2Location.SUPREME_VICTORY: ProtoRule(hard_rule=SC2Logic.supreme_requirement),
     Sc2Location.SUPREME_FIRST_RELIC: ProtoRule(hard_rule=SC2Logic.supreme_requirement),
     Sc2Location.SUPREME_SECOND_RELIC: ProtoRule(hard_rule=SC2Logic.supreme_requirement),

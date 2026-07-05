@@ -14,6 +14,10 @@ class SC2Race(IntEnum):
     def get_mission_flag(self) -> 'MissionFlag':
         return MissionFlag.__getitem__(self.get_title())
 
+    @staticmethod
+    def actual_races() -> tuple['SC2Race', ...]:
+        return (SC2Race.TERRAN, SC2Race.ZERG, SC2Race.PROTOSS,)
+
 
 class MissionPools(IntEnum):
     STARTER = 0
