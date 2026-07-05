@@ -868,7 +868,7 @@ def set_rules(
                 if isinstance(location_data.info, VictoryCacheData):
                     location_to_count[location_data.info.victory_location] += 1
                     if order < 3:
-                        _log_location_rule(location_data, order, depth, signature)
+                        _log_location_rule(location_data, order, depth)
                     continue
                 location = location_data.info
                 rule = LOCATION_TO_RULE.get(location, EMPTY_RULE)
