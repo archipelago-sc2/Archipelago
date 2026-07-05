@@ -52,15 +52,18 @@ class TestFill(test_base.Sc2SetupTestBase):
 
     @staticmethod
     def _plando_first_missions(*missions: mission_tables.SC2Mission) -> dict:
+        missions = [
+            {"index": index, "mission_pool": mission.mission_name}
+            for index, mission in enumerate(missions)
+        ]
+        while len(missions) < 5:
+            missions.append({"index": len(missions), "difficulty": "easy"})
         return {
             "Test Campaign": {
                 "Test Layout": {
                     "type": "column",
                     "size": 5,
-                    "missions": [
-                        {"index": index, "mission_pool": mission.mission_name}
-                        for index, mission in enumerate(missions)
-                    ]
+                    "missions": missions
                 }
             }
         }

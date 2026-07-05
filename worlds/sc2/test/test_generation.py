@@ -848,7 +848,7 @@ class TestItemFiltering(Sc2SetupTestBase):
                             },
                             {
                                 'index': 2,
-                                'mission_pool': [SC2Mission.THE_RECKONING.mission_name]
+                                'mission_pool': [SC2Mission.RENDEZVOUS.mission_name]
                             },
                         ]
                     }

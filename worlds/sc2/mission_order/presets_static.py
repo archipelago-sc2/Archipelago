@@ -298,28 +298,29 @@ preset_mini_nco: 'CampaignDict' = {
     },
     "Mission Pack 1": {
         "size": 2,
+        "max_difficulty": "easy",
         "missions": [
-            { "index": 1, "entry_rules": [{ "items": { "Key": 1 }}] }
+            {"index": 1, "entry_rules": [{ "items": { "Key": 1 }}]}
         ]
     },
     "Mission Pack 2": {
         "size": 1,
         "entry_rules": [
-            { "scope": "../Mission Pack 1" },
-            { "items": { "Key": 1 }}
+            {"scope": "../Mission Pack 1"},
+            {"items": { "Key": 1 }}
         ],
         "missions": [
-            { "index": "all", "entry_rules": [{ "items": { "Key": 1 }}] }
+            {"index": "all", "entry_rules": [{ "items": { "Key": 1 }}]}
         ]
     },
     "Mission Pack 3": {
         "size": 2,
         "entry_rules": [
-            { "scope": "../Mission Pack 2" },
-            { "items": { "Key": 1 }}
+            {"scope": "../Mission Pack 2"},
+            {"items": { "Key": 1 }}
         ],
         "missions": [
-            { "index": "all", "entry_rules": [{ "items": { "Key": 1 }}] }
+            {"index": "all", "entry_rules": [{ "items": { "Key": 1 }}]}
         ]
     },
 }
