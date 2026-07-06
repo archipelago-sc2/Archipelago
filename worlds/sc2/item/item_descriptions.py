@@ -251,7 +251,7 @@ item_descriptions = {
     item_names.MARAUDER_STIMPACK: STIMPACK_LARGE_DESCRIPTION,
     item_names.MARAUDER_MEDPACK: MEDPACK_LARGE_DESCRIPTION,
     item_names.MARAUDER_LASER_TARGETING_SYSTEM: LASER_TARGETING_SYSTEMS_DESCRIPTION,
-    item_names.MARAUDER_MAGRAIL_MUNITIONS: "Deals 20 damage to target unit. Autocast on attack with a cooldown.",
+    item_names.MARAUDER_MAGRAIL_MUNITIONS: "Deals 50 damage to target unit. Autocast on attack with a cooldown.",
     item_names.MARAUDER_INTERNAL_TECH_MODULE: INTERNAL_TECH_MODULE_DESCRIPTION_TEMPLATE.format("Marauders", "Barracks"),
     item_names.SCV_HOSTILE_ENVIRONMENT_ADAPTATION: "Increases SCV life by 15 and attack speed slightly.",
     item_names.MEDIC_ADAPTIVE_MEDPACKS: "Allows Medics to heal mechanical and air units.",
