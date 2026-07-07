@@ -1230,15 +1230,22 @@ class SC2Logic:
         air_attack_upgrades = self.wa_upgrade_count(VirtualItem.ZERG_AIR_ATTACK, state)
         return (
             (
-                ranged_attack_upgrades >= 1
+                state.has(item_names.HYDRALISK, self.player)
                 and (
-                    state.has(item_names.HYDRALISK, self.player)
-                    or state.has_all((
-                        item_names.SWARM_QUEEN,
-                        item_names.SWARM_QUEEN_RESOURCE_EFFICIENCY,
-                        item_names.SWARM_QUEEN_BIO_MECHANICAL_TRANSFUSION,
+                    ranged_attack_upgrades >= 1
+                    or state.has_any((
+                        item_names.HYDRALISK_RESOURCE_EFFICIENCY,
+                        item_names.HYDRALISK_FRENZY,
                     ), self.player)
                 )
+            )
+            or (
+                ranged_attack_upgrades >= 1
+                and state.has_all((
+                    item_names.SWARM_QUEEN,
+                    item_names.SWARM_QUEEN_RESOURCE_EFFICIENCY,
+                    item_names.SWARM_QUEEN_BIO_MECHANICAL_TRANSFUSION,
+                ), self.player)
             )
             or (
                 state.has(item_names.MUTALISK, self.player)
