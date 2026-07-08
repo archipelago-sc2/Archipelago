@@ -844,6 +844,24 @@ def set_rules(
             f"since vanilla or extra locations are excluded."
         )
 
+    keys_per_depth = 0
+    if world.options.mission_order.value != options.MissionOrder.option_custom:
+        if world.options.key_mode.value != options.KeyMode.option_disabled:
+            keys_per_depth = 1
+    elif len(depth_to_missions.get(0, ())) < 3:
+        # Depth 0 missions definitionally have no key requirements
+        first_depth_mission_slots = depth_to_missions.get(1, [])
+        # Theoretically depth 1 can be empty if 3rd mission requires 2 starter missions to both be beaten
+        if not first_depth_mission_slots:
+            first_depth_mission_slots = depth_to_missions.get(2, [])
+        keys_per_depth = -1
+        for mission_slot in first_depth_mission_slots:
+            key_count = _get_key_item_count(mission_slot.entry_rule)
+            if keys_per_depth < 0 or key_count < keys_per_depth:
+                keys_per_depth = key_count
+        if keys_per_depth < 0:
+            keys_per_depth = 0
+
     rule_cache: dict[RuleSignature, Callable[['CollectionState'], bool]] = {}
     first_order_of_depth = 0
     # Starter location tracking
@@ -903,10 +921,14 @@ def set_rules(
                     if (location.type == locations.LocationType.VANILLA
                         or location.type == locations.LocationType.EXTRA
                     ):
-                        item_counts.append(signature.estimate_items_required(items_per_wa_upgrade))
+                        item_counts.append(
+                            signature.estimate_items_required(items_per_wa_upgrade) + keys_per_depth * depth
+                        )
                     elif location.type == locations.LocationType.VICTORY:
                         item_count = signature.estimate_items_required(items_per_wa_upgrade)
-                        item_counts.extend([item_count] * location_to_count[location])
+                        # The key needs to appear before entrance to the next depth
+                        item_counts.append(item_count + keys_per_depth * (depth+1))
+                        item_counts.extend([item_count + keys_per_depth * depth] * (location_to_count[location]-1))
 
                 item_counts.sort()
                 additional_items_required = 0
@@ -1002,6 +1024,22 @@ def set_rules(
                 location_data.location.access_rule = rule_func
         first_order_of_depth = order + 1
     return
+
+
+def _get_key_item_count(entry_rule: SubRuleEntryRule) -> int:
+    key_counts: list[int] = []
+    for sub_rule in entry_rule.rules_to_check:
+        if isinstance(sub_rule, ItemEntryRule):
+            key_counts.append(sum(sub_rule.items_to_check.values()))
+        elif isinstance(sub_rule, SubRuleEntryRule):
+            key_counts.append(_get_key_item_count(sub_rule))
+        else:
+            key_counts.append(0)
+    num_target_rules = entry_rule.target_amount
+    if num_target_rules < 0:
+        num_target_rules = len(entry_rule.rules_to_check)
+    key_count = sum(sorted(key_counts)[:num_target_rules])
+    return key_count
 
 
 ########################

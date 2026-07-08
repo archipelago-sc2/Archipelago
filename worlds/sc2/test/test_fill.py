@@ -113,6 +113,66 @@ class TestFill(test_base.Sc2SetupTestBase):
             raise ex
         self.handler.buffer.clear()
 
+    def test_fill_gauntlet_with_keys(self) -> None:
+        world_options = {
+            **self.BASE_OPTIONS,
+            options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_gauntlet,
+            options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
+            options.OPTION_NAME[options.EnabledCampaigns]: {mission_tables.SC2Campaign.WOL.campaign_name},
+            options.OPTION_NAME[options.KeyMode]: options.KeyMode.option_missions,
+            options.OPTION_NAME[options.MasteryLocations]: options.LocationInclusion.option_disabled,
+            options.OPTION_NAME[options.MaximumCampaignSize]: 8,
+            options.OPTION_NAME[options.ExcludedMissions]: [
+                # Exclude the hard missions that might appear after depth 3 with high item requirements
+                mission_tables.SC2Mission.ALL_IN.mission_name,
+                mission_tables.SC2Mission.SHATTER_THE_SKY.mission_name,
+                mission_tables.SC2Mission.GATES_OF_HELL.mission_name,
+                mission_tables.SC2Mission.MAW_OF_THE_VOID.mission_name,
+                mission_tables.SC2Mission.SUPERNOVA.mission_name,
+                mission_tables.SC2Mission.ENGINE_OF_DESTRUCTION.mission_name,
+                # Exclude the loot pinata to put more pressure on the starter location system
+                mission_tables.SC2Mission.THE_GREAT_TRAIN_ROBBERY.mission_name,
+            ]
+        }
+        try:
+            self.generate_world(world_options)
+            self.fill_after_generation()
+            self.handler.buffer.clear()
+        except Exception as ex:
+            self.handler.flush()
+            ex.add_note(self._get_formatted_logs())
+            raise ex
+        self.handler.buffer.clear()
+
+    def test_fill_cmo_with_keys(self) -> None:
+        world_options = {
+            **self.BASE_OPTIONS,
+            options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
+            options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
+            options.OPTION_NAME[options.CustomMissionOrder]: {
+                "Test Campaign": {
+                    "Test Layout": {
+                        "type": "column",
+                        "size": 5,
+                        "missions": [
+                            {"index": 0, "mission_pool": mission_tables.SC2Mission.OUTBREAK.mission_name},
+                            {"index": 1, "entry_rules": [{"items": {"Key": 1}}]},
+                            {"index": 2, "entry_rules": [{"items": {"Key": 1}}]},
+                        ]
+                    }
+                }
+            }
+        }
+        try:
+            self.generate_world(world_options)
+            self.fill_after_generation()
+            self.handler.buffer.clear()
+        except Exception as ex:
+            self.handler.flush()
+            ex.add_note(self._get_formatted_logs())
+            raise ex
+        self.handler.buffer.clear()
+
     def test_fill_terran_outbreak_first(self) -> None:
         world_options = {
             **self.BASE_OPTIONS,
