@@ -1284,9 +1284,9 @@ _protoss_core_units = {
     item_names.SKIRMISHER: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
     item_names.DESTROYER: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
     item_names.DAWNBRINGER: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
-    item_names.MOTHERSHIP_TALDARIM: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
-    item_names.MOTHERSHIP_PURIFIER: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
-    item_names.MOTHERSHIP_AIUR: LogicRating.BASIC_EXTRA | LogicRating.ADVANCED_STARTER,
+    item_names.MOTHERSHIP_TALDARIM: LogicRating.BASIC_EXTRA,
+    item_names.MOTHERSHIP_PURIFIER: LogicRating.BASIC_EXTRA,
+    item_names.MOTHERSHIP_AIUR: LogicRating.BASIC_EXTRA,
 
     item_names.ORACLE: LogicRating.ADVANCED_STARTER,
     item_names.DARK_ARCHON: LogicRating.ADVANCED_STARTER,
