@@ -844,23 +844,27 @@ def set_rules(
             f"since vanilla or extra locations are excluded."
         )
 
-    keys_per_depth = 0
+    # Note(mm): Capture the minimum number of keys necessary to access the next depth level.
+    # Note in practice, more keys can be required to access a depth level,
+    # but that will likely result in fill errors down the line if it's a problem,
+    # or overcounting starter locations if it isn't.
+    min_keys_per_depth = 0
     if world.options.mission_order.value != options.MissionOrder.option_custom:
         if world.options.key_mode.value != options.KeyMode.option_disabled:
-            keys_per_depth = 1
+            min_keys_per_depth = 1
     elif len(depth_to_missions.get(0, ())) < 3:
         # Depth 0 missions definitionally have no key requirements
         first_depth_mission_slots = depth_to_missions.get(1, [])
         # Theoretically depth 1 can be empty if 3rd mission requires 2 starter missions to both be beaten
         if not first_depth_mission_slots:
             first_depth_mission_slots = depth_to_missions.get(2, [])
-        keys_per_depth = -1
+        min_keys_per_depth = -1
         for mission_slot in first_depth_mission_slots:
             key_count = _get_key_item_count(mission_slot.entry_rule)
-            if keys_per_depth < 0 or key_count < keys_per_depth:
-                keys_per_depth = key_count
-        if keys_per_depth < 0:
-            keys_per_depth = 0
+            if min_keys_per_depth < 0 or key_count < min_keys_per_depth:
+                min_keys_per_depth = key_count
+        if min_keys_per_depth < 0:
+            min_keys_per_depth = 0
 
     rule_cache: dict[RuleSignature, Callable[['CollectionState'], bool]] = {}
     first_order_of_depth = 0
@@ -922,13 +926,13 @@ def set_rules(
                         or location.type == locations.LocationType.EXTRA
                     ):
                         item_counts.append(
-                            signature.estimate_items_required(items_per_wa_upgrade) + keys_per_depth * depth
+                            signature.estimate_items_required(items_per_wa_upgrade) + min_keys_per_depth * depth
                         )
                     elif location.type == locations.LocationType.VICTORY:
                         item_count = signature.estimate_items_required(items_per_wa_upgrade)
                         # The key needs to appear before entrance to the next depth
-                        item_counts.append(item_count + keys_per_depth * (depth+1))
-                        item_counts.extend([item_count + keys_per_depth * depth] * (location_to_count[location]-1))
+                        item_counts.append(item_count + min_keys_per_depth * (depth+1))
+                        item_counts.extend([item_count + min_keys_per_depth * depth] * (location_to_count[location]-1))
 
                 item_counts.sort()
                 additional_items_required = 0
