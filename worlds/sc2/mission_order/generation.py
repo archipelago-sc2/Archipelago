@@ -779,7 +779,7 @@ def flag_hero_tech(
                 else:
                     kerrigan_build_missions.add(mission_data)
 
-    # Grant Kerrigan items in no-builds if she doesn't appear in a build mission or more than 1 build mission
+    # Grant Kerrigan items in no-builds if she doesn't appear in a build mission or more than 1 no-build mission
     if not kerrigan_build_missions.difference(world.logic.grant_hero_items):
         if len(kerrigan_nobuild_missions.difference(world.logic.grant_hero_items)) <= 1:
             for mission in kerrigan_nobuild_missions:
