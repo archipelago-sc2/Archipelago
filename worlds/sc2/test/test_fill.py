@@ -73,8 +73,9 @@ class TestFill(test_base.Sc2SetupTestBase):
         NUM_FILLS = 5
         world_options = {
             **self.BASE_OPTIONS,
-            # options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
+            options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_gauntlet,
+            # options.OPTION_NAME[options.EnabledHeroes]: set(options.EnabledHeroes.valid_keys),
             options.OPTION_NAME[options.MaximumCampaignSize]: 10,
         }
         logger = logging.getLogger()

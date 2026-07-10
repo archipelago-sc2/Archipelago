@@ -42,6 +42,12 @@ ADVANCED_FREE_DEFENSE_RATING = 2
 ADVANCED_FREE_MACRO_RATING = 2
 
 
+def max2(a: int, b: int) -> int:
+    if a < b:
+        return b
+    return a
+
+
 def resolve_aa(aa_min: int, logic_level: int) -> int:
     if aa_min >= 0:
         return aa_min
@@ -250,10 +256,10 @@ class ProtoRule:
                 upgrades = 0
                 num_units = 0
             aa_min = resolve_aa(self.aa_min, logic_level)
-            anti_air = max(anti_air, aa_min)
+            anti_air = max2(anti_air, aa_min)
             if logic_level == LOGIC_CHAOS and anti_air > 1:
                 anti_air = 1
-            upgrades = max(upgrades, self.upgrades_min)
+            upgrades = max2(upgrades, self.upgrades_min)
             if location.type == LocationType.MASTERY:
                 num_units = MASTERY_LOCATION_UNITS_REQUIRED
                 upgrades = max(upgrades, 3)
@@ -271,11 +277,11 @@ class ProtoRule:
                 defense_rating = self.defense_rating
                 macro_rating = self.macro_rating
             elif logic_level == LOGIC_ADVANCED:
-                defense_rating = max(0, self.defense_rating - ADVANCED_FREE_DEFENSE_RATING)
-                macro_rating = max(0, self.macro_rating - ADVANCED_FREE_MACRO_RATING)
+                defense_rating = max2(0, self.defense_rating - ADVANCED_FREE_DEFENSE_RATING)
+                macro_rating = max2(0, self.macro_rating - ADVANCED_FREE_MACRO_RATING)
             if depth == 0:
                 defense_rating -= DEPTH_0_FREE_DEFENSE_RATING
-                defense_rating = max(0, defense_rating)
+                defense_rating = max2(0, defense_rating)
 
         # Heroes
         required_hero_rating = 0
@@ -292,6 +298,9 @@ class ProtoRule:
             heroes = HeroFlag.NONE
         else:
             heroes = hero_presence.get(mission, HeroFlag.NONE)
+
+        if heroes:
+            defense_rating = max2(0, defense_rating - required_hero_rating)
 
         return RuleSignature(
             mission.race,
