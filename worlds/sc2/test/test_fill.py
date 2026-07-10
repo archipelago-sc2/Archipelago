@@ -63,7 +63,8 @@ class TestFill(test_base.Sc2SetupTestBase):
                 "Test Layout": {
                     "type": "column",
                     "size": 5,
-                    "missions": missions
+                    "max_difficulty": "medium",
+                    "missions": missions,
                 }
             }
         }
@@ -147,13 +148,15 @@ class TestFill(test_base.Sc2SetupTestBase):
     def test_fill_cmo_with_keys(self) -> None:
         world_options = {
             **self.BASE_OPTIONS,
-            options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
             options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
+            options.OPTION_NAME[options.EnabledHeroes]: set(),
+            options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
             options.OPTION_NAME[options.CustomMissionOrder]: {
                 "Test Campaign": {
                     "Test Layout": {
                         "type": "column",
                         "size": 5,
+                        "max_difficulty": "medium",
                         "missions": [
                             {"index": 0, "mission_pool": mission_tables.SC2Mission.OUTBREAK.mission_name},
                             {"index": 1, "entry_rules": [{"items": {"Key": 1}}]},
