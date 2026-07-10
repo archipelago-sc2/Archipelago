@@ -179,6 +179,7 @@ class TestFill(test_base.Sc2SetupTestBase):
     def test_fill_terran_outbreak_first(self) -> None:
         world_options = {
             **self.BASE_OPTIONS,
+            options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
             options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
                 mission_tables.SC2Mission.OUTBREAK
@@ -197,6 +198,7 @@ class TestFill(test_base.Sc2SetupTestBase):
     def test_fill_protoss_outbreak_first(self) -> None:
         world_options = {
             **self.BASE_OPTIONS,
+            options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.PROTOSS.get_title()},
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
             options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
                 mission_tables.SC2Mission.OUTBREAK_P
@@ -215,6 +217,7 @@ class TestFill(test_base.Sc2SetupTestBase):
     def test_fill_zerg_outbreak_first(self) -> None:
         world_options = {
             **self.BASE_OPTIONS,
+            options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.ZERG.get_title()},
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
             options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
                 mission_tables.SC2Mission.OUTBREAK_Z
