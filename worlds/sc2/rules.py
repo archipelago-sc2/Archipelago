@@ -731,8 +731,12 @@ class SC2Logic:
         ), self.player):
             rating += 3
         # Medium
-        if state.has(item_names.WIDOW_MINE, self.player):
-            rating += 2
+        for item in (
+            item_names.WIDOW_MINE,
+            item_names.SIEGE_BREAKERS,
+        ):
+            if state.has(item, self.player):
+                rating += 2
         # Situational
         if state.has(item_names.MISSILE_TURRET, self.player):
             rating += 1
