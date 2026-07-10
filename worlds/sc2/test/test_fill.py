@@ -76,7 +76,10 @@ class TestFill(test_base.Sc2SetupTestBase):
             options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_gauntlet,
             # options.OPTION_NAME[options.EnabledHeroes]: set(options.EnabledHeroes.valid_keys),
-            options.OPTION_NAME[options.MaximumCampaignSize]: 10,
+            # Note(mm): Fill errors can still happen if hard missions appear early, but after the 3rd mission
+            # Relative difficulty puts hard missions in proportional to the size of the order, so longer
+            # gauntlets mean later hard missions and more stability.
+            options.OPTION_NAME[options.MaximumCampaignSize]: 20,
         }
         logger = logging.getLogger()
         try:
