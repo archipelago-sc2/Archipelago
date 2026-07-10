@@ -333,7 +333,7 @@ class SC2World(World):
         self.logic.transition_prefill()
         if self.options.kerrigan_levels_per_mission_completed > 0:
             # Attempt to solve being locked by Kerrigan level requirements
-            self._fill_needed_items(lambda: self.multiworld.get_all_state(False), [item_names.KERRIGAN_LEVELS_1], 70)
+            self._fill_needed_items(lambda: self.multiworld.get_all_state(), [item_names.KERRIGAN_LEVELS_1], 70)
 
     def _fill_needed_items(self, all_state_getter: Callable[[],CollectionState], items_to_use: list[str], max_attempts: int) -> None:
         """
