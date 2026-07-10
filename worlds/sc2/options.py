@@ -22,7 +22,7 @@ from .mission_tables import (
 from . import locations
 from .mission_groups import mission_groups, MissionGroupNames
 from .mission_order.options import CustomMissionOrder
-from .tables import HeroOptions
+from .tables import HeroOptions, StabilityOptions
 
 if TYPE_CHECKING:
     from worlds.AutoWorld import World
@@ -490,6 +490,22 @@ class RequiredTactics(Choice):
     alias_no_logic = option_chaos
     alias_any_units = option_chaos
     alias_standard = option_basic
+
+
+class StabilityFeatures(OptionSet):
+    """
+    Allows toggling off features that make generation more stable.
+
+    Starter locations: Extra locations inserted at the start of early missions to avoid early fill errors.
+                       If turned off, fill errors are more likely to occur if harder missions appear early.
+                       This is safer to disable in multiworlds where other worlds can pick up the slack.
+    Item re-inclusions: Excluded items may be re-included by logical requirements.
+                        If turned off, item filtering will immediately fail when a player-specific exclusion
+                        is logically required.
+    """
+    valid_keys = frozenset(StabilityOptions.ALL_KEYS)
+    default = valid_keys
+    visibility = VISIBILITY_NO_WEBSITE
 
 
 class EnableVoidTrade(Toggle):
@@ -1721,6 +1737,7 @@ class Starcraft2Options(PerGameCommonOptions):
     filler_items_distribution: FillerItemsDistribution
     mission_order_scouting: MissionOrderScouting
 
+    stability_features: StabilityFeatures
     custom_mission_order: CustomMissionOrder
 
 
@@ -1834,6 +1851,7 @@ option_groups = [
         VoidTradeAgeLimit,
         VoidTradeWorkers,
         GrantStoryTech,
+        StabilityFeatures,
         CustomMissionOrder,
     ]),
     OptionGroup("Cosmetics", [

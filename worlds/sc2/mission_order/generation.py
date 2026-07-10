@@ -20,7 +20,7 @@ from ..mission_tables import (
 )
 from ..item.item_tables import named_layout_key_item_table, named_campaign_key_item_table
 from ..item import item_names
-from ..tables import HeroFlag, HeroOptions
+from ..tables import HeroFlag, HeroOptions, StabilityOptions
 from .nodes import MissionOrderNode, SC2MOGenMissionOrder, SC2MOGenCampaign, SC2MOGenLayout, SC2MOGenMission
 from .entry_rules import EntryRule, SubRuleEntryRule, ItemEntryRule, CountMissionsEntryRule, BeatMissionsEntryRule
 from .mission_pools import (
@@ -911,7 +911,8 @@ def set_rules(
                     _log_location_rule(location_data, order, depth, signature)
 
         # Check if starter locations need to be added
-        if depth == 0 or order < 3:
+        starter_locations_enabled = StabilityOptions.STARTER_LOCATIONS in world.options.stability_features.value
+        if (depth == 0 or order < 3) and starter_locations_enabled:
             # Consider each faction separately.
             # Factions that are beatable just with their own locations can donate extra locations to
             # missions of factions.

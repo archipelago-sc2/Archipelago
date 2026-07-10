@@ -13,3 +13,13 @@ class HeroFlag(IntFlag):
     KERRIGAN = 1
     NOVA = 2
     ARTANIS = 4
+
+
+class StabilityOptions:
+    STARTER_LOCATIONS = "Starter locations"
+    ITEM_RE_INCLUSION = "Item re-inclusions"
+
+    ALL_KEYS = (
+        STARTER_LOCATIONS,
+        ITEM_RE_INCLUSION,
+    )

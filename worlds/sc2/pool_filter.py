@@ -2,9 +2,11 @@ import logging
 from typing import Callable, TYPE_CHECKING, Iterable
 from collections import Counter
 
+from Options import OptionError
 from BaseClasses import Location, ItemClassification
 from .item import StarcraftItem, ItemFilterFlags, item_names, item_parents, item_groups, virtual_items
 from .item.item_tables import item_table, TerranItemType, ZergItemType, spear_of_adun_calldowns
+from . import tables
 
 if TYPE_CHECKING:
     from . import SC2World
@@ -232,15 +234,21 @@ class ValidInventory:
             if ItemFilterFlags.Excluded & starcraft_item.filter_flags
         ]
         self.world.random.shuffle(excluded_items)
+        item_unexclusion_enabled = (
+            tables.StabilityOptions.ITEM_RE_INCLUSION in self.world.options.stability_features.value
+        )
         for excluded_item in excluded_items:
             if ItemFilterFlags.Unexcludable & excluded_item.filter_flags:
                 continue
             removal_failed = attempt_removal(excluded_item, remove_flag=ItemFilterFlags.Removed)
             if removal_failed:
                 if ItemFilterFlags.UserExcluded in excluded_item.filter_flags:
-                    logging.getLogger("Starcraft 2").warning(
-                        f"Cannot exclude item {excluded_item.name} as it would break {removal_failed}"
-                    )
+                    if item_unexclusion_enabled:
+                        logging.getLogger("Starcraft 2").warning(
+                            f"Cannot exclude item {excluded_item.name} as it would break {removal_failed}"
+                        )
+                    else:
+                        raise OptionError(f"Cannot exclude item {excluded_item.name} as it would break {removal_failed}")
                 else:
                     assert False, f"Item filtering excluded an item which is logically required: {excluded_item.name}"
                 continue
