@@ -5,7 +5,13 @@ from collections import Counter
 from Options import OptionError
 from BaseClasses import Location, ItemClassification
 from .item import StarcraftItem, ItemFilterFlags, item_names, item_parents, item_groups, virtual_items
-from .item.item_tables import item_table, TerranItemType, ZergItemType, spear_of_adun_calldowns
+from .item.item_tables import (
+    item_table,
+    TerranItemType,
+    ZergItemType,
+    ProtossItemType,
+    spear_of_adun_calldowns,
+)
 from . import tables
 
 if TYPE_CHECKING:
@@ -58,13 +64,15 @@ second_pass_placeable_items: tuple[str, ...] = (
     *[item_name for item_name, item_data in item_table.items()
       if item_data.type in (TerranItemType.Mercenary, ZergItemType.Mercenary)],
     # Kerrigan and Nova levels, abilities and generally useful stuff
-    *[item_name for item_name, item_data in item_table.items()
-      if item_data.type in (
-        ZergItemType.Level,
-        ZergItemType.Ability,
-        ZergItemType.Evolution_Pit,
-        TerranItemType.Nova_Gear
-        )],
+    *[
+        item_name for item_name, item_data in item_table.items()
+        if item_data.type in (
+            ZergItemType.Level,
+            ZergItemType.Ability,
+            ZergItemType.Evolution_Pit,
+            TerranItemType.Nova_Gear
+        )
+    ],
     item_names.NOVA_PROGRESSIVE_STEALTH_SUIT_MODULE,
     # Zerg static defenses
     item_names.SPORE_CRAWLER,
@@ -381,6 +389,13 @@ class ValidInventory:
             item = self.world.random.choice(removable)
             # Make it less likely to drop w/a items
             item_info = item_table[item.name]
+            if item_info.type.display_name in (
+                TerranItemType.Upgrade,
+                ZergItemType.Upgrade,
+                ProtossItemType.Upgrade,
+            ):
+                item = self.world.random.choice(removable)
+                item_info = item_table[item.name]
             # Do not remove item if it would drop upgrades below minimum
             if min_upgrades_per_unit > 0:
                 group_name = None
