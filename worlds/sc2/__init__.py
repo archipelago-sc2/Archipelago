@@ -598,7 +598,9 @@ def flag_excludes_by_faction_presence(world: SC2World, item_list: list[FilterIte
                 item.flags |= ItemFilterFlags.FilterExcluded
                 continue
         if not protoss_missions and item.data.race == SC2Race.PROTOSS:
-            if item.name not in item_groups.soa_items:
+            if (item.name not in item_groups.soa_items
+                and item.data.type != ProtossItemType.Artanis_Items
+            ):
                 item.flags |= ItemFilterFlags.FilterExcluded
             continue
 
