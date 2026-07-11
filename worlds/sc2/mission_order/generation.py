@@ -753,6 +753,8 @@ def flag_hero_tech(
 
     kerrigan_build_missions: set[SC2Mission] = set()
     kerrigan_nobuild_missions: set[SC2Mission] = set()
+    nova_build_missions: set[SC2Mission] = set()
+    nova_nobuild_missions: set[SC2Mission] = set()
     order = 0
     MAX_GRANT_BREADTH = 2
     for depth, missions in depth_to_missions.items():
@@ -778,11 +780,26 @@ def flag_hero_tech(
                     kerrigan_nobuild_missions.add(mission_data)
                 else:
                     kerrigan_build_missions.add(mission_data)
+            # Check for Nova missions
+            if ((MissionFlag.Nova|MissionFlag.HeroSystemUnsupported) in mission_data.flags
+                or HeroFlag.NOVA in heroes
+            ):
+                if MissionFlag.NoBuild in mission_data.flags:
+                    nova_nobuild_missions.add(mission_data)
+                else:
+                    nova_build_missions.add(mission_data)
 
-    # Grant Kerrigan items in no-builds if she doesn't appear in a build mission or more than 1 no-build mission
+
+    # Grant Kerrigan/Nova items in no-builds if they don't appear in a build mission
+    # or more than 1 no-build mission
+    NOBUILD_STORY_TECH_THRESHOLD = 2
     if not kerrigan_build_missions.difference(world.logic.grant_hero_items):
-        if len(kerrigan_nobuild_missions.difference(world.logic.grant_hero_items)) <= 1:
+        if len(kerrigan_nobuild_missions.difference(world.logic.grant_hero_items)) < NOBUILD_STORY_TECH_THRESHOLD:
             for mission in kerrigan_nobuild_missions:
+                world.logic.grant_hero_items.add(mission)
+    if not nova_build_missions.difference(world.logic.grant_hero_items):
+        if len(nova_nobuild_missions.difference(world.logic.grant_hero_items)) < NOBUILD_STORY_TECH_THRESHOLD:
+            for mission in nova_nobuild_missions:
                 world.logic.grant_hero_items.add(mission)
 
 
