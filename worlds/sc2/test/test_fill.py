@@ -69,16 +69,15 @@ class TestFill(test_base.Sc2SetupTestBase):
             }
         }
 
-    def test_stress_fill_one_build_starter_mission_with_3_heroes(self) -> None:
+    def test_stress_fill_one_build_starter_mission_with_2_heroes(self) -> None:
         NUM_FILLS = 5
         world_options = {
             **self.BASE_OPTIONS,
             options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_gauntlet,
-            # options.OPTION_NAME[options.EnabledHeroes]: set(options.EnabledHeroes.valid_keys),
             # Note(mm): Fill errors can still happen if hard missions appear early, but after the 3rd mission
-            # Relative difficulty puts hard missions in proportional to the size of the order, so longer
-            # gauntlets mean later hard missions and more stability.
+            # Relative difficulty puts hard missions in proportion to the size of the order, so longer
+            # gauntlets mean later hard missions and more stability. This is worsened by having more heroes.
             options.OPTION_NAME[options.MaximumCampaignSize]: 20,
         }
         logger = logging.getLogger()
