@@ -847,7 +847,7 @@ def set_rules(
         2
     )
     extra_locations_on = world.options.extra_locations.value == options.LocationInclusion.option_enabled
-    vanilla_locations_on = world.options.extra_locations.value == options.LocationInclusion.option_enabled
+    vanilla_locations_on = world.options.vanilla_locations.value == options.LocationInclusion.option_enabled
     max_starter_cache_locations_per_mission = {
         (True, True): 4,
         (False, True): 6,
