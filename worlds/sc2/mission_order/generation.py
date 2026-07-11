@@ -866,6 +866,7 @@ def set_rules(
         if min_keys_per_depth < 0:
             min_keys_per_depth = 0
 
+    starter_locations_enabled = StabilityOptions.STARTER_LOCATIONS in world.options.stability_features.value
     rule_cache: dict[RuleSignature, Callable[['CollectionState'], bool]] = {}
     first_order_of_depth = 0
     # Starter location tracking
@@ -911,8 +912,7 @@ def set_rules(
                     _log_location_rule(location_data, order, depth, signature)
 
         # Check if starter locations need to be added
-        starter_locations_enabled = StabilityOptions.STARTER_LOCATIONS in world.options.stability_features.value
-        if (depth == 0 or order < 3) and starter_locations_enabled:
+        if depth == 0 or order < 3:
             # Consider each faction separately.
             # Factions that are beatable just with their own locations can donate extra locations to
             # missions of factions.
@@ -965,45 +965,53 @@ def set_rules(
                 + cumulative_starter_locations
             )
             if starter_locations > 0:
+                if starter_locations_enabled:
+                    is_statement = "is getting"
+                else:
+                    is_statement = "would have gotten"
                 logger.info(
-                    f"Player {world.player} is getting {starter_locations} starter locations "
+                    f"Player {world.player} {is_statement} {starter_locations} starter locations "
                     f"for {len(mission_slots)} missions at depth {depth}. "
                     f"Item requirements per race: "
                     + ", ".join((f"{race.get_title()}: {count}" for race, count in starter_locations_per_race.items()))
                 )
-            max_num_starter_locations = len(mission_slots) * max_starter_cache_locations_per_mission
-            if starter_locations > max_num_starter_locations:
-                if len(mission_slots) == 1:
-                    missions_string = f"Mission {mission_slots[0].mission.mission_name} isn't a valid starter mission"
-                else:
-                    missions_string = (
-                        f"Missions {', '.join(mission_slot.mission.mission_name for mission_slot in mission_slots)} "
-                        f"aren't valid starter missions together"
+            if starter_locations_enabled:
+                max_num_starter_locations = len(mission_slots) * max_starter_cache_locations_per_mission
+                if starter_locations > max_num_starter_locations:
+                    if len(mission_slots) == 1:
+                        missions_string = f"Mission {mission_slots[0].mission.mission_name} isn't a valid starter mission"
+                    else:
+                        missions_string = (
+                            f"Missions {', '.join(mission_slot.mission.mission_name for mission_slot in mission_slots)} "
+                            f"aren't valid starter missions together"
+                        )
+                    raise OptionError(
+                        f"{missions_string} at depth {depth}. "
+                        f"It would require {starter_locations} starter locations, "
+                        f"but the maximum is {max_num_starter_locations} for {len(mission_slots)} "
+                        f"mission{'s' if len(mission_slots) > 1 else ''}.\n"
+                        f"==> Required starter location counts per faction: "
+                        + ", ".join(
+                            (f"{race.get_title()}: {count}"
+                            for race, count in starter_locations_per_race.items())
+                        )
                     )
-                raise OptionError(
-                    f"{missions_string} at depth {depth}. "
-                    f"It would require {starter_locations} starter locations, "
-                    f"but the maximum is {max_num_starter_locations} for {len(mission_slots)} "
-                    f"mission{'s' if len(mission_slots) > 1 else ''}.\n"
-                    f"==> Required starter location counts per faction: "
-                    + ", ".join((f"{race.get_title()}: {count}" for race, count in starter_locations_per_race.items()))
-                )
-            for index in range(starter_locations):
-                starter_cache_index, mission_index = divmod(index, len(mission_slots))
-                mission_slot = mission_slots[mission_index]
-                mission_locations = region_to_location_data[mission_slot.mission.mission_name]
-                assert isinstance(mission_locations[0].info, locations.Sc2Location)
-                new_location_data = LocationData(
-                    StarterCacheData(starter_cache_index, mission_locations[0].info)
-                )
-                new_location = _create_location(
-                    world.player,
-                    new_location_data,
-                    mission_slot.region,
-                    location_cache
-                )
-                mission_slot.region.locations.append(new_location)
-                mission_locations.append(new_location_data)
+                for index in range(starter_locations):
+                    starter_cache_index, mission_index = divmod(index, len(mission_slots))
+                    mission_slot = mission_slots[mission_index]
+                    mission_locations = region_to_location_data[mission_slot.mission.mission_name]
+                    assert isinstance(mission_locations[0].info, locations.Sc2Location)
+                    new_location_data = LocationData(
+                        StarterCacheData(starter_cache_index, mission_locations[0].info)
+                    )
+                    new_location = _create_location(
+                        world.player,
+                        new_location_data,
+                        mission_slot.region,
+                        location_cache
+                    )
+                    mission_slot.region.locations.append(new_location)
+                    mission_locations.append(new_location_data)
 
         # Set the rules
         for order_in_depth, mission_slot in enumerate(mission_slots):
