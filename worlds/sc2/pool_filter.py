@@ -387,15 +387,18 @@ class ValidInventory:
             if len(removable) == 0:
                 return False
             item = self.world.random.choice(removable)
-            # Make it less likely to drop w/a items
+            # Make it less likely to cull w/a items
             item_info = item_table[item.name]
-            if item_info.type.display_name in (
-                TerranItemType.Upgrade,
-                ZergItemType.Upgrade,
-                ProtossItemType.Upgrade,
-            ):
-                item = self.world.random.choice(removable)
-                item_info = item_table[item.name]
+            for reroll in range(2):
+                if item_info.type.display_name in (
+                    TerranItemType.Upgrade,
+                    ZergItemType.Upgrade,
+                    ProtossItemType.Upgrade,
+                ):
+                    item = self.world.random.choice(removable)
+                    item_info = item_table[item.name]
+                else:
+                    break
             # Do not remove item if it would drop upgrades below minimum
             if min_upgrades_per_unit > 0:
                 group_name = None
