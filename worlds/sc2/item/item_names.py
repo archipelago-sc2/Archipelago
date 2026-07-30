@@ -372,7 +372,7 @@ PLANETARY_FORTRESS_PROGRESSIVE_AUGMENTED_THRUSTERS = "Progressive Augmented Thru
 PLANETARY_FORTRESS_IBIKS_TRACKING_SCANNERS         = "Ibiks Tracking Scanners (Planetary Fortress)"
 PLANETARY_FORTRESS_ORBITAL_MODULE                  = "Orbital Module (Planetary Fortress)"
 SENSOR_TOWER_ASSISTIVE_TARGETING                   = "Assistive Targeting (Sensor Tower)"
-SENSOR_TOWER_MUILTISPECTRUM_DOPPLER                = "Multispectrum Doppler (Sensor Tower)"
+SENSOR_TOWER_MULTISPECTRUM_DOPPLER                 = "Multispectrum Doppler (Sensor Tower)"
 
 # Nova
 NOVA_GHOST_VISOR                        = "Ghost Visor (Nova Equipment)"
