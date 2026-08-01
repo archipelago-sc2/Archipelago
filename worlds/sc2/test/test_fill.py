@@ -154,6 +154,7 @@ class TestFill(test_base.Sc2SetupTestBase):
             options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
             options.OPTION_NAME[options.EnabledHeroes]: set(),
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
+            options.OPTION_NAME[options.MasteryLocations]: options.LocationInclusion.option_disabled,
             options.OPTION_NAME[options.CustomMissionOrder]: {
                 "Test Campaign": {
                     "Test Layout": {
@@ -184,6 +185,7 @@ class TestFill(test_base.Sc2SetupTestBase):
             **self.BASE_OPTIONS,
             options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
+            options.OPTION_NAME[options.MasteryLocations]: options.LocationInclusion.option_disabled,
             options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
                 mission_tables.SC2Mission.OUTBREAK
             ),
@@ -203,6 +205,7 @@ class TestFill(test_base.Sc2SetupTestBase):
             **self.BASE_OPTIONS,
             options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.PROTOSS.get_title()},
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
+            options.OPTION_NAME[options.MasteryLocations]: options.LocationInclusion.option_disabled,
             options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
                 mission_tables.SC2Mission.OUTBREAK_P
             ),
@@ -222,6 +225,7 @@ class TestFill(test_base.Sc2SetupTestBase):
             **self.BASE_OPTIONS,
             options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.ZERG.get_title()},
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
+            options.OPTION_NAME[options.MasteryLocations]: options.LocationInclusion.option_disabled,
             options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
                 mission_tables.SC2Mission.OUTBREAK_Z
             ),
@@ -242,6 +246,7 @@ class TestFill(test_base.Sc2SetupTestBase):
             options.OPTION_NAME[options.SelectedRaces]: {mission_tables.SC2Race.TERRAN.get_title()},
             options.OPTION_NAME[options.ExtraLocations]: options.LocationInclusion.option_disabled,
             options.OPTION_NAME[options.VanillaLocations]: options.LocationInclusion.option_disabled,
+            options.OPTION_NAME[options.MasteryLocations]: options.LocationInclusion.option_disabled,
             options.OPTION_NAME[options.VictoryCache]: 3,
             options.OPTION_NAME[options.MissionOrder]: options.MissionOrder.option_custom,
             options.OPTION_NAME[options.CustomMissionOrder]: self._plando_first_missions(
