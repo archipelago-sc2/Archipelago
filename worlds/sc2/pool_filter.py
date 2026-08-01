@@ -363,6 +363,20 @@ class ValidInventory:
         if len(failed_locations) > 0:
             raise Exception(f"Too many items excluded - couldn't satisfy access rules for the following locations:\n{failed_locations}")
 
+        # Request a level of each w/a upgrade level
+        reserved_upgrades: dict[int, int] = {}
+        UPGRADE_LEVELS_TO_RESERVE = 2
+        for item in inventory:
+            if (not (ItemFilterFlags.RequestedOrBetter & item.filter_flags)
+                and item_table[item.name].type in (
+                    TerranItemType.Upgrade, ZergItemType.Upgrade, ProtossItemType.Upgrade
+                )
+                and reserved_upgrades.get(item.code, 0) < UPGRADE_LEVELS_TO_RESERVE
+            ):
+                reserved_upgrades[item.code] = reserved_upgrades.get(item.code, 0) + 1
+                item.filter_flags |= ItemFilterFlags.Requested
+        del reserved_upgrades
+
         # Optionally locking generic items
         generic_items: list[StarcraftItem] = [
             starcraft_item for starcraft_item in inventory
