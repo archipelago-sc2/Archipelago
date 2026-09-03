@@ -12,6 +12,7 @@ import time
 import Utils
 from Utils import async_start
 from NetUtils import ClientStatus, NetworkItem
+from itertools import islice
 
 from . import banks, user_paths
 from .failable import Error
@@ -385,10 +386,11 @@ class MissionClient:
             current_items[SC2Race.ANY][get_item_flag_word(item_names.UPGRADE_RESEARCH_COST)],
         ))
 
-    def get_trap_items(self, current_items: dict[SC2Race, list[int]]) -> str:
-        return ("{} {}".format(
-            current_items[SC2Race.ANY][get_item_flag_word(item_names.TRAP_GHOST_SPAWN)],
-            current_items[SC2Race.ANY][get_item_flag_word(item_names.TRAP_VOID_DUPLICATE)],
+    def get_mutator_items(self, current_items: dict[SC2Race, list[int]]) -> str:
+        return ("{} {} {}".format(
+            current_items[SC2Race.ANY][get_item_flag_word(item_names.MUTATOR_GHOST_SPAWN)],
+            current_items[SC2Race.ANY][get_item_flag_word(item_names.MUTATOR_VOID_DUPLICATE)],
+            current_items[SC2Race.ANY][get_item_flag_word(item_names.MUTATOR_ENABLE_CLOAK)],
         ))
 
     def update_tech(self, current_items: dict[SC2Race, list[int]], kerrigan_level: int) -> None | Error[str]:
@@ -397,7 +399,7 @@ class MissionClient:
             self.get_zerg_tech(current_items, kerrigan_level),
             self.get_protoss_tech(current_items),
             self.get_misc_tech(current_items),
-            self.get_trap_items(current_items),
+            self.get_mutator_items(current_items),
         )
 
     def update_core_options(self, current_items: dict[SC2Race, list[int]]) -> None | Error[str]:
@@ -885,14 +887,18 @@ def calculate_items(ctx: 'SC2Context', mission_id: int) -> dict[SC2Race, list[in
                 )
 
 
-    # Upgrades from completed missions
-    if ctx.generic_upgrade_missions > 0:
-        total_missions = sum(len(column) for campaign in ctx.custom_mission_order for layout in campaign.layouts for column in layout.missions)
-        num_missions = int((ctx.generic_upgrade_missions / 100) * total_missions)
-        completed = len([mission_id for mission_id in ctx.mission_id_to_location_ids if ctx.is_mission_completed(mission_id)])
-        upgrade_count = min(completed // num_missions, ctx.max_upgrade_level) if num_missions > 0 else ctx.max_upgrade_level
-        upgrade_count = min(upgrade_count, item_tables.WEAPON_ARMOR_UPGRADE_MAX_LEVEL)
+    # Handle scaling with completed missions
+    total_missions = len([mission for campaign in ctx.custom_mission_order
+        for layout in campaign.layouts for column in layout.missions for mission in column if mission.mission_id > 0])
+    completed = len([mission_id for mission_id in ctx.mission_id_to_location_ids if ctx.is_mission_completed(mission_id)])
+    mutator_count_available = min(len(ctx.mutator_order), ctx.mutator_limit)
+    mutator_count = 0
 
+    # W/A upgrade missions
+    if ctx.generic_upgrade_missions > 0:
+        missions_per_upgrade = int((ctx.generic_upgrade_missions / 100) * total_missions)
+        upgrade_count = min(completed // missions_per_upgrade, ctx.max_upgrade_level) if missions_per_upgrade > 0 else ctx.max_upgrade_level
+        upgrade_count = min(upgrade_count, item_tables.WEAPON_ARMOR_UPGRADE_MAX_LEVEL)
         # Equivalent to "Progressive Weapon/Armor Upgrade" item
         global_upgrades: set[str] = options.upgrade_included_names[options.GenericUpgradeItems.option_bundle_all]
         for global_upgrade in global_upgrades:
@@ -900,6 +906,30 @@ def calculate_items(ctx: 'SC2Context', mission_id: int) -> dict[SC2Race, list[in
             upgrade_flaggroup = item.race_to_item_type[race]["Upgrade"].flag_word
             for bundled_number in get_bundle_upgrade_member_numbers(global_upgrade):
                 accumulators[race][upgrade_flaggroup] += upgrade_count << bundled_number
+
+    # Mutators on mission completion
+    if ctx.apply_mutators == options.ApplyMutators.option_progression_scaling:
+        missions_per_mutator = int( total_missions * ctx.mutator_rate / (mutator_count_available * 100))
+        mutator_count = min(completed // missions_per_mutator, ctx.mutator_limit) if missions_per_mutator > 0 else ctx.mutator_limit
+
+    # Handle scaling with mission order depth
+    current_depth = ctx.mission_id_to_depth[mission_id]
+    max_depth = ctx.max_depth
+
+    # Mutators on mission depth
+    if ctx.apply_mutators == options.ApplyMutators.option_depth_scaling:
+        mutator_count = min((current_depth * mutator_count_available * 100) // (max_depth * ctx.mutator_rate ), ctx.mutator_limit)
+
+    # Cloak handling, only allow mutators to cloak units after a certain depth
+    if current_depth >= 8: # matches detector option
+        cloak_item = item_tables.item_table[item_names.MUTATOR_ENABLE_CLOAK]
+        accumulators[cloak_item.race][cloak_item.type.flag_word] += 1 << cloak_item.number
+
+    # apply mutators
+    if mutator_count > 0:
+        for mutator in islice(ctx.mutator_order, mutator_count):
+            mutator_item = item_tables.item_table[mutator]
+            accumulators[mutator_item.race][mutator_item.type.flag_word] += 1 << mutator_item.number
 
     return accumulators
 

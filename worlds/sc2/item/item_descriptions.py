@@ -610,8 +610,8 @@ item_descriptions = {
     item_names.STARTING_SUPPLY: "Increases the starting supply for all missions.",
     item_names.NOTHING: "Does nothing. Used to remove a location from the game.",
     item_names.MAX_SUPPLY: "Increases the maximum supply cap for all missions.",
-    item_names.TRAP_GHOST_SPAWN: inspect.cleandoc("""
-        Trap Item.
+    item_names.MUTATOR_GHOST_SPAWN: inspect.cleandoc("""
+        Mutator
 
         Creates a Nuclear Silo building for an enemy player.
         The Nuclear Silo periodically spawns Ghost attack waves,
@@ -620,12 +620,20 @@ item_descriptions = {
 
         Only works in build missions.
     """),
-    item_names.TRAP_VOID_DUPLICATE: inspect.cleandoc("""
-        Trap Item.
+    item_names.MUTATOR_VOID_DUPLICATE: inspect.cleandoc("""
+        Mutator
 
         Increases the size of enemy attack waves.
         Wave units are duplicated as Void Shades.
         +20% wave size per level, +100% wave size max.
+
+        Only works in build missions.
+    """),
+    item_names.MUTATOR_ENABLE_CLOAK: inspect.cleandoc("""
+        Mutator
+
+        Allows other Mutators to send cloaked units.
+        Does nothing by itself.
     """),
     item_names.REDUCED_MAX_SUPPLY: "Trap Item. Decreases the maximum supply cap for all missions.",
     item_names.SHIELD_REGENERATION: "Increases shield regeneration of all own units.",

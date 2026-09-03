@@ -805,6 +805,8 @@ class SC2Context(CommonContext):
         self.enable_morphling = EnableMorphling.default
         self.custom_mission_order: list[CampaignSlotData] = []
         self.mission_id_to_entry_rules: dict[int, MissionEntryRules]
+        self.mission_id_to_depth: dict[int, int]
+        self.max_depth: int
         self.final_mission_ids: list[int] = [29]
         self.final_locations: list[int] = []
         self.announcements: queue.Queue = queue.Queue()
@@ -1039,7 +1041,12 @@ class SC2Context(CommonContext):
                 for campaign in self.custom_mission_order for layout in campaign.layouts
                 for column in layout.missions for mission in column
             }
-
+            self.mission_id_to_depth = {
+                mission.mission_id: mission.min_depth
+                for campaign in self.custom_mission_order for layout in campaign.layouts
+                for column in layout.missions for mission in column
+            }
+            self.max_depth = max(self.mission_id_to_depth.values())
             self.mission_order = args["slot_data"].get("mission_order", MissionOrder.option_vanilla)
             if self.slot_data_version < 4:
                 self.final_mission_ids = [args["slot_data"].get("final_mission", SC2Mission.ALL_IN.id)]
@@ -1124,6 +1131,10 @@ class SC2Context(CommonContext):
             self.difficulty_damage_modifier = args["slot_data"].get("difficulty_damage_modifier", DifficultyDamageModifier.option_true)
             self.mission_order_scouting = args["slot_data"].get("mission_order_scouting", MissionOrderScouting.option_none)
             self.mission_item_classification = args["slot_data"].get("mission_item_classification")
+            self.apply_mutators = args["slot_data"].get("apply_mutators")
+            self.mutator_limit = args["slot_data"].get("mutator_limit")
+            self.mutator_rate = args["slot_data"].get("mutator_rate")
+            self.mutator_order = args["slot_data"].get("mutator_order")
 
             if self.slot_data_version < 5 and required_tactics > RequiredTactics.option_chaos:
                 # Locking Grant Story Tech/Levels if no logic

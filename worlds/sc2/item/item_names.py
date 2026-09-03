@@ -1093,9 +1093,14 @@ BUILDING_CONSTRUCTION_SPEED = "Increased Building Construction Speed"
 UPGRADE_RESEARCH_SPEED      = "Increased Upgrade Research Speed"
 UPGRADE_RESEARCH_COST       = "Reduced Upgrade Research Cost"
 
+# Mutators
+MUTATOR_GHOST_SPAWN         = "Ghost Spawn Mutator"
+MUTATOR_VOID_DUPLICATE      = "Void Duplicate Mutator"
+
+# does nothing by itself, just allows other mutators to apply cloak
+MUTATOR_ENABLE_CLOAK        = "Enable Cloak for Mutators"
+
 # Trap
-TRAP_GHOST_SPAWN            = "Ghost Spawn Trap"
-TRAP_VOID_DUPLICATE         = "Void Duplicate Trap"
 REDUCED_MAX_SUPPLY          = "Decreased Maximum Supply"
 NOTHING                     = "Nothing"
 

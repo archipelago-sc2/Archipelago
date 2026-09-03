@@ -136,8 +136,9 @@ class FactionlessItemType(ItemTypeEnum):
     MaxSupplyTrap = "Max Supply Trap", 7
     ResearchSpeed = "Research Speed", 8
     ResearchCost = "Research Cost", 9
-    GhostSpawnTrap = "Ghost Spawn Trap", 10
-    VoidDuplicateTrap = "Void Duplicate Trap", 11
+    MutatorGhostSpawn = "Ghost Spawn Mutator", 10
+    MutatorVoidDuplicate = "Void Duplicate Mutator", 11
+    MutatorEnableCloak = "Enable Cloak Mutator", 12
     Keys = "Keys", -1
 
 

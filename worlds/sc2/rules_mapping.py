@@ -231,6 +231,17 @@ class ProtoRule:
             upgrade_depths = (6, 13, 20)
             hero_depths = (3, 14)
 
+        detector_items = world.options.detector_items == options.DetectorItems.option_enabled
+        detector_depths: tuple[int, ...]
+        if detector_items == True:
+            if logic_level == LOGIC_BASIC:
+                detector_depths = (8, 8, 12)
+            elif logic_level == LOGIC_ADVANCED:
+                detector_depths = (8, 12, 20)
+            elif logic_level == LOGIC_CHAOS:
+                detector_depths = (8,)
+
+
         soa_flags = 0
         defense_rating = 0
         macro_rating = 0
@@ -252,6 +263,8 @@ class ProtoRule:
             if not (FLAG_NO_LOGIC_TRACKS & self.flags):
                 anti_air = self.rating_from_progress(progress, anti_air_depths)
                 upgrades = self.rating_from_progress(progress, upgrade_depths)
+                if detector_items:
+                    detection = self.rating_from_progress(progress, detector_depths)
             else:
                 anti_air = 0
                 upgrades = 0

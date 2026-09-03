@@ -1642,6 +1642,77 @@ class FillerItemsDistribution(ItemDict):
         super(ItemDict, self).__init__(value)
 
 
+class ApplyMutators(Choice):
+    """
+    Controls how Mutators are applied to your campaign.
+    Mutators are optional special conditions added to missions.
+
+    Disabled: Do not apply Mutators (default)
+    Trap Items: Mutators are randomly found in the Multiworld as Trap Items
+    Depth Scaling: Mutators are applied based on how late the mission is available in your mission order
+    Progression Scaling: Mutators are applied based on the percentage of missions you completed
+
+    Warning: Mutators can significantly increase the difficulty of a mission
+    and are never considered by logic.
+    """
+    display_name = "Apply Mutators"
+    option_disabled = 0
+    option_trap_items = 1
+    option_depth_scaling = 2
+    option_progression_scaling = 3
+    default = 0
+
+
+class MutatorMaxLevels(ItemDict):
+    """
+    Controls which mutators are allowed up to which level.
+
+    Ghost Spawn Mutator: Spawns Ghosts which nuke your base. 5 levels.
+    Void Duplicate Mutator: Increases Enemy Attack Waves. 5 levels.
+    """
+    display_name = "Allowed Mutators"
+    default =  {
+        item_names.MUTATOR_GHOST_SPAWN: 5,
+        item_names.MUTATOR_VOID_DUPLICATE: 5,
+    }
+    valid_keys = default.keys()
+
+class MutatorLimit(Range):
+    """
+    Total count of mutators to be added to your campaign
+    """
+    display_name = "Mutator Limit"
+    range_start = 0
+    range_end = 10
+    default = 5
+
+
+class MutatorRate(Range):
+    """
+    Effect changes based on the "Apply Mutators" setting:
+
+    Trap Items: No Effect
+    Depth Scaling: Apply all Mutators up to this depth percentage (1-100)
+    Progression Scaling: Apply all Mutators up to this percentage of mission completions (1-100)
+    """
+    display_name = "Mutator Rate"
+    range_start = 1
+    range_end = 100
+    default = 5
+
+class DetectorItems(Choice):
+    """
+    Mutators may require you to deal with invisible units, starting from a certain depth
+    Enabling this setting will guarantee, that you get access to some way of handling
+    cloaked units before reaching that depth, based on your required tactics.
+    Auto: Enabled, if a mutator with cloaked units is used.
+    """
+    display_name = "Detector Items"
+    option_disabled = 0
+    option_enabled = 1
+    option_auto = 2
+    default = 2
+
 @dataclass
 class Starcraft2Options(PerGameCommonOptions):
     start_inventory: Sc2StartInventory  # type: ignore
@@ -1739,6 +1810,11 @@ class Starcraft2Options(PerGameCommonOptions):
 
     stability_features: StabilityFeatures
     custom_mission_order: CustomMissionOrder
+    apply_mutators: ApplyMutators
+    mutator_max_levels: MutatorMaxLevels
+    mutator_rate: MutatorRate
+    mutator_limit: MutatorLimit
+    detector_items: DetectorItems
 
 
 option_groups = [
@@ -1860,9 +1936,15 @@ option_groups = [
         PlayerColorZerg,
         PlayerColorZergPrimal,
         PlayerColorNova,
-    ])
+    ]),
+    OptionGroup("Mutators", [
+        ApplyMutators,
+        MutatorLimit,
+        MutatorMaxLevels,
+        MutatorRate,
+        DetectorItems,
+    ]),
 ]
-
 
 def get_option_value(world: 'SC2World | None', name: str) -> Any:
     """

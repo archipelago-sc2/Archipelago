@@ -242,6 +242,7 @@ class ItemGroupNames:
     VANILLA_ITEMS = "Vanilla Items"
     OVERPOWERED_ITEMS = "Overpowered Items"
     DISABLED_ITEMS = "Disabled Items"
+    MUTATOR_ITEMS = "Mutator Items"
     UNRELEASED_ITEMS = "Unreleased Items"
     LEGACY_ITEMS = "Legacy Items"
 
@@ -1711,12 +1712,20 @@ item_name_groups[ItemGroupNames.OVERPOWERED_ITEMS] = overpowered_items = [
 ]
 
 # Opt-In items that do not show up by default.
+# These items need to be explicitly added, either by the mutator options
+# or by putting them into locked items or start inventory
+item_name_groups[ItemGroupNames.MUTATOR_ITEMS] = mutator_items = [
+    # Mutators
+    item_names.MUTATOR_GHOST_SPAWN,
+    item_names.MUTATOR_VOID_DUPLICATE,
+]
+
+# Opt-In items that do not show up by default.
 # These items need to be explicitly added, either by certain options
 # or by putting them into locked items or start inventory
 item_name_groups[ItemGroupNames.DISABLED_ITEMS] = disabled_items = [
-    # Trap items
-    item_names.TRAP_GHOST_SPAWN,
-    item_names.TRAP_VOID_DUPLICATE,
+    # special mutator item, affecting other mutators
+    item_names.MUTATOR_ENABLE_CLOAK,
 ]
 
 # Items not aimed to be officially released
