@@ -52,6 +52,7 @@ class MissionClient:
         'update_period_seconds',
         'start_time',
         'warned_identity_mismatches',
+        'warning_load_active',
         'load_refresh_in_progress',
         'mission_checks_blocked',
         'mission_checks_override',
@@ -76,6 +77,7 @@ class MissionClient:
         self.update_period_seconds = 0.5
         self.start_time = time.time_ns()
         self.warned_identity_mismatches: set[tuple[str, str, str]] = set()
+        self.warning_load_active = False
         self.load_refresh_in_progress = False
         self.mission_checks_blocked = False
         self.mission_checks_override = False
@@ -262,11 +264,15 @@ class MissionClient:
     ) -> None:
         """Warn about loaded-save identity problems and block checks on definite mismatches."""
         if save_loaded_value.strip() != "1":
+            self.warning_load_active = False
             self.load_refresh_in_progress = False
             return
 
         if self.ctx.slot is None:
             return
+        if not self.warning_load_active:
+            self.warned_identity_mismatches.clear()
+            self.warning_load_active = True
         if not self.load_refresh_in_progress:
             self.mission_checks_override = False
 
