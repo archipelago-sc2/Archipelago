@@ -316,9 +316,8 @@ class MissionClient:
 
         if not saved_world_id:
             candidate_warnings[("world-legacy-save", "", current_world_id)] = (
-                "WARNING: This save was made on an older version and has no World ID, so its "
-                "multiworld cannot be verified. The missing World ID alone does not block "
-                "checks or items."
+                "WARNING: This save was made on an older version and has no World ID. "
+                "The missing World ID alone does not block checks or items."
             )
         elif not current_world_id:
             candidate_warnings[("world-legacy-connected", saved_world_id, "")] = (
@@ -353,8 +352,7 @@ class MissionClient:
         self.mission_checks_override = True
         self.mission_checks_blocked = False
         warning = (
-            "WARNING OVERRIDE: Mission checks were re-enabled from the running SC2 mission despite "
-            "the loaded-save identity mismatch. The saved slot and World ID were not changed."
+            "WARNING OVERRIDE: Mission checks were re-enabled from the running SC2 mission."
         )
         logger.warning(warning)
         error = banks.send_ap_message([warning])
@@ -372,7 +370,6 @@ class MissionClient:
             self.setup_pending = True
         if self.setup_pending and self.do_setup():
             self.load_refresh_in_progress = refresh_requested
-            logger.info("Refreshed current Archipelago items and options for the active mission.")
 
     async def client_loop(self) -> None:
         while self.running:
