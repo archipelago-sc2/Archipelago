@@ -4,6 +4,7 @@ import logging
 import os
 import queue
 import re
+from urllib.parse import quote, unquote
 from . import user_paths
 from .failable import Error
 
@@ -18,6 +19,9 @@ BANK_CORE_OPTIONS_KEY_STARTING_RESOURCES = "StartingResources"
 BANK_CORE_OPTIONS_KEY_FACTION_COLORS = "FactionColors"
 BANK_CORE_OPTIONS_KEY_UNCOLLECTED_LOCATIONS = "UncollectedLocations"
 BANK_CORE_OPTIONS_KEY_LOAD_FINISHED = "LoadFinished"
+BANK_CORE_OPTIONS_KEY_SLOT_NAME = "SlotName"
+BANK_CORE_OPTIONS_KEY_WORLD_ID = "WorldID"
+BANK_CORE_OPTIONS_KEY_SAVE_WARNING = "SaveWarning"
 
 # Options
 # 2 types of options because they are handled in different mod files by SC2
@@ -50,6 +54,12 @@ BANK_TRADE_RECEIVE_KEY_TRADE_RESPONSE = "TradeResponse"
 BANK_LOCATIONS_FILE_NAME = "ArchipelagoLocations" # .SC2Bank
 BANK_LOCATIONS_SECTION_LOCATIONS = "Locations"
 BANK_LOCATIONS_KEY_GAME_STATE = "GameState"
+BANK_LOCATIONS_KEY_MISSION_MAP = "MissionMap"
+BANK_LOCATIONS_KEY_MISSION_RACE = "MissionRace"
+BANK_LOCATIONS_KEY_SLOT_NAME = "SlotName"
+BANK_LOCATIONS_KEY_WORLD_ID = "WorldID"
+BANK_LOCATIONS_KEY_SAVE_LOADED = "SaveLoaded"
+BANK_LOCATIONS_KEY_CHECKS_OVERRIDE = "ChecksOverride"
 
 # Update
 # Doesn't need sections or keys. The existence of the file is used as an update prompt for now
@@ -66,6 +76,15 @@ BANK_TRADE_SEND_KEY_RECEIVE_COUNT = "Count"
 BANK_BACKUP_FILE_LIMIT = 100
 
 logger = logging.getLogger("Starcraft2")
+
+
+def encode_bank_identity(value: str) -> str:
+    """Encode arbitrary AP names as XML-safe ASCII for round-tripping through Galaxy banks."""
+    return quote(value, safe="")
+
+
+def decode_bank_identity(value: str) -> str:
+    return unquote(value)
 
 
 class SC2Bank:
@@ -112,7 +131,7 @@ class SC2Bank:
             path = f"{bank_folder}/{self.file_name}.SC2Bank"
         if not os.path.isfile(path):
             return None
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             SECTION_PATTERN = re.compile(r'<Section name="(\w+)">')
             KEY_PATTERN = re.compile(r'<Key name="(\w+)">')
             VALUE_PATTERN = re.compile(r'<Value string="([^"]+)"/>')
@@ -174,13 +193,12 @@ class SC2Bank:
             # start at 1, makes handling in SC2 easier
             path = f"{dir}/{self.file_name}_backup_{i}.SC2Bank"
             if not os.path.isfile(path):
-                with open(path, "w") as f:
+                with open(path, "w", encoding="utf-8") as f:
                     f.write('\n'.join(lines))
                 return None
         # only the messages bank has any chance to hit this
         # at current limits, this would be attempting to send 5000 messages in a single iteration
-        logger.info(f"Too many bank backups, cannot write:\n{self}")
-        return None
+        return Error(f"Too many bank backups, cannot write {self.file_name}; will retry.")
 
     def remove_entry_from_file(self, key: str) -> None | Error[str]:
         """Remove one Key/Value pair from a bank file"""
@@ -189,9 +207,9 @@ class SC2Bank:
         if isinstance(bank_folder, Error):
             return bank_folder
         path = f"{bank_folder}/{self.file_name}.SC2Bank"
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             deleting = False
             for line in lines:
                 line_content = line.strip()
@@ -247,7 +265,10 @@ def send_core_options(
     start_resources: str,
     colors: str,
     uncollected_objectives: str | None = None,
-    finished_loading: str | None = None
+    finished_loading: str | None = None,
+    slot_name: str | None = None,
+    world_id: str | None = None,
+    save_warning: str | None = None,
 ) -> None | Error[str]:
     bank = SC2Bank(BANK_CORE_OPTIONS_FILE_NAME)
     bank.add_entry(
@@ -271,6 +292,24 @@ def send_core_options(
             BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
             BANK_CORE_OPTIONS_KEY_LOAD_FINISHED,
             finished_loading
+        )
+    if slot_name:
+        bank.add_entry(
+            BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
+            BANK_CORE_OPTIONS_KEY_SLOT_NAME,
+            encode_bank_identity(slot_name),
+        )
+    if world_id:
+        bank.add_entry(
+            BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
+            BANK_CORE_OPTIONS_KEY_WORLD_ID,
+            encode_bank_identity(world_id),
+        )
+    if save_warning:
+        bank.add_entry(
+            BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
+            BANK_CORE_OPTIONS_KEY_SAVE_WARNING,
+            save_warning,
         )
     return bank.write_file()
 
@@ -361,15 +400,19 @@ def update_prompt() -> bool:
     return result
 
 
-def read_locations() -> str | Error[str]:
+def read_location_info() -> tuple[str, str, str, str, str, str, str] | Error[str]:
     bank = SC2Bank(BANK_LOCATIONS_FILE_NAME)
     if error := bank.read_file():
         return error
-    result = bank.get_value(
-        BANK_LOCATIONS_SECTION_LOCATIONS,
-        BANK_LOCATIONS_KEY_GAME_STATE
+    return (
+        bank.get_value(BANK_LOCATIONS_SECTION_LOCATIONS, BANK_LOCATIONS_KEY_GAME_STATE),
+        bank.get_value(BANK_LOCATIONS_SECTION_LOCATIONS, BANK_LOCATIONS_KEY_MISSION_MAP),
+        bank.get_value(BANK_LOCATIONS_SECTION_LOCATIONS, BANK_LOCATIONS_KEY_MISSION_RACE),
+        bank.get_value(BANK_LOCATIONS_SECTION_LOCATIONS, BANK_LOCATIONS_KEY_SLOT_NAME),
+        bank.get_value(BANK_LOCATIONS_SECTION_LOCATIONS, BANK_LOCATIONS_KEY_WORLD_ID),
+        bank.get_value(BANK_LOCATIONS_SECTION_LOCATIONS, BANK_LOCATIONS_KEY_SAVE_LOADED),
+        bank.get_value(BANK_LOCATIONS_SECTION_LOCATIONS, BANK_LOCATIONS_KEY_CHECKS_OVERRIDE),
     )
-    return result
 
 
 # Void Trade
