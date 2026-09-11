@@ -60,69 +60,23 @@ class ItemTypeEnum(enum.Enum):
 
 
 class TerranItemType(ItemTypeEnum):
-    Armory_1 = "Armory", 0
-    """General Terran unit upgrades"""
-    Armory_2 = "Armory", 1
-    Armory_3 = "Armory", 2
-    Armory_4 = "Armory", 3
-    Armory_5 = "Armory", 4
-    Armory_6 = "Armory", 5
-    Armory_7 = "Armory", 6
-    Progressive = "Progressive Upgrade", 7
-    Laboratory = "Laboratory", 8
-    Upgrade = "Upgrade", 9
-    Unit = "Unit", 10
-    Building = "Building", 11
-    Mercenary = "Mercenary", 12
-    Nova_Gear = "Nova Gear", 13
-    Progressive_2 = "Progressive Upgrade", 14
-    Unit_2 = "Unit", 15
-    Armory_8 = "Armory", 16
-    Armory_9 = "Armory", 17
+    Unit = "Unit", 0
+    Item = "Item", 1
+    Upgrade = "Upgrade", 2
+    Progressive = "Progressive Upgrade", 3
 
 
 class ZergItemType(ItemTypeEnum):
-    Ability = "Ability", 0
-    """Kerrigan abilities"""
-    Mutation_1 = "Mutation", 1
-    Strain = "Strain", 2
-    Morph = "Morph", 3
-    Upgrade = "Upgrade", 4
-    Mercenary = "Mercenary", 5
-    Unit = "Unit", 6
-    Level = "Level", 7
-    """Kerrigan level packs"""
-    Primal_Form = "Primal Form", 8
-    Evolution_Pit = "Evolution Pit", 9
-    """Zerg global economy upgrades, like automated extractors"""
-    Mutation_2 = "Mutation", 10
-    Mutation_3 = "Mutation", 11
-    Mutation_4 = "Mutation", 12
-    Progressive = "Progressive Upgrade", 13
-    Mutation_5 = "Mutation", 14
-    Mutation_6 = "Mutation", 15
-
+    Unit = "Unit", 0
+    Item = "Item", 1
+    Upgrade = "Upgrade", 2
+    Progressive = "Progressive Upgrade", 3
 
 class ProtossItemType(ItemTypeEnum):
     Unit = "Unit", 0
-    Unit_2 = "Unit", 1
+    Item = "Item", 1
     Upgrade = "Upgrade", 2
-    Building = "Building", 3
-    Progressive = "Progressive Upgrade", 4
-    Spear_Of_Adun = "Spear of Adun", 5
-    Solarite_Core = "Solarite Core", 6
-    """Protoss global effects, such as reconstruction beam or automated assimilators"""
-    Forge_1 = "Forge", 7
-    """General Protoss unit upgrades"""
-    Forge_2 = "Forge", 8
-    Forge_3 = "Forge", 9
-    Forge_4 = "Forge", 10
-    Forge_5 = "Forge", 11
-    War_Council = "War Council", 12
-    War_Council_2 = "War Council", 13
-    ShieldRegeneration = "Shield Regeneration Group", 14
-    Artanis_Items = "Artanis Ability", 15
-    Forge_6 = "Forge", 16
+    Progressive = "Progressive Upgrade", 3
 
 
 class FactionlessItemType(ItemTypeEnum):
@@ -136,8 +90,10 @@ class FactionlessItemType(ItemTypeEnum):
     MaxSupplyTrap = "Max Supply Trap", 7
     ResearchSpeed = "Research Speed", 8
     ResearchCost = "Research Cost", 9
-    GhostSpawnTrap = "Ghost Spawn Trap", 10
-    VoidDuplicateTrap = "Void Duplicate Trap", 11
+    Level = "Level", 10
+    ShieldRegeneration = "Shield Regeneration Group", 11
+    GhostSpawnTrap = "Ghost Spawn Trap", 12
+    VoidDuplicateTrap = "Void Duplicate Trap", 13
     Keys = "Keys", -1
 
 

@@ -589,50 +589,49 @@ def flag_excludes_by_faction_presence(world: SC2World, item_list: list[FilterIte
     for item in item_list:
         # Catch-all for all of a faction's items
         # Unit upgrades required for no-builds will get the FilterExcluded lifted when flagging AllowedOrphan
-        if not terran_missions and item.data.race == SC2Race.TERRAN:
-            if item.name not in item_groups.nova_equipment:
-                item.flags |= ItemFilterFlags.FilterExcluded
-                continue
-        if not zerg_missions and item.data.race == SC2Race.ZERG:
-            if (item.data.type != ZergItemType.Ability
-                and item.data.type != ZergItemType.Level
-            ):
-                item.flags |= ItemFilterFlags.FilterExcluded
-                continue
-        if not protoss_missions and item.data.race == SC2Race.PROTOSS:
-            if (item.name not in item_groups.soa_items
-                and item.data.type != ProtossItemType.Artanis_Items
-            ):
-                item.flags |= ItemFilterFlags.FilterExcluded
+        if (not terran_missions
+            and item.data.race == SC2Race.TERRAN
+            and item.name not in item_groups.nova_equipment
+        ):
+            item.flags |= ItemFilterFlags.FilterExcluded
+            continue
+        if (not zerg_missions
+            and item.data.race == SC2Race.ZERG
+            and item.name not in item_groups.kerrigan_abilities
+        ):
+            item.flags |= ItemFilterFlags.FilterExcluded
+            continue
+        if (not protoss_missions
+            and (item.data.race == SC2Race.PROTOSS
+                or item.name == item_names.SHIELD_REGENERATION)
+            and item.name not in item_groups.artanis_abilities
+            and item.name not in item_groups.soa_items
+        ):
+            item.flags |= ItemFilterFlags.FilterExcluded
             continue
 
         # Faction units
         if (not terran_build_missions
             and item.data.race == SC2Race.TERRAN
             and item.data.type != item_tables.TerranItemType.Upgrade
-            and item.name not in item_groups.nova_equipment
             and item.name not in allowed_remaining_terran_units
+            and item.name not in item_groups.nova_equipment
         ):
             item.flags |= ItemFilterFlags.FilterExcluded
         if (not zerg_build_missions
-            and item.data.type in (
-                ZergItemType.Unit,
-                ZergItemType.Mercenary,
-                ZergItemType.Evolution_Pit,
-            )
+            and item.data.type == ZergItemType.Unit
             and item.name not in allowed_remaining_zerg_units
+            and item.name not in item_groups.kerrigan_abilities
         ):
             item.flags |= ItemFilterFlags.FilterExcluded
         if (not protoss_build_missions
             # Note(mm): This doesn't handle categories containing e.g. automated assimilators
             # or warp gate improvements because that item type is mixed in with
             # e.g. Reconstruction Beam and Overwatch
-            and item.data.type in (
-                ProtossItemType.Unit,
-                ProtossItemType.Unit_2,
-                ProtossItemType.Building,
-            )
+            and item.data.type == ProtossItemType.Unit
             and item.name not in allowed_remaining_protoss_units
+            and item.name not in item_groups.artanis_abilities
+            and item.name not in item_groups.soa_items
         ):
             # Note(mm): This doesn't exclude things like automated assimilators or warp gate improvements
             # because that item type is mixed in with e.g. Reconstruction Beam and Overwatch
@@ -751,25 +750,21 @@ def flag_mission_based_item_excludes(world: SC2World, item_list: list[FilterItem
 
         # Todo(mm): How should no-build only / grant_story_tech affect excluding Kerrigan items?
         # Exclude Primal form based on Kerrigan presence or primal form option
-        if (item.data.type == ZergItemType.Primal_Form
+        if (item.name == item_names.KERRIGAN_PRIMAL_FORM
             and (remove_kerrigan_items or world.options.kerrigan_primal_status != KerriganPrimalStatus.option_item)
         ):
             item.flags |= ItemFilterFlags.FilterExcluded
 
         # Remove Kerrigan abilities if there's no Kerrigan
-        if item.data.type == ZergItemType.Ability and remove_kerrigan_items:
-            item.flags |= ItemFilterFlags.FilterExcluded
-
-        # Remove Nova items if there's no Nova
-        if item.data.type == item_tables.nova_equipment and remove_nova_items:
+        if item.name in item_groups.kerrigan_abilities and remove_kerrigan_items:
             item.flags |= ItemFilterFlags.FilterExcluded
 
         # Remove Artanis items if there's no Artanis
-        if item.data.type == ProtossItemType.Artanis_Items and remove_artanis_items:
+        if item.name in item_groups.artanis_abilities and remove_artanis_items:
             item.flags |= ItemFilterFlags.FilterExcluded
 
         # Remove Spear of Adun if it's off
-        if item.name in item_tables.spear_of_adun_calldowns and not soa_presence:
+        if item.name in item_groups.spear_of_adun_actives and not soa_presence:
             item.flags |= ItemFilterFlags.FilterExcluded
 
         # Remove Spear of Adun passives

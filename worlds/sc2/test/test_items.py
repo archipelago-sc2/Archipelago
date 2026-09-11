@@ -69,24 +69,17 @@ class TestItems(unittest.TestCase):
         """
         Tests if each item is distinct for sending into the mod.
         """
-        item_types: list[ItemType] = [
-            *[item.value for item in item_tables.TerranItemType],
-            *[item.value for item in item_tables.ZergItemType],
-            *[item.value for item in item_tables.ProtossItemType],
-            *[item.value for item in item_tables.FactionlessItemType]
-        ]
-
-        self.assertGreater(len(item_types), 0)
-
-        for item_type in item_types:
-            item_names: list[str] = [
-                item_name for item_name in item_tables.item_table
-                if item_tables.item_table[item_name].number >= 0  # Negative numbers have special meaning
-                   and item_tables.item_table[item_name].type == item_type
-            ]
-            item_numbers = {item_tables.item_table[item_name] for item_name in item_names}
-
-            self.assertEqual(len(item_names), len(item_numbers))
+        encountered: dict[tuple[ItemType, int], str] = {}
+        for item_name, item_data in item_tables.item_table.items():
+            if (item_data.number < 0  # negative numbers have special meaning
+            or item_data.type is item_tables.FactionlessItemType.Keys): # all keys share number 0
+                continue
+            signal = (item_data.type, item_data.number)
+            assert signal not in encountered, (
+                f"Item {item_name} shares type: {item_data.type.display_name}"
+                f" and number: {item_data.number} with {encountered[signal]}"
+            )
+            encountered[signal] = item_name
 
     def test_progressive_has_quantity(self) -> None:
         """
@@ -94,7 +87,6 @@ class TestItems(unittest.TestCase):
         """
         progressive_groups: list[ItemType] = [
             item_tables.TerranItemType.Progressive,
-            item_tables.TerranItemType.Progressive_2,
             item_tables.ProtossItemType.Progressive,
             item_tables.ZergItemType.Progressive
         ]
@@ -113,40 +105,13 @@ class TestItems(unittest.TestCase):
         non_progressive_single_entity_groups: list[ItemType] = [
             # Terran
             item_tables.TerranItemType.Unit,
-            item_tables.TerranItemType.Unit_2,
-            item_tables.TerranItemType.Mercenary,
-            item_tables.TerranItemType.Armory_1,
-            item_tables.TerranItemType.Armory_2,
-            item_tables.TerranItemType.Armory_3,
-            item_tables.TerranItemType.Armory_4,
-            item_tables.TerranItemType.Armory_5,
-            item_tables.TerranItemType.Armory_6,
-            item_tables.TerranItemType.Armory_7,
-            item_tables.TerranItemType.Armory_8,
-            item_tables.TerranItemType.Armory_9,
-            item_tables.TerranItemType.Building,
-            item_tables.TerranItemType.Laboratory,
-            item_tables.TerranItemType.Nova_Gear,
+            item_tables.TerranItemType.Item,
             # Zerg
             item_tables.ZergItemType.Unit,
-            item_tables.ZergItemType.Mercenary,
-            item_tables.ZergItemType.Morph,
-            item_tables.ZergItemType.Strain,
-            item_tables.ZergItemType.Mutation_1,
-            item_tables.ZergItemType.Mutation_2,
-            item_tables.ZergItemType.Mutation_3,
-            item_tables.ZergItemType.Evolution_Pit,
-            item_tables.ZergItemType.Ability,
+            item_tables.ZergItemType.Item,
             # Protoss
             item_tables.ProtossItemType.Unit,
-            item_tables.ProtossItemType.Unit_2,
-            item_tables.ProtossItemType.Building,
-            item_tables.ProtossItemType.Forge_1,
-            item_tables.ProtossItemType.Forge_2,
-            item_tables.ProtossItemType.Forge_3,
-            item_tables.ProtossItemType.Forge_4,
-            item_tables.ProtossItemType.Solarite_Core,
-            item_tables.ProtossItemType.Spear_Of_Adun
+            item_tables.ProtossItemType.Item,
         ]
 
         quantities: list[int] = [
@@ -156,20 +121,3 @@ class TestItems(unittest.TestCase):
 
         for quantity in quantities:
             self.assertLessEqual(quantity, 1)
-
-    def test_item_number_less_than_30(self) -> None:
-        """
-        Checks if all item numbers are within bounds supported by game mod.
-        """
-        not_checked_item_types: list[ItemType] = [
-            item_tables.ZergItemType.Level
-        ]
-        items_to_check: list[str] = [
-            item for item in item_tables.item_table
-            if item_tables.item_table[item].type not in not_checked_item_types
-        ]
-
-        for item in items_to_check:
-            item_number = item_tables.item_table[item].number
-            self.assertLess(item_number, 30)
-

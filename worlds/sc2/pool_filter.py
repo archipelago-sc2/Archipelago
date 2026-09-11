@@ -10,7 +10,6 @@ from .item.item_tables import (
     TerranItemType,
     ZergItemType,
     ProtossItemType,
-    spear_of_adun_calldowns,
 )
 from . import tables
 
@@ -19,97 +18,9 @@ if TYPE_CHECKING:
     from BaseClasses import CollectionState
 
 
-# Items that can be placed before resources if not already in
-# General upgrades and Mercs
-second_pass_placeable_items: tuple[str, ...] = (
-    # Global weapon/armor upgrades
-    item_names.PROGRESSIVE_TERRAN_ARMOR_UPGRADE,
-    item_names.PROGRESSIVE_TERRAN_WEAPON_UPGRADE,
-    item_names.PROGRESSIVE_TERRAN_WEAPON_ARMOR_UPGRADE,
-    item_names.PROGRESSIVE_ZERG_ARMOR_UPGRADE,
-    item_names.PROGRESSIVE_ZERG_WEAPON_UPGRADE,
-    item_names.PROGRESSIVE_ZERG_WEAPON_ARMOR_UPGRADE,
-    item_names.PROGRESSIVE_PROTOSS_ARMOR_UPGRADE,
-    item_names.PROGRESSIVE_PROTOSS_WEAPON_UPGRADE,
-    item_names.PROGRESSIVE_PROTOSS_WEAPON_ARMOR_UPGRADE,
-    item_names.PROGRESSIVE_PROTOSS_SHIELDS,
-    # Terran Buildings without upgrades
-    item_names.SENSOR_TOWER,
-    item_names.HIVE_MIND_EMULATOR,
-    item_names.PSI_DISRUPTER,
-    item_names.PERDITION_TURRET,
-    # General Terran upgrades without any dependencies
-    item_names.SCV_ADVANCED_CONSTRUCTION,
-    item_names.SCV_DUAL_FUSION_WELDERS,
-    item_names.SCV_CONSTRUCTION_JUMP_JETS,
-    item_names.PROGRESSIVE_FIRE_SUPPRESSION_SYSTEM,
-    item_names.PROGRESSIVE_ORBITAL_COMMAND,
-    item_names.ULTRA_CAPACITORS,
-    item_names.VANADIUM_PLATING,
-    item_names.ORBITAL_DEPOTS,
-    item_names.MICRO_FILTERING,
-    item_names.AUTOMATED_REFINERY,
-    item_names.COMMAND_CENTER_COMMAND_CENTER_REACTOR,
-    item_names.COMMAND_CENTER_SCANNER_SWEEP,
-    item_names.COMMAND_CENTER_MULE,
-    item_names.COMMAND_CENTER_EXTRA_SUPPLIES,
-    item_names.TECH_REACTOR,
-    item_names.CELLULAR_REACTOR,
-    item_names.PROGRESSIVE_REGENERATIVE_BIO_STEEL,  # Place only L1
-    item_names.STRUCTURE_ARMOR,
-    item_names.HI_SEC_AUTO_TRACKING,
-    item_names.ADVANCED_OPTICS,
-    item_names.ROGUE_FORCES,
-    # Mercenaries (All races)
-    *[item_name for item_name, item_data in item_table.items()
-      if item_data.type in (TerranItemType.Mercenary, ZergItemType.Mercenary)],
-    # Kerrigan and Nova levels, abilities and generally useful stuff
-    *[
-        item_name for item_name, item_data in item_table.items()
-        if item_data.type in (
-            ZergItemType.Level,
-            ZergItemType.Ability,
-            ZergItemType.Evolution_Pit,
-            TerranItemType.Nova_Gear
-        )
-    ],
-    item_names.NOVA_PROGRESSIVE_STEALTH_SUIT_MODULE,
-    # Zerg static defenses
-    item_names.SPORE_CRAWLER,
-    item_names.SPINE_CRAWLER,
-    # Overseer
-    item_names.OVERSEER,
-    # Spear of Adun Abilities
-    item_names.SOA_CHRONO_SURGE,
-    item_names.SOA_PROGRESSIVE_PROXY_PYLON,
-    item_names.SOA_PYLON_OVERCHARGE,
-    item_names.SOA_ORBITAL_STRIKE,
-    item_names.SOA_TEMPORAL_FIELD,
-    item_names.SOA_SOLAR_LANCE,
-    item_names.SOA_MASS_RECALL,
-    item_names.SOA_SHIELD_OVERCHARGE,
-    item_names.SOA_DEPLOY_FENIX,
-    item_names.SOA_PURIFIER_BEAM,
-    item_names.SOA_TIME_STOP,
-    item_names.SOA_SOLAR_BOMBARDMENT,
-    # Protoss generic upgrades
-    item_names.MATRIX_OVERLOAD,
-    item_names.QUATRO,
-    item_names.NEXUS_OVERCHARGE,
-    item_names.ORBITAL_ASSIMILATORS,
-    item_names.WARP_HARMONIZATION,
-    item_names.GUARDIAN_SHELL,
-    item_names.RECONSTRUCTION_BEAM,
-    item_names.OVERWATCH,
-    item_names.SUPERIOR_WARP_GATES,
-    item_names.KHALAI_INGENUITY,
-    item_names.AMPLIFIED_ASSIMILATORS,
-    # Protoss static defenses
-    item_names.PHOTON_CANNON,
-    item_names.KHAYDARIN_MONOLITH,
-    item_names.SHIELD_BATTERY,
-)
-
+# Items affected by the "Ensure Generic Items" option
+# Includes W/A upgrades, macro upgrades, static def, hero/SoA items
+second_pass_placeable_items = tuple(item_groups.generic_items)
 
 def copy_item(item: StarcraftItem) -> StarcraftItem:
     return StarcraftItem(item.name, item.classification, item.code, item.player, item.filter_flags)
@@ -298,7 +209,7 @@ class ValidInventory:
         cull_items_over_maximum(kerrigan_passives, self.world.options.kerrigan_max_passive_abilities.value)
 
         # Spear of Adun max abilities
-        spear_of_adun_actives = [item for item in inventory if item.name in spear_of_adun_calldowns]
+        spear_of_adun_actives = [item for item in inventory if item.name in item_groups.spear_of_adun_actives]
         self.world.random.shuffle(spear_of_adun_actives)
         cull_items_over_maximum(spear_of_adun_actives, self.world.options.spear_of_adun_max_active_abilities.value)
 

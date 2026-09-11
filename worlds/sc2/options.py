@@ -957,7 +957,7 @@ class SpearOfAdunMaxActiveAbilities(Range):
     range_start = 0
     range_end = sum([
         item_tables.item_table[item_name].quantity
-        for item_name in item_tables.spear_of_adun_calldowns
+        for item_name in item_groups.spear_of_adun_actives
     ])
     default = range_end
 

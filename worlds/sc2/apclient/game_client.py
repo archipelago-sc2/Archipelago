@@ -19,7 +19,7 @@ from .transfer_data import normalized_unit_types
 from .. import options, locations, item, rules
 from .. import SC2World
 from ..item import item_tables, item_names, item_groups
-from ..item import ZergItemType
+from ..item import FactionlessItemType
 from ..mission_tables import (
     lookup_id_to_mission,
     SC2Mission,
@@ -119,6 +119,10 @@ class MissionClient:
         skip_cutscenes = 1 if SC2World.settings.game_skip_cutscenes else 0
         disable_forced_camera = 1 if SC2World.settings.game_disable_forced_camera else 0
         nova_presence = 0  # unused for now
+        if is_kerrigan_primal(self.ctx, kerrigan_level):
+            primal_item = item_tables.item_table[item_names.KERRIGAN_PRIMAL_FORM]
+            flag_word = get_item_flag_word(item_names.KERRIGAN_PRIMAL_FORM)
+            start_items[primal_item.race][flag_word] |= 1 << primal_item.number
         error = banks.send_options(
             f" {difficulty}"
             f" {generic_upgrade_options}"
@@ -361,28 +365,23 @@ class MissionClient:
 
     def get_terran_tech(self, current_items: dict[SC2Race, list[int]]) -> str:
         terran_items = current_items[SC2Race.TERRAN]
-        return (" ".join(map(str, terran_items)))
+        return (" ".join(f'{i:02x}' for i in terran_items))
 
-    def get_zerg_tech(self, current_items: dict[SC2Race, list[int]], kerrigan_level: int) -> str:
+    def get_zerg_tech(self, current_items: dict[SC2Race, list[int]]) -> str:
         zerg_items = current_items[SC2Race.ZERG]
-        zerg_items = [
-            value
-            for index, value in enumerate(zerg_items)
-            if index not in (ZergItemType.Level.flag_word, ZergItemType.Primal_Form.flag_word)
-        ]
-        kerrigan_primal_by_items = is_kerrigan_primal(self.ctx, kerrigan_level)
-        kerrigan_primal_bot_value = 1 if kerrigan_primal_by_items else 0
-        return(f"{kerrigan_level} {kerrigan_primal_bot_value} " + ' '.join(map(str, zerg_items)))
+        return (" ".join(f'{i:02x}' for i in zerg_items))
 
     def get_protoss_tech(self, current_items: dict[SC2Race, list[int]]) -> str:
         protoss_items = current_items[SC2Race.PROTOSS]
-        return (" ".join(map(str, protoss_items)))
+        return (" ".join(f'{i:02x}' for i in protoss_items))
 
-    def get_misc_tech(self, current_items: dict[SC2Race, list[int]]) -> str:
-        return ("{} {} {}".format(
+    def get_misc_tech(self, current_items: dict[SC2Race, list[int]], kerrigan_level) -> str:
+        return ("{} {} {} {} {}".format(
             current_items[SC2Race.ANY][get_item_flag_word(item_names.BUILDING_CONSTRUCTION_SPEED)],
             current_items[SC2Race.ANY][get_item_flag_word(item_names.UPGRADE_RESEARCH_SPEED)],
             current_items[SC2Race.ANY][get_item_flag_word(item_names.UPGRADE_RESEARCH_COST)],
+            current_items[SC2Race.ANY][get_item_flag_word(item_names.SHIELD_REGENERATION)],
+            kerrigan_level,
         ))
 
     def get_trap_items(self, current_items: dict[SC2Race, list[int]]) -> str:
@@ -394,9 +393,9 @@ class MissionClient:
     def update_tech(self, current_items: dict[SC2Race, list[int]], kerrigan_level: int) -> None | Error[str]:
         return banks.send_items(
             self.get_terran_tech(current_items),
-            self.get_zerg_tech(current_items, kerrigan_level),
+            self.get_zerg_tech(current_items),
             self.get_protoss_tech(current_items),
-            self.get_misc_tech(current_items),
+            self.get_misc_tech(current_items, kerrigan_level),
             self.get_trap_items(current_items),
         )
 
@@ -787,10 +786,14 @@ def calculate_items(ctx: 'SC2Context', mission_id: int) -> dict[SC2Race, list[in
         # exists multiple times
         elif item_data.quantity > 1:
             flaggroup = item_data.type.flag_word
-
             # Generic upgrades apply only to Weapon / Armor upgrades
             if item_data.number >= 0:
-                accumulators[item_data.race][flaggroup] += 1 << item_data.number
+                mask = ((1 << item_data.quantity.bit_length()) - 1 ) << item_data.number
+                amount = accumulators[item_data.race][flaggroup] & mask
+                new = amount + (1 << item_data.number)
+                max = item_data.quantity << item_data.number
+                if new <= max:
+                    accumulators[item_data.race][flaggroup] += 1 << item_data.number
             else:
                 if name == item_names.PROGRESSIVE_PROTOSS_GROUND_UPGRADE:
                     shields_from_ground_upgrade += 1
@@ -810,8 +813,6 @@ def calculate_items(ctx: 'SC2Context', mission_id: int) -> dict[SC2Race, list[in
         else:
             if name == item_names.PROGRESSIVE_ORBITAL_COMMAND:
                 orbital_command_count += 1
-            elif item_data.type == ZergItemType.Level:
-                accumulators[item_data.race][item_data.type.flag_word] += item_data.number
             elif name == item_names.STARTING_MINERALS:
                 accumulators[item_data.race][item_data.type.flag_word] += ctx.minerals_per_item
             elif name == item_names.STARTING_VESPENE:
@@ -820,6 +821,8 @@ def calculate_items(ctx: 'SC2Context', mission_id: int) -> dict[SC2Race, list[in
                 accumulators[item_data.race][item_data.type.flag_word] += ctx.starting_supply_per_item
             elif name == item_names.UPGRADE_RESEARCH_COST:
                 accumulators[item_data.race][item_data.type.flag_word] += ctx.research_cost_reduction_per_item
+            elif item_data.type == FactionlessItemType.Level:
+                accumulators[item_data.race][item_data.type.flag_word] += item_data.number
             else:
                 accumulators[item_data.race][item_data.type.flag_word] += 1
 
@@ -928,7 +931,7 @@ def calc_difficulty(difficulty: int) -> Literal['C', 'N', 'H', 'B', 'X']:
 def get_kerrigan_level(
     ctx: 'SC2Context', items: dict[SC2Race, list[int]], missions_beaten: int, mission_id: int
 ) -> int:
-    item_value = items[SC2Race.ZERG][ZergItemType.Level.flag_word]
+    item_value = items[SC2Race.ANY][FactionlessItemType.Level.flag_word]
     mission_value = missions_beaten * ctx.kerrigan_levels_per_mission_completed
     if ctx.kerrigan_levels_per_mission_completed_cap != -1:
         mission_value = min(mission_value, ctx.kerrigan_levels_per_mission_completed_cap)
