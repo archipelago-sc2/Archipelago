@@ -72,7 +72,8 @@ class TestItems(unittest.TestCase):
         encountered: dict[tuple[ItemType, int], str] = {}
         for item_name, item_data in item_tables.item_table.items():
             if (item_data.number < 0  # negative numbers have special meaning
-            or item_data.type is item_tables.FactionlessItemType.Keys): # all keys share number 0
+                or item_data.type is item_tables.FactionlessItemType.Keys # all keys share number 0
+            ):
                 continue
             signal = (item_data.type, item_data.number)
             assert signal not in encountered, (
