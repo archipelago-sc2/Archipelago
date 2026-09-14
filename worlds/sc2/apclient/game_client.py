@@ -788,11 +788,11 @@ def calculate_items(ctx: 'SC2Context', mission_id: int) -> dict[SC2Race, list[in
             flaggroup = item_data.type.flag_word
             # Generic upgrades apply only to Weapon / Armor upgrades
             if item_data.number >= 0:
-                mask = ((1 << item_data.quantity.bit_length()) - 1 ) << item_data.number
-                amount = accumulators[item_data.race][flaggroup] & mask
-                new = amount + (1 << item_data.number)
-                max = item_data.quantity << item_data.number
-                if new <= max:
+                bit_mask = ((1 << item_data.quantity.bit_length()) - 1 ) << item_data.number
+                current_amount = accumulators[item_data.race][flaggroup] & bit_mask
+                new_amount = current_amount + (1 << item_data.number)
+                max_amount = item_data.quantity << item_data.number
+                if new_amount <= max_amount:
                     accumulators[item_data.race][flaggroup] += 1 << item_data.number
             else:
                 if name == item_names.PROGRESSIVE_PROTOSS_GROUND_UPGRADE:
