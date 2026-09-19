@@ -2101,18 +2101,14 @@ item_table = {
     item_names.SKIRMISHER_ESSENCE_DRAIN: ItemData(464 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 164, SC2Race.PROTOSS, parent=item_names.SKIRMISHER),
     item_names.SKIRMISHER_BLOODSHARD_COATING: ItemData(465 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 165, SC2Race.PROTOSS, parent=item_names.SKIRMISHER),
     item_names.SKIRMISHER_TERRAZINE_INJECTORS: ItemData(466 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 166, SC2Race.PROTOSS, parent=item_names.SKIRMISHER),
-    item_names.SHIELD_BATTERY_KHALAI_INGENUITY: ItemData(467 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 275, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.SKIRMISHER),
-    item_names.PHOTON_CANNON_KHALAI_INGENUITY: ItemData(468 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 276, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.PHOTON_CANNON),
-    item_names.PHOTON_CANNON_REPULSOR_SHELL: ItemData(469 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 277, SC2Race.PROTOSS, parent=item_names.PHOTON_CANNON),
-    item_names.PHOTON_CANNON_PHASE_CANNON: ItemData(470 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 278, SC2Race.PROTOSS, parent=item_names.PHOTON_CANNON),
-    item_names.KHAYDARIN_MONOLITH_OPTIMIZED_ORDNANCE: ItemData(471 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 279, SC2Race.PROTOSS, parent=item_names.KHAYDARIN_MONOLITH),
-    item_names.KHAYDARIN_MONOLITH_KHALAI_INGENUITY: ItemData(472 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 280, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.KHAYDARIN_MONOLITH),
-    item_names.KHAYDARIN_MONOLITH_RAPID_POWER_CYCLING: ItemData(473 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 281, SC2Race.PROTOSS, parent=item_names.KHAYDARIN_MONOLITH),
-    item_names.KHAYDARIN_MONOLITH_KHAYDARIN_SURGE: ItemData(474 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 282, SC2Race.PROTOSS, parent=item_names.KHAYDARIN_MONOLITH),
-    item_names.PSI_SPIRE_POWER_GRID_STABILIZER: ItemData(475 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 283, SC2Race.PROTOSS, parent=item_names.PSI_SPIRE),
-    item_names.PSI_SPIRE_ELECTROMAGNETIC_DISRUPTION: ItemData(476 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 284, SC2Race.PROTOSS, parent=item_names.PSI_SPIRE),
-    item_names.LAUNCH_BAY_GRAVITON_CATAPULT: ItemData(477 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 285, SC2Race.PROTOSS, parent=item_names.LAUNCH_BAY),
-    item_names.LAUNCH_BAY_FOCUSED_LENS: ItemData(478 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 286, SC2Race.PROTOSS, parent=item_names.LAUNCH_BAY),
+    item_names.PHOTON_CANNON_REPULSOR_SHELL: ItemData(467 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 277, SC2Race.PROTOSS, parent=item_names.PHOTON_CANNON),
+    item_names.PHOTON_CANNON_PHASE_CANNON: ItemData(468 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 278, SC2Race.PROTOSS, parent=item_names.PHOTON_CANNON),
+    item_names.KHAYDARIN_MONOLITH_RAPID_POWER_CYCLING: ItemData(469 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 279, SC2Race.PROTOSS, parent=item_names.KHAYDARIN_MONOLITH),
+    item_names.KHAYDARIN_MONOLITH_KHAYDARIN_SURGE: ItemData(470 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 280, SC2Race.PROTOSS, parent=item_names.KHAYDARIN_MONOLITH),
+    item_names.PSI_SPIRE_POWER_GRID_STABILIZER: ItemData(471 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 281, SC2Race.PROTOSS, parent=item_names.PSI_SPIRE),
+    item_names.PSI_SPIRE_ELECTROMAGNETIC_DISRUPTION: ItemData(472 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 282, SC2Race.PROTOSS, parent=item_names.PSI_SPIRE),
+    item_names.LAUNCH_BAY_GRAVITON_CATAPULT: ItemData(473 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 283, SC2Race.PROTOSS, parent=item_names.LAUNCH_BAY),
+    item_names.LAUNCH_BAY_FOCUSED_LENS: ItemData(474 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 284, SC2Race.PROTOSS, parent=item_names.LAUNCH_BAY),
     # War Council
     item_names.ZEALOT_WHIRLWIND: ItemData(500 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 167, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.ZEALOT),
     item_names.CENTURION_RESOURCE_EFFICIENCY: ItemData(501 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 168, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.CENTURION),
@@ -2202,11 +2198,11 @@ item_table = {
         ItemData(807 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 237, SC2Race.PROTOSS, classification=ItemClassification.progression),
     item_names.SUPERIOR_WARP_GATES:
         ItemData(808 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 238, SC2Race.PROTOSS),
-    item_names.PHOTON_CANNON_ENHANCED_TARGETING:
-        ItemData(809 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 239, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.PHOTON_CANNON),
-    item_names.PHOTON_CANNON_OPTIMIZED_ORDNANCE:
-        ItemData(810 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 240, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=item_names.PHOTON_CANNON),
-    item_names.PYLON_KHALAI_INGENUITY:
+    item_names.ENHANCED_TARGETING:
+        ItemData(809 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 239, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=parent_names.PROTOSS_STATIC_DEFENSE),
+    item_names.OPTIMIZED_ORDNANCE:
+        ItemData(810 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 240, SC2Race.PROTOSS, classification=ItemClassification.progression, parent=parent_names.PROTOSS_ATTACKING_BUILDING),
+    item_names.KHALAI_INGENUITY:
         ItemData(811 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 241, SC2Race.PROTOSS, classification=ItemClassification.progression),
     item_names.AMPLIFIED_ASSIMILATORS:
         ItemData(812 + SC2LOTV_ITEM_ID_OFFSET, ProtossItemType.Item, 242, SC2Race.PROTOSS, classification=ItemClassification.progression),
