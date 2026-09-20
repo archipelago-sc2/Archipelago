@@ -697,6 +697,8 @@ item_id_table = {
     item_names.SPIRE_MATURATION:                             ItemModInfo(ZergItemType.Item, 210),
     item_names.SUBMERGED_TUMORS:                             ItemModInfo(ZergItemType.Item, 211),
     item_names.KERRIGAN_PRIMAL_FORM:                         ItemModInfo(ZergItemType.Item, 212),
+    item_names.INFESTOR_CONSUME:                             ItemModInfo(ZergItemType.Item, 213),
+    item_names.INFESTOR_NEURAL_PARASITE:                     ItemModInfo(ZergItemType.Item, 214),
 
     item_names.INFESTED_SIEGE_TANK_PROGRESSIVE_AUTOMATED_MITOSIS: ItemModInfo(ZergItemType.Progressive, 0),
     item_names.INFESTED_DIAMONDBACK_PROGRESSIVE_FUNGAL_SNARE:     ItemModInfo(ZergItemType.Progressive, 2),

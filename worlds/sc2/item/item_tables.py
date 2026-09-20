@@ -703,6 +703,8 @@ item_table = {
     item_names.RAVAGER_BURROWED_BOMBARDMENT:      ItemData(2460, Z, apclass=PROG, parent=item_names.RAVAGER),
     item_names.RAVAGER_BONE_PLATING:              ItemData(2461, Z, parent=item_names.RAVAGER),
     item_names.RAVAGER_WRITHING_ABOMINATION:      ItemData(2462, Z, parent=item_names.RAVAGER),
+    item_names.INFESTOR_CONSUME:                  ItemData(2463, Z, parent=item_names.INFESTOR),
+    item_names.INFESTOR_NEURAL_PARASITE:          ItemData(2464, Z, parent=item_names.INFESTOR),
 
     # Kerrigan levels
     item_names.KERRIGAN_LEVELS_10: ItemData(2500, ANY, quantity=0, apclass=PROG),
