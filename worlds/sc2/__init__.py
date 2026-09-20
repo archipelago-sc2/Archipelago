@@ -486,7 +486,18 @@ def create_and_flag_explicit_item_locks_and_excludes(world: SC2World) -> list[Fi
                 continue
             else:
                 auto_excludes[item_name] = item_data.quantity
-
+    nerf_items = (
+        *item_groups.terran_nerf_items,
+        *item_groups.zerg_nerf_items,
+        *item_groups.protoss_nerf_items,
+    )
+    if world.options.general_unit_nerfs.value == options.GeneralUnitNerfs.option_excluded:
+        for item_name in nerf_items:
+            auto_excludes[item_name] = 1
+    elif world.options.general_unit_nerfs.value == options.GeneralUnitNerfs.option_vanilla:
+        for item_name in nerf_items:
+            if item_name not in start_inventory and not world.options.locked_items.value.get(item_name):
+                start_inventory[item_name] = 1
 
     result: list[FilterItem] = []
     for item_name, item_data in item_tables.item_table.items():
