@@ -410,26 +410,26 @@ barracks_wa_group = (
     item_names.MARINE, item_names.FIREBAT, item_names.MARAUDER,
     item_names.REAPER, item_names.GHOST, item_names.SPECTRE, item_names.HERC,
     item_names.DOMINION_TROOPER,
-)
-item_name_groups[ItemGroupNames.BARRACKS_UNITS] = barracks_units = (
-    *barracks_wa_group,
-    item_names.MEDIC,
     item_names.SON_OF_KORHAL,
     item_names.FIELD_RESPONSE_THETA,
     item_names.AEGIS_GUARD,
     item_names.EMPERORS_SHADOW,
 )
+item_name_groups[ItemGroupNames.BARRACKS_UNITS] = barracks_units = (
+    *barracks_wa_group,
+    item_names.MEDIC,
+)
 factory_wa_group = (
     item_names.HELLION, item_names.VULTURE, item_names.GOLIATH, item_names.DIAMONDBACK,
     item_names.SIEGE_TANK, item_names.THOR, item_names.PREDATOR,
     item_names.CYCLONE, item_names.WARHOUND,
+    item_names.BULWARK_COMPANY,
+    item_names.SHOCK_DIVISION,
+    item_names.BLACKHAMMER,
 )
 item_name_groups[ItemGroupNames.FACTORY_UNITS] = factory_units = (
     *factory_wa_group,
     item_names.WIDOW_MINE,
-    item_names.BULWARK_COMPANY,
-    item_names.SHOCK_DIVISION,
-    item_names.BLACKHAMMER,
 )
 starport_wa_group = (
     item_names.WRAITH,
@@ -439,12 +439,13 @@ starport_wa_group = (
     item_names.LIBERATOR,
     item_names.VALKYRIE,
     item_names.RAVEN_HUNTER_SEEKER_WEAPON,
+    item_names.NIGHT_WOLF,
 )
 item_name_groups[ItemGroupNames.STARPORT_UNITS] = starport_units = (
     item_names.MEDIVAC, item_names.WRAITH, item_names.VIKING, item_names.BANSHEE,
     item_names.BATTLECRUISER, item_names.HERCULES, item_names.SCIENCE_VESSEL, item_names.RAVEN,
     item_names.LIBERATOR, item_names.VALKYRIE, item_names.PRIDE_OF_AUGUSTGRAD, item_names.SKY_FURY,
-    item_names.EMPERORS_GUARDIAN, item_names.NIGHT_HAWK, item_names.NIGHT_WOLF,
+    item_names.EMPERORS_GUARDIAN, item_names.NIGHT_HAWK,
 )
 terran_basic_barracks_units = _intersection(terran_basic_units, barracks_wa_group)
 terran_basic_factory_units = _intersection(terran_basic_units, factory_wa_group)
