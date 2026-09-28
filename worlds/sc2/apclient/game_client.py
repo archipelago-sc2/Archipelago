@@ -45,12 +45,21 @@ class MissionClient:
         'mission_id',
         'switcher_process',
         'sc2_pid',
+        'next_process_check',
         'bonuses',
         'trade_reply_cooldown',
         'last_received_update',
         'last_trade_cargo',
         'update_period_seconds',
         'start_time',
+        'warned_identity_mismatches',
+        'warning_load_active',
+        'load_refresh_in_progress',
+        'mission_checks_blocked',
+        'mission_checks_override',
+        'save_warning_code',
+        'mission_mapping_valid',
+        'setup_pending',
     ]
 
     def __init__(self, ctx: 'SC2Context', mission_id: int, process: subprocess.Popen) -> None:
@@ -62,12 +71,21 @@ class MissionClient:
         self.mission_id = mission_id
         self.switcher_process = process
         self.sc2_pid: int | None = None
+        self.next_process_check = 0.0
         self.bonuses = [False for _ in range(MAX_BONUS)]
         self.trade_reply_cooldown: int = 0
         self.last_received_update: int = 0
         self.last_trade_cargo: set = set()
         self.update_period_seconds = 0.5
         self.start_time = time.time_ns()
+        self.warned_identity_mismatches: set[tuple[str, str, str]] = set()
+        self.warning_load_active = False
+        self.load_refresh_in_progress = False
+        self.mission_checks_blocked = False
+        self.mission_checks_override = False
+        self.save_warning_code = ""
+        self.mission_mapping_valid = True
+        self.setup_pending = True
 
     def check_game_running(self) -> bool:
         if not self.running:
@@ -94,7 +112,22 @@ class MissionClient:
             kill_pid(self.sc2_pid)
         self.running = False
 
-    def do_setup(self) -> None:
+    def do_setup(self) -> bool:
+        """Queue a complete setup, retaining a retry request if any bank write fails."""
+        self.setup_pending = True
+        try:
+            error = self.write_setup_banks()
+        except OSError as error:
+            logger.error("Could not refresh mission banks: %s", error)
+            return False
+        if isinstance(error, Error):
+            logger.error(error.message)
+            return False
+        self.last_received_update = len(self.ctx.items_received)
+        self.setup_pending = False
+        return True
+
+    def write_setup_banks(self) -> None | Error[str]:
         mission = lookup_id_to_mission[self.mission_id]
         start_items = calculate_items(self.ctx, self.mission_id)
         missions_beaten = self.missions_beaten_count()
@@ -146,22 +179,225 @@ class MissionClient:
             f" {hero_presence}"
         )
         if isinstance(error, Error):
-            logger.error(error.message)
-            return
-        self.update_tech(start_items, kerrigan_level)
+            return error
+        error = self.update_tech(start_items, kerrigan_level)
+        if isinstance(error, Error):
+            return error
         objectives = ""
         if uncollected_objectives:
             objectives = " ".join(f"{str(objective)}" for objective in uncollected_objectives)
-        error = banks.send_core_options(
+        return banks.send_core_options(
             self.get_resources(start_items),
             self.get_colors(),
             objectives,
-            "1"
+            "1",
+            self.get_slot_name(),
+            self.ctx.world_id,
+            self.save_warning_code,
         )
+
+    def reset_mission_state(self) -> None:
+        self.mission_completed = self.ctx.is_mission_completed(self.mission_id)
+        self.bonuses = [
+            locations.get_location_id(self.mission_id, bonus_id + 1) in self.ctx.checked_locations
+            for bonus_id in range(MAX_BONUS)
+        ]
+
+    def resolve_mission_id_from_map_file(self, map_file: str, mission_race: str) -> int | None:
+        candidate_mission_ids = [
+            mission_id
+            for mission_id in self.ctx.mission_id_to_location_ids
+            if mission_id in lookup_id_to_mission
+            and lookup_id_to_mission[mission_id].map_file == map_file
+        ]
+        if not candidate_mission_ids:
+            return None
+        if mission_race:
+            candidate_mission_ids = [
+                mission_id
+                for mission_id in candidate_mission_ids
+                if get_mission_race_name(mission_id) == mission_race
+            ]
+        if self.mission_id in candidate_mission_ids:
+            return self.mission_id
+        if len(candidate_mission_ids) == 1:
+            return candidate_mission_ids[0]
+        return None
+
+    def sync_active_mission(self, map_file: str, mission_race: str, save_loaded: bool = False) -> bool:
+        """Validate the reported mission and queue setup if client accounting changes."""
+        current_mission = lookup_id_to_mission[self.mission_id]
+        current_mission_race = get_mission_race_name(self.mission_id)
+        resolved_mission_id = self.resolve_mission_id_from_map_file(map_file, mission_race)
+        self.mission_mapping_valid = resolved_mission_id is not None
+        if resolved_mission_id is None:
+            warning_key = ("mission", map_file, mission_race)
+            if warning_key not in self.warned_identity_mismatches:
+                self.warned_identity_mismatches.add(warning_key)
+                logger.warning(
+                    "%s reports map %s (%s), but no valid mission mapping was found "
+                    "from %s (%s). Mission checks and setup are paused until the map is identified.",
+                    "Loaded save" if save_loaded else "Game",
+                    map_file or "unknown map",
+                    mission_race or "unknown race",
+                    current_mission.map_file,
+                    current_mission_race or "unknown race",
+                )
+            return False
+        if resolved_mission_id == self.mission_id:
+            return False
+
+        next_mission = lookup_id_to_mission[resolved_mission_id]
+        if save_loaded:
+            logger.info(
+                "Detected mission switch from %s to %s via loaded save.",
+                current_mission.mission_name,
+                next_mission.mission_name,
+            )
+        else:
+            logger.debug(
+                "Game mission metadata changed client mission from %s to %s.",
+                current_mission.mission_name,
+                next_mission.mission_name,
+            )
+        self.mission_id = resolved_mission_id
+        self.reset_mission_state()
+        self.setup_pending = True
+        return True
+
+    def get_slot_name(self) -> str:
+        if self.ctx.slot is not None and self.ctx.slot in self.ctx.slot_info:
+            return self.ctx.slot_info[self.ctx.slot].name
+        return self.ctx.auth or ""
+
+    def begin_save_load(self) -> None:
+        """Reset per-load state before mission and identity messages are emitted."""
+        if not self.warning_load_active:
+            self.warned_identity_mismatches.clear()
+            self.warning_load_active = True
+            self.mission_checks_override = False
+
+    def check_save_identity(
+        self,
+        saved_slot_value: str,
+        saved_world_id_value: str,
+        save_loaded_value: str,
+    ) -> None:
+        """Warn about loaded-save identity problems and block checks on definite mismatches."""
+        if save_loaded_value.strip() != "1":
+            self.warning_load_active = False
+            self.load_refresh_in_progress = False
+            return
+
+        if self.ctx.slot is None:
+            return
+        self.begin_save_load()
+
+        saved_slot_name = banks.decode_bank_identity(saved_slot_value) if saved_slot_value else ""
+        saved_world_id = banks.decode_bank_identity(saved_world_id_value) if saved_world_id_value else ""
+        current_slot_name = self.get_slot_name()
+        current_world_id = self.ctx.world_id
+        slot_mismatch = bool(
+            saved_slot_name and current_slot_name and saved_slot_name != current_slot_name
+        )
+        world_mismatch = bool(
+            saved_world_id and current_world_id and saved_world_id != current_world_id
+        )
+
+        self.mission_checks_blocked = (
+            (slot_mismatch or world_mismatch) and not self.mission_checks_override
+        )
+        if slot_mismatch and world_mismatch:
+            self.save_warning_code = "SlotAndWorldMismatch"
+        elif slot_mismatch:
+            self.save_warning_code = "SlotMismatch"
+        elif world_mismatch:
+            self.save_warning_code = "WorldMismatch"
+        elif not saved_world_id:
+            self.save_warning_code = "LegacySave"
+        elif not current_world_id:
+            self.save_warning_code = "LegacyConnectedWorld"
+        else:
+            self.save_warning_code = ""
+
+        candidate_warnings: dict[tuple[str, str, str], str] = {}
+        mismatch_suffix = (
+            "Checks from this loaded mission will not be sent."
+        )
+        if slot_mismatch:
+            candidate_warnings[("slot", saved_slot_name, current_slot_name)] = (
+                "WARNING: This save was created with a different slot. "
+                f'Saved slot: "{saved_slot_name}"; connected slot: "{current_slot_name}". '
+                + mismatch_suffix
+            )
+
+        if not saved_world_id:
+            candidate_warnings[("world-legacy-save", "", current_world_id)] = (
+                "WARNING: This save was made on an older version and has no World ID. "
+                "The missing World ID alone does not block checks or items."
+            )
+        elif not current_world_id:
+            candidate_warnings[("world-legacy-connected", saved_world_id, "")] = (
+                "WARNING: The connected multiworld was made on an older version and has no "
+                "World ID, so this save cannot be verified. "
+                "The missing World ID alone does not block checks or items."
+            )
+        elif world_mismatch:
+            candidate_warnings[("world", saved_world_id, current_world_id)] = (
+                "WARNING: This save was created in a different multiworld. "
+                f'Saved World ID: "{saved_world_id}"; connected World ID: "{current_world_id}". '
+                + mismatch_suffix
+            )
+
+        warnings = [
+            message for key, message in candidate_warnings.items()
+            if key not in self.warned_identity_mismatches
+        ]
+        self.warned_identity_mismatches.update(candidate_warnings)
+        for warning in warnings:
+            logger.warning(warning)
+        if warnings:
+            if slot_mismatch or world_mismatch:
+                logger.warning(
+                    'Checks can be re-enabled by entering "-debug" in-game, and '
+                    'then typing "-enablechecks".'
+                )
+                game_warnings = [
+                    "WARNING: Mismatching slot or world ID detected. "
+                    "Checks from this loaded mission will not be sent. See client for details."
+                ]
+            else:
+                game_warnings = warnings
+            error = banks.send_ap_message(game_warnings)
+            if isinstance(error, Error):
+                logger.error(error.message)
+
+    def apply_mission_check_override(self, checks_override_value: str) -> None:
+        """Apply the current game's in-game -enablechecks request."""
+        if checks_override_value.strip() != "1" or not self.mission_checks_blocked:
+            return
+
+        self.mission_checks_override = True
+        self.mission_checks_blocked = False
+        warning = (
+            "WARNING OVERRIDE: Mission checks were re-enabled from the running SC2 mission."
+        )
+        logger.warning(warning)
+        error = banks.send_ap_message([warning])
         if isinstance(error, Error):
             logger.error(error.message)
-            return
-        self.last_received_update = len(self.ctx.items_received)
+
+    def refresh_after_save_load(self, save_loaded_value: str, mission_switched: bool) -> None:
+        refresh_requested = save_loaded_value.strip() == "1"
+        if not refresh_requested:
+            self.load_refresh_in_progress = False
+        elif not self.load_refresh_in_progress:
+            self.setup_pending = True
+
+        if mission_switched:
+            self.setup_pending = True
+        if self.setup_pending and self.do_setup():
+            self.load_refresh_in_progress = refresh_requested
 
     async def client_loop(self) -> None:
         while self.running:
@@ -173,6 +409,8 @@ class MissionClient:
 
     async def on_step(self) -> None:
         # @assume setup is done
+        if not self.running:
+            return
         if self.sc2_pid is None:
             if not self.is_switcher_process_closed():
                 # Still starting up
@@ -180,9 +418,11 @@ class MissionClient:
             self.sc2_pid = get_sc2_pid()
             logger.debug(f"sc2 process ID is {self.sc2_pid}")
             return
-        elif self.update_number % 10 == 0:
+        elif time.monotonic() >= self.next_process_check:
+            self.next_process_check = time.monotonic() + 5.0
             if not self.check_game_running():
                 logger.debug("sc2 process exited")
+                return
         game_state = 0
         error = banks.send_ap_messages_from_queue(self.ctx.announcements)
         if isinstance(error, Error):
@@ -223,6 +463,8 @@ class MissionClient:
                 async_start(self.ctx.trade_receive(5))
 
         game_state = self.get_locations()
+        if not self.mission_mapping_valid or self.setup_pending or self.ctx.slot is None:
+            return
 
         if game_state & 1:
             self.update_number += 1
@@ -248,7 +490,7 @@ class MissionClient:
             self.last_received_update = len(self.ctx.items_received)
 
         if game_state & 1:
-            if game_state & (1 << 1) and not self.mission_completed:
+            if not self.mission_checks_blocked and game_state & (1 << 1) and not self.mission_completed:
                 victory_locations = [locations.get_location_id(self.mission_id, 0)]
                 send_victory = (
                     self.mission_id in self.ctx.final_mission_ids
@@ -282,12 +524,13 @@ class MissionClient:
                     self.mission_completed = True
                     self.ctx.finished_game = True
 
-            for x, completed in enumerate(self.bonuses):
-                if not completed and game_state & (1 << (x + 2)):
-                    await self.ctx.send_msgs(
-                        [{"cmd": 'LocationChecks',
-                            "locations": [locations.get_location_id(self.mission_id, x + 1)]}])
-                    self.bonuses[x] = True
+            if not self.mission_checks_blocked:
+                for x, completed in enumerate(self.bonuses):
+                    if not completed and game_state & (1 << (x + 2)):
+                        await self.ctx.send_msgs(
+                            [{"cmd": 'LocationChecks',
+                                "locations": [locations.get_location_id(self.mission_id, x + 1)]}])
+                        self.bonuses[x] = True
 
             # Send Void Trade results
             if self.ctx.trade_response is not None and self.trade_reply_cooldown == 0:
@@ -298,12 +541,74 @@ class MissionClient:
                 # Wait an arbitrary amount of frames before trying again
                 self.trade_reply_cooldown = 60
 
+    def report_save_load_status(self, message: str, *, in_game: bool = True) -> None:
+        """Report a load transition once; message delivery must not interrupt setup."""
+        logger.info(message)
+        if not in_game:
+            return
+        try:
+            error = banks.send_ap_message([message])
+        except OSError as error:
+            logger.error("Could not send save-load status: %s", error)
+            return
+        if isinstance(error, Error):
+            logger.error(error.message)
+
     def get_locations(self) -> int:
-        result = banks.read_locations()
+        result = banks.read_location_info()
         if isinstance(result, Error):
             return 0
-        if (result.strip()):  # may be "" or " "
-            return int(result)
+        (
+            game_state,
+            mission_map,
+            mission_race,
+            saved_slot_name,
+            saved_world_id,
+            save_loaded,
+            checks_override,
+        ) = result
+        refresh_requested = save_loaded.strip() == "1"
+        refresh_acknowledged = (
+            not refresh_requested and self.load_refresh_in_progress and not self.setup_pending
+        )
+        mission_switched = False
+        if self.ctx.slot is not None:
+            if refresh_requested:
+                self.begin_save_load()
+            if mission_map or refresh_requested:
+                mission_switched = self.sync_active_mission(mission_map, mission_race, refresh_requested)
+        self.check_save_identity(saved_slot_name, saved_world_id, save_loaded)
+        self.apply_mission_check_override(checks_override)
+        if self.ctx.slot is None:
+            return 0
+        if not self.mission_mapping_valid:
+            return 0
+        if refresh_acknowledged and not mission_switched:
+            saved_slot = banks.decode_bank_identity(saved_slot_name)
+            saved_world = banks.decode_bank_identity(saved_world_id)
+            current_slot = self.get_slot_name()
+            current_world = self.ctx.world_id
+            mismatch = (
+                bool(saved_slot and current_slot and saved_slot != current_slot)
+                or bool(saved_world and current_world and saved_world != current_world)
+            )
+            if mismatch and self.mission_checks_override:
+                status = "Identity mismatch; checks enabled by debug override."
+            elif mismatch or self.mission_checks_blocked:
+                status = "Identity mismatch; mission checks remain blocked."
+            elif saved_slot and current_slot and saved_world and current_world:
+                status = "Slot and World ID match."
+            else:
+                status = "Identity could not be fully verified because slot or World ID information is missing."
+            self.report_save_load_status(
+                "Save refresh acknowledged by game. " + status,
+                in_game=not (mismatch or self.mission_checks_blocked or self.save_warning_code),
+            )
+        self.refresh_after_save_load(save_loaded, mission_switched)
+        if self.setup_pending:
+            return 0
+        if (game_state.strip()):  # may be "" or " "
+            return int(game_state)
         return 0
 
     def get_trade_units_sent(self) -> str:
@@ -402,7 +707,9 @@ class MissionClient:
     def update_core_options(self, current_items: dict[SC2Race, list[int]]) -> None | Error[str]:
         return banks.send_core_options(
             self.get_resources(current_items),
-            self.get_colors()
+            self.get_colors(),
+            slot_name=self.get_slot_name(),
+            world_id=self.ctx.world_id,
         )
 
 
@@ -1088,6 +1395,17 @@ def get_mission_variant(mission_id: int) -> int:
     elif MissionFlag.Protoss in mission_flags:
         return 3
     return 0
+
+
+def get_mission_race_name(mission_id: int) -> str:
+    mission_flags = lookup_id_to_mission[mission_id].flags
+    if MissionFlag.Terran in mission_flags:
+        return "Terran"
+    if MissionFlag.Zerg in mission_flags:
+        return "Zerg"
+    if MissionFlag.Protoss in mission_flags:
+        return "Protoss"
+    return ""
 
 
 def get_item_flag_word(item_name: str) -> int:

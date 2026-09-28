@@ -1,6 +1,7 @@
 from dataclasses import fields
 import logging
 import os
+import uuid
 
 from collections import Counter
 from typing import Any, ClassVar, Callable, Mapping
@@ -54,6 +55,15 @@ from worlds.LauncherComponents import components, Component, launch as launch_co
 from .presets import sc2_options_presets
 
 logger = logging.getLogger("Starcraft 2")
+
+
+def get_sc2_world_id(multiworld: MultiWorld) -> str:
+    """Return one random generation ID shared by every SC2 slot in this multiworld."""
+    world_id = getattr(multiworld, "_sc2_world_id", None)
+    if world_id is None:
+        world_id = uuid.uuid4().hex
+        setattr(multiworld, "_sc2_world_id", world_id)
+    return world_id
 
 def launch_client(*args: str):
     from .client import launch
@@ -300,6 +310,7 @@ class SC2World(World):
         slot_data["grant_hero_items"] = [mission.id for mission in self.logic.grant_hero_items]
         slot_data["final_mission_ids"] = self.custom_mission_order.get_final_mission_ids()
         slot_data["custom_mission_order"] = self.custom_mission_order.get_slot_data()
+        slot_data["world_id"] = get_sc2_world_id(self.multiworld)
         slot_data["version"] = 5
         if self.options.mission_order_scouting != MissionOrderScouting.option_none:
             mission_item_classification: dict[str, int] = {}
