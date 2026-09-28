@@ -22,7 +22,7 @@ from .mission_tables import (
 from . import locations
 from .mission_groups import mission_groups, MissionGroupNames
 from .mission_order.options import CustomMissionOrder
-from .tables import HeroOptions, StabilityOptions
+from .tables import HeroOptions, StabilityOptions, mutators
 
 if TYPE_CHECKING:
     from worlds.AutoWorld import World
@@ -1642,6 +1642,111 @@ class FillerItemsDistribution(ItemDict):
         super(ItemDict, self).__init__(value)
 
 
+class MutatorTrapItemLimit(Range):
+    """
+    Shuffles up to this many Mutators into the item pool as trap items.
+    For multi-level Mutators, each level counts as one item towards the limit.
+
+    Warning: Mutators can significantly increase the difficulty of a mission
+    and are never considered by logic.
+    """
+    display_name = "Mutator Trap Item Limit"
+    range_start = 0
+    range_end = sum(mutators.values())
+    default = 0
+
+
+class MutatorTrapItemMaxLevels(ItemDict):
+    """
+    Controls the max level of each individual Mutator
+    to be shuffled into the item pool as trap item.
+
+    Setting a Mutator to 0 will prevent that Mutator
+    from shuffling into the item pool as trap item.
+    """
+    display_name = "Mutator Trap Item Max Levels"
+
+    default = mutators
+    valid_keys = default.keys()
+
+    def __init__(self, value: dict[str, int]):
+        # Allow zeros that the parent class doesn't allow
+        if any(item_count < 0 for item_count in value.values()):
+            raise Exception("Cannot have negative item weight.")
+        super(ItemDict, self).__init__(value)
+
+class MutationRateSource(Choice):
+    """
+    "Mutation Rate" refers to Mutators being applied
+    at a consistent rate over your campaign.
+
+    Disabled: Do not apply Mutators as you progress the campaign.
+    Depth Scaling: Mutators are applied based on the depth of the mission within the mission order.
+    Completion Scaling: Mutators are applied based on how many missions you have completed.
+
+    Warning: Mutators can significantly increase the difficulty of a mission
+    and are never considered by logic.
+    """
+    display_name = "Mutation Rate Source"
+    option_disabled = 0
+    option_depth_scaling = 1
+    option_completion_scaling = 2
+    default = 0
+
+class MutationRateLimit(Range):
+    """
+    Adds up to this many Mutators as you progress the campaign.
+    For multi-level Mutators, each level counts as one item towards the limit.
+    """
+    display_name = "Mutator Trap Item Limit"
+    range_start = 0
+    range_end = sum(mutators.values())
+    default = 0
+
+class MutationRateEndpoint(Range):
+    """
+    Controls the point in the campaign where all Mutators are active, as a percentage.
+    Setting this to 80% means, that all mutators will be active 80% into the mission order,
+    and will be linearly distributed up to this end point.
+    """
+    display_name = "Mutation Rate Endpoint"
+    range_start = 0
+    range_end = 100
+    default = 80
+
+class MutationRateMaxLevels(ItemDict):
+    """
+    Controls the max level of each individual Mutator
+    to be applied over the course of the mission order.
+    """
+    display_name = "Mutator Trap Item Max Levels"
+
+    default = mutators
+    valid_keys = default.keys()
+
+    def __init__(self, value: dict[str, int]):
+        # Allow zeros that the parent class doesn't allow
+        if any(item_count < 0 for item_count in value.values()):
+            raise Exception("Cannot have negative item weight.")
+        super(ItemDict, self).__init__(value)
+
+
+class DetectorItems(Choice):
+    """
+    Mutators may require you to deal with invisible units, starting from a certain depth
+    Enabling this setting will guarantee, that you get access to some way of handling
+    cloaked units before reaching that depth, based on your required tactics.
+
+    Depth 5: Mutators are not allowed to use Cloaked Units before reaching Depth 5,
+    and you will get access to items dealing with cloaked units befor depth 5.
+    Auto: Enabled, if a mutator with cloaked units is used.
+    """
+    display_name = "Detector Items"
+    option_disabled = 0
+    option_auto = -1
+    option_depth_5 = 5
+    default = -1
+
 @dataclass
 class Starcraft2Options(PerGameCommonOptions):
     start_inventory: Sc2StartInventory  # type: ignore
@@ -1739,6 +1844,13 @@ class Starcraft2Options(PerGameCommonOptions):
 
     stability_features: StabilityFeatures
     custom_mission_order: CustomMissionOrder
+    mutator_trap_item_limit: MutatorTrapItemLimit
+    mutator_trap_item_max_levels: MutatorTrapItemMaxLevels
+    mutation_rate_source: MutationRateSource
+    mutation_rate_limit: MutationRateLimit
+    mutation_rate_endpoint: MutationRateEndpoint
+    mutation_rate_max_levels: MutationRateMaxLevels
+    detector_items: DetectorItems
 
 
 option_groups = [
@@ -1860,9 +1972,17 @@ option_groups = [
         PlayerColorZerg,
         PlayerColorZergPrimal,
         PlayerColorNova,
-    ])
+    ]),
+    OptionGroup("Mutators", [
+        MutatorTrapItemLimit,
+        MutatorTrapItemMaxLevels,
+        MutationRateSource,
+        MutationRateLimit,
+        MutationRateEndpoint,
+        MutationRateMaxLevels,
+        DetectorItems,
+    ]),
 ]
-
 
 def get_option_value(world: 'SC2World | None', name: str) -> Any:
     """

@@ -57,6 +57,7 @@ class MissionSlotData:
     prev_mission_ids: list[int] = field(default_factory=list)
     entry_rule: SubRuleRuleData = field(default_factory=SubRuleRuleData.empty)
     victory_cache_size: int = 0
+    min_depth: int = 0
 
     @staticmethod
     def empty_slot_data() -> dict[str, Any]:
@@ -72,4 +73,4 @@ class MissionSlotDataDict(TypedDict):
     prev_mission_ids: NotRequired[list[int]]
     entry_rule: NotRequired[SubRuleRuleDataDict]
     victory_cache_size: NotRequired[int]
-
+    min_depth: NotRequired[int]

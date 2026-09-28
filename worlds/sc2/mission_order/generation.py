@@ -920,6 +920,15 @@ def set_rules(
     # Note(mm): This has to happen before rule resolution so it can look into logic.grant_hero_items
     flag_hero_tech(world, region_to_location_data, depth_to_missions)
 
+    if world.options.detector_items.value == options.DetectorItems.option_auto:
+        if (
+            world.options.mutator_trap_item_limit.value == 0
+            and world.options.mutation_rate_source.value == options.MutationRateSource.option_disabled
+        ):
+            world.options.detector_items.value = options.DetectorItems.option_disabled
+        else:
+            world.options.detector_items.value = options.DetectorItems.option_depth_5
+
     items_per_wa_upgrade = (
         0 if world.options.generic_upgrade_missions > 0 else
         1 if world.options.generic_upgrade_items.value in (

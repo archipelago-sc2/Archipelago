@@ -673,6 +673,7 @@ class SC2MOGenMission:
             [mission.mission.id for mission in self.prev],
             self.entry_rule.to_slot_data(),
             self.option_victory_cache,
+            self.min_depth,
         ))
 
     def __str__(self) -> str:

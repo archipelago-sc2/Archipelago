@@ -5,13 +5,19 @@ import os
 from collections import Counter
 from typing import Any, ClassVar, Callable, Mapping
 from math import floor, ceil
+from itertools import islice
 from BaseClasses import Item, MultiWorld, Location, Tutorial, ItemClassification, CollectionState
 from Options import OptionError
 import Utils
 from worlds.AutoWorld import WebWorld, World
 
 from . import location_groups
-from .item.item_groups import unreleased_items, war_council_upgrades, disabled_items
+from .item.item_groups import (
+    unreleased_items,
+    war_council_upgrades,
+    disabled_items,
+    mutator_items
+)
 from .item import (
     item_groups,
     item_names,
@@ -128,6 +134,8 @@ class SC2World(World):
         self.filler_items_distribution: dict[str, int] = FillerItemsDistribution.default
         self.logic: 'SC2Logic | None' = None
         self.hero_presence: dict[SC2Mission, HeroFlag] = {}
+        self.mutator_trap_item_order: list [str] = []
+        self.mutation_rate_order: list [str] = []
         self.remove_kerrigan_items = False
 
     def create_item(self, name: str) -> StarcraftItem:
@@ -261,6 +269,8 @@ class SC2World(World):
         flag_start_inventory(self, item_list)
         flag_unused_upgrade_types(self, item_list)
         flag_unreleased_items(item_list)
+        calculate_mutator_order(self)
+        flag_mutator_items(self, item_list)
         flag_disabled_items(item_list)
         flag_war_council_items(self, item_list)
         flag_and_add_resource_locations(self, item_list)
@@ -297,6 +307,7 @@ class SC2World(World):
 
         slot_data["plando_locations"] = get_plando_locations(self)
         slot_data["hero_presence"] = pack_hero_presence(self.hero_presence)
+        slot_data["mutation_rate_order"] = self.mutation_rate_order
         slot_data["grant_hero_items"] = [mission.id for mission in self.logic.grant_hero_items]
         slot_data["final_mission_ids"] = self.custom_mission_order.get_final_mission_ids()
         slot_data["custom_mission_order"] = self.custom_mission_order.get_slot_data()
@@ -404,6 +415,15 @@ def pack_hero_presence(presence: dict[SC2Mission, HeroFlag]) -> dict[str, int]:
         if hero_flag != HeroFlag.NONE:
             result[str(mission.id)] = hero_flag.value
     return result
+
+
+def calculate_mutator_order(world: SC2World) -> None:
+    for mutator, lvl in world.options.mutator_trap_item_max_levels.items():
+        world.mutator_trap_item_order.extend(mutator for i in range(lvl))
+    world.random.shuffle(world.mutator_trap_item_order)
+    for mutator, lvl in world.options.mutation_rate_max_levels.items():
+        world.mutation_rate_order.extend(mutator for i in range(lvl))
+    world.random.shuffle(world.mutation_rate_order)
 
 
 def _get_column_display(index: int, single_row_layout: bool) -> str:
@@ -1044,6 +1064,27 @@ def flag_disabled_items(item_list: list[FilterItem]) -> None:
         if (item.name in disabled_items
             and not (ItemFilterFlags.Locked|ItemFilterFlags.StartInventory) & item.flags
         ):
+            item.flags |= ItemFilterFlags.Removed
+
+
+def flag_mutator_items(world: SC2World, item_list: list[FilterItem]) -> None:
+    """
+    Remove all mutator items, unless the option is enabled
+    or they're explicitly locked
+    """
+    temp_mutator_order = list(islice(world.mutator_trap_item_order, world.options.mutator_trap_item_limit.value))
+    for item in item_list:
+        if (item.name in temp_mutator_order
+            and not (ItemFilterFlags.Locked|ItemFilterFlags.StartInventory) & item.flags
+        ):
+            # lock mutator items up to the limit
+            item.flags |= ItemFilterFlags.Locked
+            temp_mutator_order.remove(item.name)
+    for item in item_list:
+        if (item.name in mutator_items
+            and not (ItemFilterFlags.Locked|ItemFilterFlags.StartInventory) & item.flags
+        ):
+            # remove mutator items, except the ones we previously locked
             item.flags |= ItemFilterFlags.Removed
 
 
