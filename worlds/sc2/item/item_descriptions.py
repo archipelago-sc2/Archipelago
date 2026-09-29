@@ -1010,6 +1010,8 @@ item_descriptions = {
     item_names.PHOTON_CANNON: "Protoss defensive structure. Can attack ground and air units.",
     item_names.KHAYDARIN_MONOLITH: "Advanced Protoss defensive structure. Has superior range and damage, but is very expensive and attacks slowly.",
     item_names.SHIELD_BATTERY: "Protoss defensive structure. Restores shields to nearby friendly units and structures.",
+    item_names.PSI_SPIRE: "Protoss defensive structure. Casts Psionic Storm on enemies.\nCan attack ground and air units.",
+    item_names.LAUNCH_BAY: "Protoss defensive structure. Releases Interceptors to attack enemies.\nCan attack ground and air units.",
     item_names.PROBE_NERAZIM_COATING: "Probes are permanently cloaked.",
     item_names.SUPPLICANT_BLOOD_SHIELD: "Increases the armor value of Supplicant shields.",
     item_names.SUPPLICANT_SOUL_AUGMENTATION: "Increases Supplicant max shields by +25.",
@@ -1293,6 +1295,8 @@ item_descriptions = {
     item_names.ENHANCED_TARGETING: "Protoss defensive structures gain +2 range.",
     item_names.OPTIMIZED_ORDNANCE: "Increases the attack speed of Protoss defensive structures by 25%.",
     item_names.KHALAI_INGENUITY: "Pylons, Photon Cannons, Monoliths, and Shield Batteries warp in near-instantly.",
+    item_names.PHOTON_CANNON_REPULSOR_SHELL: "Increases Photon Cannon Shields and Shield Regeneration.",
+    item_names.PHOTON_CANNON_PHASE_CANNON: "Allows Photon Cannons to transform into a mobile Phase Cannon form, which cannot attack.",
     item_names.AMPLIFIED_ASSIMILATORS: "Assimilators produce Vespene gas 25% faster.",
     item_names.PROGRESSIVE_WARP_RELOCATE: inspect.cleandoc("""
         Level 1: Protoss structures can be moved anywhere within pylon power after a brief delay. Max 3 charges, shared globally.
@@ -1309,8 +1313,13 @@ item_descriptions = {
     item_names.OPERATIONAL_EFFICIENCY_ROBOTICS_BAY: "Removes the vespene cost and halves the mineral cost of Robotics Bays.\nAlso allows building a Robotics Bay without a Robotics Facility.",
     item_names.OPERATIONAL_EFFICIENCY_TEMPLAR_ARCHIVE: "Removes the vespene cost and halves the mineral cost of Templar Archives.\nAlso allows building a Templar Archive without a Gateway.",
     item_names.OPERATIONAL_EFFICIENCY_DARK_SHRINE: "Removes the vespene cost and halves the mineral cost of Dark Shrines.\nAlso allows building a Dark Shrine without a Gateway.",
+    item_names.KHAYDARIN_MONOLITH_RAPID_POWER_CYCLING: "Reduces the charging time for Khaydarin Monoliths.",
+    item_names.KHAYDARIN_MONOLITH_KHAYDARIN_SURGE: "Khaydarin Monolith attacks stun enemy targets, with a cooldown.\nCan stun Heroic targets, with a longer cooldown.",
+    item_names.PSI_SPIRE_POWER_GRID_STABILIZER: "Psi Spires gain increased range and area of effect.",
+    item_names.PSI_SPIRE_ELECTROMAGNETIC_DISRUPTION: "Psi Spires reduce damage and speed of enemies.",
+    item_names.LAUNCH_BAY_GRAVITON_CATAPULT: "Launch Bays can launch Interceptors more quickly.",
+    item_names.LAUNCH_BAY_FOCUSED_LENS: "Launch Bay Interceptor weapons ignore armor.",
 }
-
 # Key descriptions
 key_descriptions = {
     key: GENERIC_KEY_DESC

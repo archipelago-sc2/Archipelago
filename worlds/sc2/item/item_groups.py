@@ -1412,6 +1412,8 @@ item_name_groups[ItemGroupNames.PROTOSS_BUILDINGS] = protoss_buildings = [
     item_names.PHOTON_CANNON,
     item_names.KHAYDARIN_MONOLITH,
     item_names.SHIELD_BATTERY,
+    item_names.PSI_SPIRE,
+    item_names.LAUNCH_BAY,
 ]
 item_name_groups[ItemGroupNames.PROTOSS_UNITS] = protoss_units = [
     item_name for item_name, item_data in item_tables.item_table.items()

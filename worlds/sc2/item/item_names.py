@@ -793,6 +793,8 @@ PROGRESSIVE_PROTOSS_WEAPON_ARMOR_UPGRADE = f"{PROTOSS_UPGRADE_PREFIX} Weapon/Arm
 PHOTON_CANNON       = "Photon Cannon"
 KHAYDARIN_MONOLITH  = "Khaydarin Monolith"
 SHIELD_BATTERY      = "Shield Battery"
+PSI_SPIRE           = "Psi Spire"
+LAUNCH_BAY          = "Launch Bay"
 
 # Unit Upgrades
 SUPPLICANT_BLOOD_SHIELD                                 = "Blood Shield (Supplicant)"
@@ -964,6 +966,14 @@ CALADRIUS_SOLARITE_REACTOR                              = "Solarite Reactor (Cal
 MISTWING_NULL_SHROUD                                    = "Null Shroud (Mist Wing)"
 MISTWING_PILOT                                          = "Pilot (Mist Wing)"
 PROBE_NERAZIM_COATING                                   = "Nerazim Coating (Probe)"
+PHOTON_CANNON_REPULSOR_SHELL                            = "Repulsor Shell (Photon Cannon)"
+PHOTON_CANNON_PHASE_CANNON                              = "Phase Cannon (Photon Cannon)"
+KHAYDARIN_MONOLITH_RAPID_POWER_CYCLING                  = "Rapid Power Cycling (Khaydarin Monolith)"
+KHAYDARIN_MONOLITH_KHAYDARIN_SURGE                      = "Khaydarin Surge (Khaydarin Monolith)"
+PSI_SPIRE_POWER_GRID_STABILIZER                         = "Power Grid Stabilizer (Psi Spire)"
+PSI_SPIRE_ELECTROMAGNETIC_DISRUPTION                    = "Electromagnetic Disruption (Psi Spire)"
+LAUNCH_BAY_GRAVITON_CATAPULT                            = "Graviton Catapult (Launch Bay)"
+LAUNCH_BAY_FOCUSED_LENS                                 = "Focused Lens (Launch Bay)"
 
 # War Council
 ZEALOT_WHIRLWIND                                        = "Whirlwind (Zealot)"
