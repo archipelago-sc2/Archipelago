@@ -755,6 +755,8 @@ item_id_table = {
     item_names.PHOTON_CANNON:       ItemModInfo(ProtossItemType.Unit, 50),
     item_names.KHAYDARIN_MONOLITH:  ItemModInfo(ProtossItemType.Unit, 51),
     item_names.SHIELD_BATTERY:      ItemModInfo(ProtossItemType.Unit, 52),
+    item_names.PSI_SPIRE:           ItemModInfo(ProtossItemType.Unit, 53),
+    item_names.LAUNCH_BAY:          ItemModInfo(ProtossItemType.Unit, 54),
 
     item_names.PROGRESSIVE_PROTOSS_WEAPON_UPGRADE:       ItemModInfo(ProtossItemType.Upgrade, -1),
     item_names.PROGRESSIVE_PROTOSS_ARMOR_UPGRADE:        ItemModInfo(ProtossItemType.Upgrade, -1),
@@ -1042,6 +1044,14 @@ item_id_table = {
     item_names.ARTANIS_RASZAGALS_RHYTHM:                         ItemModInfo(ProtossItemType.Item, 272),
     item_names.ARTANIS_BLADE_WALTZ:                              ItemModInfo(ProtossItemType.Item, 273),
     item_names.ARTANIS_TASSADARS_TEACHINGS:                      ItemModInfo(ProtossItemType.Item, 274),
+    item_names.PHOTON_CANNON_REPULSOR_SHELL:                     ItemModInfo(ProtossItemType.Item, 275),
+    item_names.PHOTON_CANNON_PHASE_CANNON:                       ItemModInfo(ProtossItemType.Item, 276),
+    item_names.KHAYDARIN_MONOLITH_RAPID_POWER_CYCLING:           ItemModInfo(ProtossItemType.Item, 277),
+    item_names.KHAYDARIN_MONOLITH_KHAYDARIN_SURGE:               ItemModInfo(ProtossItemType.Item, 278),
+    item_names.PSI_SPIRE_POWER_GRID_STABILIZER:                  ItemModInfo(ProtossItemType.Item, 279),
+    item_names.PSI_SPIRE_ELECTROMAGNETIC_DISRUPTION:             ItemModInfo(ProtossItemType.Item, 280),
+    item_names.LAUNCH_BAY_GRAVITON_CATAPULT:                     ItemModInfo(ProtossItemType.Item, 281),
+    item_names.LAUNCH_BAY_FOCUSED_LENS:                          ItemModInfo(ProtossItemType.Item, 282),
 
     item_names.SOA_PROGRESSIVE_PROXY_PYLON: ItemModInfo(ProtossItemType.Progressive, 0),
     item_names.PROGRESSIVE_WARP_RELOCATE:   ItemModInfo(ProtossItemType.Progressive, 2),

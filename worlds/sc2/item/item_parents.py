@@ -237,11 +237,24 @@ parent_present[parent_names.SCOUT_OR_OPPRESSOR_OR_MISTWING] = AnyOf(
     main_item=item_names.SCOUT,
 )
 parent_present[parent_names.PROTOSS_STATIC_DEFENSE] = AnyOf(
-    (item_names.NEXUS_OVERCHARGE, item_names.PHOTON_CANNON, item_names.KHAYDARIN_MONOLITH, item_names.SHIELD_BATTERY),
+    (
+        item_names.NEXUS_OVERCHARGE,
+        item_names.PHOTON_CANNON,
+        item_names.KHAYDARIN_MONOLITH,
+        item_names.SHIELD_BATTERY,
+        item_names.PSI_SPIRE,
+        item_names.LAUNCH_BAY,
+    ),
     main_item=item_names.PHOTON_CANNON,
 )
 parent_present[parent_names.PROTOSS_ATTACKING_BUILDING] = AnyOf(
-    (item_names.NEXUS_OVERCHARGE, item_names.PHOTON_CANNON, item_names.KHAYDARIN_MONOLITH),
+    (
+        item_names.NEXUS_OVERCHARGE,
+        item_names.PHOTON_CANNON,
+        item_names.KHAYDARIN_MONOLITH,
+        item_names.PSI_SPIRE,
+        item_names.LAUNCH_BAY,
+    ),
     main_item=item_names.PHOTON_CANNON,
 )
 parent_present[parent_names.MOTHERSHIP] = AnyOf(

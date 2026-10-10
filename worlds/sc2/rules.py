@@ -2136,6 +2136,8 @@ class SC2Logic:
             item_names.PHOTON_CANNON,
             item_names.KHAYDARIN_MONOLITH,
             item_names.NEXUS_OVERCHARGE,
+            item_names.PSI_SPIRE,
+            item_names.LAUNCH_BAY,
         ):
             if state.has(item, self.player):
                 rating += 3
