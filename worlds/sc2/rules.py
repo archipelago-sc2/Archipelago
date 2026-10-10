@@ -2081,7 +2081,10 @@ class SC2Logic:
         )
 
     def _protoss_mobile_multi_item_detection(self, state: CollectionState) -> bool:
-        return state.has_all((item_names.VANGUARD, item_names.VANGUARD_FLARE), self.player)
+        return (
+            state.has_all((item_names.VANGUARD, item_names.VANGUARD_FLARE), self.player)
+            or state.has_all((item_names.MIRAGE, item_names.MIRAGE_OBSERVER_MODULE), self.player)
+        )
 
     @series(LogicSeries.MacroPower, SC2Race.PROTOSS, 0)
     def protoss_macro_rating(self, state: CollectionState) -> int:

@@ -398,8 +398,12 @@ item_table = {
     item_names.UPGRADE_RESEARCH_SPEED:       ItemData(1807, ANY, quantity=0, apclass=FILLER),
     item_names.UPGRADE_RESEARCH_COST:        ItemData(1808, ANY, quantity=0, apclass=FILLER),
     item_names.REDUCED_MAX_SUPPLY:           ItemData(1850, ANY, quantity=0, apclass=TRAP),
-    item_names.TRAP_GHOST_SPAWN:             ItemData(1851, ANY, quantity=5, apclass=TRAP),
-    item_names.TRAP_VOID_DUPLICATE:          ItemData(1852, ANY, quantity=5, apclass=TRAP),
+
+
+    # Mutators
+    item_names.MUTATOR_GHOST_SPAWN:          ItemData(1851, ANY, quantity=5, apclass=TRAP),
+    item_names.MUTATOR_VOID_DUPLICATE:       ItemData(1852, ANY, quantity=5, apclass=TRAP),
+    item_names.MUTATOR_ENABLE_CLOAK:         ItemData(1853, ANY, apclass=TRAP),
 
     # Nova items
     item_names.NOVA_GHOST_VISOR:             ItemData(1900, T, apclass=PROG),
@@ -435,7 +439,7 @@ item_table = {
     item_names.BLACKHAMMER_SMART_SERVOS:            ItemData(1959, T, parent=item_names.BLACKHAMMER),
     item_names.BLACKHAMMER_BULWARK_FIELD:           ItemData(1960, T, parent=item_names.BLACKHAMMER),
 
-    # Zerg units
+    # Zerg unit
     item_names.ZERGLING:                ItemData(2000, Z, apclass=PROG),
     item_names.SWARM_QUEEN:             ItemData(2001, Z, apclass=PROG),
     item_names.ROACH:                   ItemData(2002, Z, apclass=PROG),
@@ -977,7 +981,7 @@ item_table = {
     item_names.MIRAGE_ETERNAL_DUTY:                    ItemData(3458, P, parent=item_names.MIRAGE),
     item_names.MIRAGE_PHASE_ALIGNMENT:                 ItemData(3459, P, parent=item_names.MIRAGE),
     item_names.MIRAGE_AFTERIMAGE:                      ItemData(3460, P, parent=item_names.MIRAGE),
-    item_names.MIRAGE_OBSERVER_MODULE:                 ItemData(3461, P, parent=item_names.MIRAGE),
+    item_names.MIRAGE_OBSERVER_MODULE:                 ItemData(3461, P, apclass=PROG, parent=item_names.MIRAGE),
     item_names.SKIRMISHER_ULTIMATE_SACRIFICE:          ItemData(3462, P, parent=item_names.SKIRMISHER),
     item_names.SKIRMISHER_RESOURCE_EFFICIENCY:         ItemData(3463, P, parent=item_names.SKIRMISHER),
     item_names.SKIRMISHER_ESSENCE_DRAIN:               ItemData(3464, P, parent=item_names.SKIRMISHER),

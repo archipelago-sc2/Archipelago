@@ -92,8 +92,9 @@ class FactionlessItemType(ItemTypeEnum):
     ResearchCost = "Research Cost", 9
     Level = "Level", 10
     ShieldRegeneration = "Shield Regeneration Group", 11
-    GhostSpawnTrap = "Ghost Spawn Trap", 12
-    VoidDuplicateTrap = "Void Duplicate Trap", 13
+    MutatorGhostSpawn = "Ghost Spawn Mutator", 12
+    MutatorVoidDuplicate = "Void Duplicate Mutator", 13
+    MutatorEnableCloak = "Enable Cloak Mutator", 14
     Keys = "Keys", -1
 
 

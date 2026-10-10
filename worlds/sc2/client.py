@@ -38,6 +38,8 @@ from .options import (
     SpearOfAdunPresence, SpearOfAdunPresentInNoBuild, SpearOfAdunPassiveAbilityPresence,
     SpearOfAdunPassivesPresentInNoBuild, EnableVoidTrade, VoidTradeAgeLimit, void_trade_age_limits_ms, VoidTradeWorkers,
     DifficultyDamageModifier, MissionOrderScouting, GenericUpgradeResearchSpeedup, MercenaryHighlanders, WarCouncilNerfs,
+    MutationRateSource, MutationRateLimit, MutationRateMaxLevels, MutationRateEndpoint,
+    DetectorItems,
 )
 from .mission_order.slot_data import CampaignSlotData, LayoutSlotData, MissionSlotData, MissionOrderObjectSlotData
 from .mission_order.entry_rules import SubRuleRuleData, CountMissionsRuleData, MissionEntryRules
@@ -670,6 +672,36 @@ class StarcraftClientProcessor(ClientCommandProcessor):
         return True
 
     @mark_raw
+    def _cmd_ghost_spawn(self, level: str = "") -> None:
+        """
+        Overrides the level of the Ghost Spawn mutator
+        """
+        if level not in [str(i) for i in range(-1, 6)]:
+            sc2_logger.info("Use `/ghost_spawn [0-5] to override the level. -1 restores the default" )
+            return
+        if level == "-1" :
+            self.ctx.ghost_spawn_level = -1;
+            sc2_logger.info("Ghost Spawn mutator set to default level")
+        else:
+            self.ctx.ghost_spawn_level = int(level)
+            sc2_logger.info(f"Ghost Spawn Mutator set to level {self.ctx.ghost_spawn_level}")
+
+    @mark_raw
+    def _cmd_void_duplicate(self, level: str = "") -> None:
+        """
+        Overrides the level of the Void Duplicate mutator
+        """
+        if level not in [str(i) for i in range(-1, 6)]:
+            sc2_logger.info("Use `/void_duplicate [0-5] to override the level. -1 restores the default" )
+            return
+        if level == "-1" :
+            self.ctx.void_duplicate_level = -1;
+            sc2_logger.info(" Void Duplicate mutator set to default level")
+        else:
+            self.ctx.void_duplicate_level = int(level)
+            sc2_logger.info(f" Void Duplicate Mutator set to level {self.ctx.void_duplicate_level}")
+
+    @mark_raw
     def _cmd_set_path(self, path: str = "") -> bool:
         """Manually set the SC2 install directory (if the automatic detection fails)."""
         if path:
@@ -808,6 +840,8 @@ class SC2Context(CommonContext):
         self.enable_morphling = EnableMorphling.default
         self.custom_mission_order: list[CampaignSlotData] = []
         self.mission_id_to_entry_rules: dict[int, MissionEntryRules]
+        self.mission_id_to_depth: dict[int, int]
+        self.max_depth: int
         self.final_mission_ids: list[int] = [29]
         self.final_locations: list[int] = []
         self.announcements: queue.Queue = queue.Queue()
@@ -857,6 +891,13 @@ class SC2Context(CommonContext):
         self.mission_order_scouting = MissionOrderScouting.option_none
         self.mission_item_classification: dict[str, int] | None = None
         self.show_war_council_nerfs: int = 0
+        self.mutation_rate_source = MutationRateSource.default
+        self.mutation_rate_limit = MutationRateLimit.default
+        self.mutation_rate_endpoint = MutationRateEndpoint.default
+        self.mutation_rate_order: list[str] | None = None
+        self.ghost_spawn_level: int = -1 # Overrides for mutator levels. -1 = don't use override.
+        self.void_duplicate_level: int = -1
+        self.detector_items = DetectorItems.option_disabled
 
     async def server_auth(self, password_requested: bool = False) -> None:
         self.game = STARCRAFT2
@@ -1046,6 +1087,12 @@ class SC2Context(CommonContext):
                 for column in layout.missions for mission in column
             }
 
+            self.mission_id_to_depth = {
+                mission.mission_id: mission.min_depth
+                for campaign in self.custom_mission_order for layout in campaign.layouts
+                for column in layout.missions for mission in column
+            }
+            self.max_depth = max(self.mission_id_to_depth.values())
             self.mission_order = slot_data.get("mission_order", MissionOrder.option_vanilla)
             if self.slot_data_version < 4:
                 self.final_mission_ids = [v3_data.get("final_mission", SC2Mission.ALL_IN.id)]
@@ -1132,6 +1179,11 @@ class SC2Context(CommonContext):
             self.difficulty_damage_modifier = slot_data.get("difficulty_damage_modifier", DifficultyDamageModifier.option_true)
             self.mission_order_scouting = slot_data.get("mission_order_scouting", MissionOrderScouting.option_none)
             self.mission_item_classification = slot_data.get("mission_item_classification")
+            self.mutation_rate_source = slot_data.get("mutation_rate_source")
+            self.mutation_rate_limit = slot_data.get("mutation_rate_limit")
+            self.mutation_rate_endpoint = slot_data.get("mutation_rate_endpoint")
+            self.mutation_rate_order = slot_data.get("mutation_rate_order", [])
+            self.detector_items = slot_data.get("detector_items")
 
             if self.slot_data_version < 5 and required_tactics > RequiredTactics.option_chaos:
                 # Locking Grant Story Tech/Levels if no logic

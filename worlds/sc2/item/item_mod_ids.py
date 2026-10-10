@@ -407,8 +407,10 @@ item_id_table = {
     item_names.UPGRADE_RESEARCH_SPEED:      ItemModInfo(FactionlessItemType.ResearchSpeed, 1),
     item_names.UPGRADE_RESEARCH_COST:       ItemModInfo(FactionlessItemType.ResearchCost, 1),
     item_names.REDUCED_MAX_SUPPLY:          ItemModInfo(FactionlessItemType.MaxSupplyTrap, -1),
-    item_names.TRAP_GHOST_SPAWN:            ItemModInfo(FactionlessItemType.GhostSpawnTrap, 0),
-    item_names.TRAP_VOID_DUPLICATE:         ItemModInfo(FactionlessItemType.VoidDuplicateTrap, 0),
+
+    item_names.MUTATOR_GHOST_SPAWN:         ItemModInfo(FactionlessItemType.MutatorGhostSpawn, 0),
+    item_names.MUTATOR_VOID_DUPLICATE:      ItemModInfo(FactionlessItemType.MutatorVoidDuplicate, 0),
+    item_names.MUTATOR_ENABLE_CLOAK:        ItemModInfo(FactionlessItemType.MutatorEnableCloak, 0),
 
     item_names.ZERGLING:                ItemModInfo(ZergItemType.Unit, 0),
     item_names.SWARM_QUEEN:             ItemModInfo(ZergItemType.Unit, 1),

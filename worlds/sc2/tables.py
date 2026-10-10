@@ -1,4 +1,5 @@
 from enum import IntFlag
+from .item import item_names
 
 
 class HeroOptions:
@@ -29,3 +30,8 @@ class StabilityOptions:
         STARTER_LOCATIONS,
         ITEM_RE_INCLUSION,
     )
+
+mutators = {
+    item_names.MUTATOR_GHOST_SPAWN: 5,
+    item_names.MUTATOR_VOID_DUPLICATE: 5,
+}
