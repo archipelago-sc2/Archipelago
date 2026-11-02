@@ -381,6 +381,9 @@ item_id_table = {
     item_names.BLACKHAMMER_INFERNO_BLITZ:                     ItemModInfo(TerranItemType.Item, 292),
     item_names.BLACKHAMMER_SMART_SERVOS:                      ItemModInfo(TerranItemType.Item, 293),
     item_names.BLACKHAMMER_BULWARK_FIELD:                     ItemModInfo(TerranItemType.Item, 294),
+    item_names.NUKE_RESOURCE_EFFICIENCY:                      ItemModInfo(TerranItemType.Item, 295),
+    item_names.NUKE_OPTIMIZED_LOGISTICS:                      ItemModInfo(TerranItemType.Item, 296),
+    item_names.NUKE_FISSION_PROPELLANT:                       ItemModInfo(TerranItemType.Item, 297),
 
     item_names.PROGRESSIVE_FIRE_SUPPRESSION_SYSTEM:                ItemModInfo(TerranItemType.Progressive, 0),
     item_names.VULTURE_PROGRESSIVE_REPLENISHABLE_MAGAZINE:         ItemModInfo(TerranItemType.Progressive, 2),

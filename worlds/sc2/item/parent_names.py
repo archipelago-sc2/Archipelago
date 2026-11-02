@@ -18,6 +18,7 @@ STARSHIP_WEAPON_UNITS = "Starship Weapon Units"
 VEHICLE_UNITS = "Vehicle Units"
 VEHICLE_WEAPON_UNITS = "Vehicle Weapon Units"
 TERRAN_MERCENARIES = "Terran Mercenaries"
+NUKE_SOURCE = "Nuke Source"
 
 # Zerg
 ANY_NYDUS_WORM = "Any Nydus Worm"
