@@ -2266,7 +2266,7 @@ class SC2Logic:
                     self.advanced_tactics
                     and state.has_all((
                         item_names.OPPRESSOR,
-                        item_names.OPPRESSOR_VULCAN_BLASTER
+                        item_names.OPPRESSOR_VULCAN_BOOSTER
                     ), self.player)
                     and has_air_upgrades
                 )
@@ -2602,7 +2602,7 @@ class SC2Logic:
                 and (
                     state.has(item_names.TEMPEST, self.player)
                     or state.has_all((item_names.VANGUARD, item_names.VANGUARD_RAPIDFIRE_CANNON), self.player)
-                    or state.has_all((item_names.OPPRESSOR, item_names.SCOUT_GRAVITIC_THRUSTERS, item_names.OPPRESSOR_VULCAN_BLASTER), self.player)
+                    or state.has_all((item_names.OPPRESSOR, item_names.SCOUT_GRAVITIC_THRUSTERS, item_names.OPPRESSOR_VULCAN_BOOSTER), self.player)
                     or state.has_all((item_names.ASCENDANT, item_names.ASCENDANT_POWER_OVERWHELMING, item_names.SUPPLICANT), self.player)
                     or state.has_all((
                         item_names.DARK_TEMPLAR,
