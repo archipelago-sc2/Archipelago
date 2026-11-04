@@ -1250,7 +1250,7 @@ item_descriptions = {
     item_names.MOTHERSHIP_AIUR_VALOROUS_RESOLVE: "Aiur Mothership War Council upgrade.\nAiur Motherships also grant shield armor to friendly units in it's Cloaking Field.",
     item_names.MOTHERSHIP_PURIFIER_MOBILE_POWER_FIELD: "Purifier Mothership War Council upgrade.\nPurifier Motherships passively project a power source around them.",
     item_names.OPPRESSOR_VULCAN_BOOSTER: "Oppressor War Council ability.\nReduces the cooldown of Vulcan Blaster, and allows attacking immediately on activation.",
-    item_names.CALADRIUS_CORONA_BEAM: "Caladrius War Council ability.\n" + _ability_desc("Caladrius", "Corona Beam", "channels a beam that drains up to 100 of the Caladrius' shields to deal up to 200 damage over time to a single target"),
+    item_names.CALADRIUS_CORONA_BEAM: "Caladrius War Council ability.\n" + _ability_desc("Caladrius", "Corona Beam", "channels a beam that drains up to 100 of the Caladrius' shields\nto deal up to 200 damage over time to a single target"),
     item_names.MISTWING_PHANTOM_DASH: "Mist Wing War Council ability.\n" + _ability_desc("Mist Wings", "Phantom Dash", "dashes forward to cover some distance quickly. Deals damage in a line if the Mist Wing is cloaked"),
     item_names.SUPPLICANT_SACRIFICE: "Supplicant War Council ability.\nAllows Supplicants to sacrifice themselves to save nearby units from death.",
 
