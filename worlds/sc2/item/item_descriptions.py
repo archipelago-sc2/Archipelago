@@ -1038,7 +1038,7 @@ item_descriptions = {
     item_names.DRAGOON_ENHANCED_STRIDER_SERVOS: "Increases Dragoon movement speed.",
     item_names.DRAGOON_RESOURCE_EFFICIENCY: _get_resource_efficiency_desc(item_names.DRAGOON),
     item_names.SCOUT_COMBAT_SENSOR_ARRAY: "All Scout variants gain increased range against air and ground.",
-    item_names.SCOUT_APIAL_SENSORS: "Scouts gain increased sight range. Also grants an active ability, which grants detection and increases sight range further for a short time.",
+    item_names.SCOUT_APIAL_SENSORS: "Scouts gain increased sight range. Also grants an active ability, which provides detection and further increases sight range for a short time.",
     item_names.SCOUT_GRAVITIC_THRUSTERS: "All Scout variants gain increased movement speed.",
     item_names.SCOUT_ADVANCED_PHOTON_BLASTERS: "Scouts, Oppressors and Mist Wings gain increased damage against ground targets.",
     item_names.SCOUT_RESOURCE_EFFICIENCY: _get_resource_efficiency_desc(item_names.SCOUT),
