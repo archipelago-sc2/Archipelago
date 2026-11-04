@@ -2529,7 +2529,7 @@ class SC2Logic:
     def protoss_havens_fall_gas_pickups(self, state: CollectionState) -> bool:
         return (
             self.protoss_basic_transport(state)
-            or state.has_all((item_names.MISTWING, item_names.MISTWING_PILOT), self.player)
+            or state.has_all((item_names.MISTWING), self.player)
             or state.has_all((item_names.ORACLE, item_names.ORACLE_SURFACE_STABILIZER), self.player)
         )
 
@@ -2751,8 +2751,7 @@ class SC2Logic:
         Ability to cross defended gaps
         """
         return (
-            state.has_any((item_names.WARP_PRISM, item_names.ARBITER), self.player)
-            or state.has_all((item_names.MISTWING, item_names.MISTWING_PILOT), self.player)
+            state.has_any((item_names.WARP_PRISM, item_names.ARBITER, item_names.MISTWING), self.player)
         )
 
     def protoss_maw_basic_requirement(self, state: CollectionState) -> bool:
