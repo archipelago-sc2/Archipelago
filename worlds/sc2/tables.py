@@ -34,4 +34,5 @@ class StabilityOptions:
 mutators = {
     item_names.MUTATOR_GHOST_SPAWN: 5,
     item_names.MUTATOR_VOID_DUPLICATE: 5,
+    item_names.MUTATOR_NYDUS_NETWORK: 5,
 }
