@@ -697,11 +697,16 @@ class MissionClient:
         if (self.ctx.void_duplicate_level == -1):
             void_duplicate = current_items[SC2Race.ANY][get_item_flag_word(item_names.MUTATOR_VOID_DUPLICATE)]
         else:
-            void_duplicate = self.ctx.void_duplicate_level
-        return ("{} {} {}".format(
+            nydus_network = self.ctx.nydus_network_level
+        if (self.ctx.nydus_network_level == -1):
+            nydus_network = current_items[SC2Race.ANY][get_item_flag_word(item_names.MUTATOR_NYDUS_NETWORK)]
+        else:
+            nydus_network = self.ctx.nydus_network_level
+        return ("{} {} {} {}".format(
             ghost_spawn,
             void_duplicate,
             current_items[SC2Race.ANY][get_item_flag_word(item_names.MUTATOR_ENABLE_CLOAK)],
+            nydus_network,
         ))
 
     def update_tech(self, current_items: dict[SC2Race, list[int]], kerrigan_level: int) -> None | Error[str]:

@@ -95,6 +95,7 @@ class FactionlessItemType(ItemTypeEnum):
     MutatorGhostSpawn = "Ghost Spawn Mutator", 12
     MutatorVoidDuplicate = "Void Duplicate Mutator", 13
     MutatorEnableCloak = "Enable Cloak Mutator", 14
+    MutatorNydusNetwork = "Nydus Network Mutator", 15
     Keys = "Keys", -1
 
 
