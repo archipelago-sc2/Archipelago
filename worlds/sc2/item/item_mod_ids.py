@@ -413,6 +413,7 @@ item_id_table = {
 
     item_names.MUTATOR_GHOST_SPAWN:         ItemModInfo(FactionlessItemType.MutatorGhostSpawn, 0),
     item_names.MUTATOR_VOID_DUPLICATE:      ItemModInfo(FactionlessItemType.MutatorVoidDuplicate, 0),
+    item_names.MUTATOR_NYDUS_NETWORK:       ItemModInfo(FactionlessItemType.MutatorNydusNetwork, 0),
     item_names.MUTATOR_ENABLE_CLOAK:        ItemModInfo(FactionlessItemType.MutatorEnableCloak, 0),
 
     item_names.ZERGLING:                ItemModInfo(ZergItemType.Unit, 0),

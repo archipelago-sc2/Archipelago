@@ -634,6 +634,17 @@ item_descriptions = {
 
         Only works in build missions.
     """),
+    item_names.MUTATOR_NYDUS_NETWORK: inspect.cleandoc("""
+        Mutator
+
+        Creates a Nydus Network building for an enemy player.
+        The Nydus Network periodically spawns Nydus Worms,
+        which will unload Zerg units into your base.
+        You can kill the Nydus Worms before they emerge
+        to prevent them from unloading units.
+
+        Only works in build missions.
+    """),
     item_names.MUTATOR_ENABLE_CLOAK: inspect.cleandoc("""
         Mutator
 
