@@ -1793,7 +1793,7 @@ class MutationRateLimit(Range):
     Adds up to this many Mutators as you progress the campaign.
     For multi-level Mutators, each level counts as one item towards the limit.
     """
-    display_name = "Mutator Trap Item Limit"
+    display_name = "Mutation Rate Limit"
     range_start = 0
     range_end = sum(mutators.values())
     default = 0
@@ -1814,7 +1814,7 @@ class MutationRateMaxLevels(ItemDict):
     Controls the max level of each individual Mutator
     to be applied over the course of the mission order.
     """
-    display_name = "Mutator Trap Item Max Levels"
+    display_name = "Mutation Rate Max Levels"
 
     default = mutators
     valid_keys = default.keys()
