@@ -671,8 +671,8 @@ class MissionClient:
 
     def get_bigger_resource_fields(self, current_items: dict[SC2Race, list[int]]) -> str:
         return ("{} {}".format(
-            current_items[SC2Race.ANY][get_item_flag_word(item_names.BIGGER_MINERAL_FIELDS)],
-            current_items[SC2Race.ANY][get_item_flag_word(item_names.BIGGER_VESPENE_GEYSERS)],
+            current_items[SC2Race.ANY][get_item_flag_word(item_names.MINERAL_FIELD_SIZE)],
+            current_items[SC2Race.ANY][get_item_flag_word(item_names.VESPENE_GEYSER_SIZE)],
         ))
 
     def get_terran_tech(self, current_items: dict[SC2Race, list[int]]) -> str:
@@ -1150,9 +1150,9 @@ def calculate_items(ctx: 'SC2Context', mission_id: int) -> dict[SC2Race, list[in
                 accumulators[item_data.race][item_id.item_type.flag_word] += ctx.minerals_per_item
             elif name == item_names.STARTING_VESPENE:
                 accumulators[item_data.race][item_id.item_type.flag_word] += ctx.vespene_per_item
-            elif name == item_names.BIGGER_MINERAL_FIELDS:
+            elif name == item_names.MINERAL_FIELD_SIZE:
                 accumulators[item_data.race][item_id.item_type.flag_word] += ctx.mineral_field_size_per_item
-            elif name == item_names.BIGGER_VESPENE_GEYSERS:
+            elif name == item_names.VESPENE_GEYSER_SIZE:
                 accumulators[item_data.race][item_id.item_type.flag_word] += ctx.vespene_geyser_size_per_item
             elif name == item_names.STARTING_SUPPLY:
                 accumulators[item_data.race][item_id.item_type.flag_word] += ctx.starting_supply_per_item

@@ -407,8 +407,8 @@ item_id_table = {
     item_names.UPGRADE_RESEARCH_SPEED:      ItemModInfo(FactionlessItemType.ResearchSpeed, 1),
     item_names.UPGRADE_RESEARCH_COST:       ItemModInfo(FactionlessItemType.ResearchCost, 1),
     item_names.REDUCED_MAX_SUPPLY:          ItemModInfo(FactionlessItemType.MaxSupplyTrap, -1),
-    item_names.BIGGER_MINERAL_FIELDS:       ItemModInfo(FactionlessItemType.BiggerMineralFields, -1),
-    item_names.BIGGER_VESPENE_GEYSERS:      ItemModInfo(FactionlessItemType.BiggerVespeneGeysers, -1),
+    item_names.MINERAL_FIELD_SIZE:          ItemModInfo(FactionlessItemType.MineralFieldSize, -1),
+    item_names.VESPENE_GEYSER_SIZE:         ItemModInfo(FactionlessItemType.VespeneGeyserSize, -1),
 
     item_names.MUTATOR_GHOST_SPAWN:         ItemModInfo(FactionlessItemType.MutatorGhostSpawn, 0),
     item_names.MUTATOR_VOID_DUPLICATE:      ItemModInfo(FactionlessItemType.MutatorVoidDuplicate, 0),

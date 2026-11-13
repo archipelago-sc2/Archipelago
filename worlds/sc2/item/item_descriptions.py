@@ -610,8 +610,8 @@ item_descriptions = {
     item_names.STARTING_SUPPLY: "Increases the starting supply for all missions.",
     item_names.NOTHING: "Does nothing. Used to remove a location from the game.",
     item_names.MAX_SUPPLY: "Increases the maximum supply cap for all missions.",
-    item_names.BIGGER_MINERAL_FIELDS: "Mineral Fields yield 5% more minerals in total.",
-    item_names.BIGGER_VESPENE_GEYSERS: "Vespene Geysers yield 5% more vespene in total.",
+    item_names.MINERAL_FIELD_SIZE: "Mineral Fields yield 5% more minerals in total.",
+    item_names.VESPENE_GEYSER_SIZE: "Vespene Geysers yield 5% more vespene in total.",
     item_names.MUTATOR_GHOST_SPAWN: inspect.cleandoc("""
         Mutator
 
