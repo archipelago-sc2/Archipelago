@@ -1105,8 +1105,8 @@ SHIELD_REGENERATION         = "Increased Shield Regeneration"
 BUILDING_CONSTRUCTION_SPEED = "Increased Building Construction Speed"
 UPGRADE_RESEARCH_SPEED      = "Increased Upgrade Research Speed"
 UPGRADE_RESEARCH_COST       = "Reduced Upgrade Research Cost"
-BIGGER_MINERAL_FIELDS       = "Bigger Mineral Fields"
-BIGGER_VESPENE_GEYSERS      = "Bigger Vespene Geysers"
+MINERAL_FIELD_SIZE          = "Mineral Field Size"
+VESPENE_GEYSER_SIZE         = "Vespene Geyser Size"
 
 # Mutators
 MUTATOR_GHOST_SPAWN         = "Ghost Spawn Mutator"
