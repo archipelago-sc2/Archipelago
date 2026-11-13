@@ -58,6 +58,8 @@ class Sc2SlotDataDict(TypedDict, total=False):
     # Filler
     minerals_per_item: int
     vespene_per_item: int
+    mineral_field_size_per_item: int
+    vespene_field_size_per_item: int
     starting_supply_per_item: int
     maximum_supply_per_item: int
     maximum_supply_reduction_per_item: int
@@ -169,6 +171,8 @@ def fill_slot_data(world: 'SC2World') -> Sc2SlotDataDict:
 
     slot_data["minerals_per_item"] = int(world.options.minerals_per_item)
     slot_data["vespene_per_item"] = int(world.options.vespene_per_item)
+    slot_data["mineral_field_size_per_item"] = int(world.options.mineral_field_size_per_item)
+    slot_data["vespene_field_size_per_item"] = int(world.options.vespene_geyser_size_per_item)
     slot_data["starting_supply_per_item"] = int(world.options.starting_supply_per_item)
     slot_data["maximum_supply_per_item"] = int(world.options.maximum_supply_per_item)
     slot_data["maximum_supply_reduction_per_item"] = int(world.options.maximum_supply_reduction_per_item)
