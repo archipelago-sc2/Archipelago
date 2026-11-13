@@ -1764,7 +1764,7 @@ item_name_groups[ItemGroupNames.WAR_COUNCIL] = war_council_upgrades = [
     item_names.MOTHERSHIP_TALDARIM_INTEGRATED_POWER,
     item_names.MOTHERSHIP_AIUR_VALOROUS_RESOLVE,
     item_names.MOTHERSHIP_PURIFIER_MOBILE_POWER_FIELD,
-    item_names.OPPRESSOR_VULCAN_BLASTER,
+    item_names.OPPRESSOR_VULCAN_BOOSTER,
     item_names.CALADRIUS_CORONA_BEAM,
     item_names.MISTWING_PHANTOM_DASH,
     item_names.SUPPLICANT_SACRIFICE,

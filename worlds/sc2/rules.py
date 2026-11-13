@@ -2266,7 +2266,7 @@ class SC2Logic:
                     self.advanced_tactics
                     and state.has_all((
                         item_names.OPPRESSOR,
-                        item_names.OPPRESSOR_VULCAN_BLASTER
+                        item_names.OPPRESSOR_VULCAN_BOOSTER
                     ), self.player)
                     and has_air_upgrades
                 )
@@ -2529,7 +2529,7 @@ class SC2Logic:
     def protoss_havens_fall_gas_pickups(self, state: CollectionState) -> bool:
         return (
             self.protoss_basic_transport(state)
-            or state.has_all((item_names.MISTWING, item_names.MISTWING_PILOT), self.player)
+            or state.has_all((item_names.MISTWING), self.player)
             or state.has_all((item_names.ORACLE, item_names.ORACLE_SURFACE_STABILIZER), self.player)
         )
 
@@ -2602,7 +2602,7 @@ class SC2Logic:
                 and (
                     state.has(item_names.TEMPEST, self.player)
                     or state.has_all((item_names.VANGUARD, item_names.VANGUARD_RAPIDFIRE_CANNON), self.player)
-                    or state.has_all((item_names.OPPRESSOR, item_names.SCOUT_GRAVITIC_THRUSTERS, item_names.OPPRESSOR_VULCAN_BLASTER), self.player)
+                    or state.has_all((item_names.OPPRESSOR, item_names.SCOUT_GRAVITIC_THRUSTERS, item_names.OPPRESSOR_VULCAN_BOOSTER), self.player)
                     or state.has_all((item_names.ASCENDANT, item_names.ASCENDANT_POWER_OVERWHELMING, item_names.SUPPLICANT), self.player)
                     or state.has_all((
                         item_names.DARK_TEMPLAR,
@@ -2751,8 +2751,7 @@ class SC2Logic:
         Ability to cross defended gaps
         """
         return (
-            state.has_any((item_names.WARP_PRISM, item_names.ARBITER), self.player)
-            or state.has_all((item_names.MISTWING, item_names.MISTWING_PILOT), self.player)
+            state.has_any((item_names.WARP_PRISM, item_names.ARBITER, item_names.MISTWING), self.player)
         )
 
     def protoss_maw_basic_requirement(self, state: CollectionState) -> bool:
