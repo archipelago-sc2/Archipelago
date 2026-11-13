@@ -1150,6 +1150,10 @@ def calculate_items(ctx: 'SC2Context', mission_id: int) -> dict[SC2Race, list[in
                 accumulators[item_data.race][item_id.item_type.flag_word] += ctx.minerals_per_item
             elif name == item_names.STARTING_VESPENE:
                 accumulators[item_data.race][item_id.item_type.flag_word] += ctx.vespene_per_item
+            elif name == item_names.BIGGER_MINERAL_FIELDS:
+                accumulators[item_data.race][item_id.item_type.flag_word] += ctx.mineral_field_size_per_item
+            elif name == item_names.BIGGER_VESPENE_GEYSERS:
+                accumulators[item_data.race][item_id.item_type.flag_word] += ctx.vespene_geyser_size_per_item
             elif name == item_names.STARTING_SUPPLY:
                 accumulators[item_data.race][item_id.item_type.flag_word] += ctx.starting_supply_per_item
             elif name == item_names.UPGRADE_RESEARCH_COST:

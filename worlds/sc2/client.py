@@ -470,6 +470,8 @@ class StarcraftClientProcessor(ClientCommandProcessor):
             # Fillers
             'minerals_per_item': ConfigurableOptionInfo('minerals_per_item', options.MineralsPerItem, ConfigurableOptionType.INTEGER),
             'gas_per_item': ConfigurableOptionInfo('vespene_per_item', options.VespenePerItem, ConfigurableOptionType.INTEGER),
+            'mineral_field_size_per_item': ConfigurableOptionInfo('mineral_field_size_per_item', options.MineralFieldSizePerItem, ConfigurableOptionType.INTEGER),
+            'vespene_geyser_size_per_item': ConfigurableOptionInfo('vespene_geyser_size_per_item', options.VespeneGeyserSizePerItem, ConfigurableOptionType.INTEGER),
             'supply_per_item': ConfigurableOptionInfo('starting_supply_per_item', options.StartingSupplyPerItem, ConfigurableOptionType.INTEGER),
             'max_supply_per_item': ConfigurableOptionInfo('maximum_supply_per_item', options.MaximumSupplyPerItem, ConfigurableOptionType.INTEGER),
             'reduced_supply_per_item': ConfigurableOptionInfo('maximum_supply_reduction_per_item', options.MaximumSupplyReductionPerItem, ConfigurableOptionType.INTEGER),
@@ -869,6 +871,8 @@ class SC2Context(CommonContext):
         self.spear_of_adun_passive_present_in_no_build = SpearOfAdunPassivesPresentInNoBuild.option_false
         self.minerals_per_item: int = 15  # For backwards compat with games generated pre-0.4.5
         self.vespene_per_item: int =  15  # For backwards compat with games generated pre-0.4.5
+        self.mineral_field_size_per_item: int = 5
+        self.vespene_geyser_size_per_item: int =  5
         self.starting_supply_per_item: int = 2  # For backwards compat with games generated pre-0.4.5
         self.maximum_supply_per_item: int = 2
         self.maximum_supply_reduction_per_item: int = options.MaximumSupplyReductionPerItem.default
@@ -1149,6 +1153,8 @@ class SC2Context(CommonContext):
                 self.spear_of_adun_passive_present_in_no_build = slot_data.get("spear_of_adun_passive_present_in_no_build", SpearOfAdunPassivesPresentInNoBuild.option_false)
             self.minerals_per_item = slot_data.get("minerals_per_item", 15)
             self.vespene_per_item = slot_data.get("vespene_per_item", 15)
+            self.mineral_field_size_per_item = slot_data.get("mineral_field_size_per_item", 5)
+            self.vespene_geyser_size_per_item = slot_data.get("vespene_geyser_size_per_item", 5)
             self.starting_supply_per_item = slot_data.get("starting_supply_per_item", options.StartingSupplyPerItem.default)
             self.maximum_supply_per_item = slot_data.get("maximum_supply_per_item", options.MaximumSupplyPerItem.default)
             self.maximum_supply_reduction_per_item = slot_data.get("maximum_supply_reduction_per_item", options.MaximumSupplyReductionPerItem.default)
