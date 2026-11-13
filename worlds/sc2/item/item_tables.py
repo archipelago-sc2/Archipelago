@@ -398,8 +398,8 @@ item_table = {
     item_names.UPGRADE_RESEARCH_SPEED:       ItemData(1807, ANY, quantity=0, apclass=FILLER),
     item_names.UPGRADE_RESEARCH_COST:        ItemData(1808, ANY, quantity=0, apclass=FILLER),
     item_names.REDUCED_MAX_SUPPLY:           ItemData(1850, ANY, quantity=0, apclass=TRAP),
-    item_names.BIGGER_MINERAL_FIELDS:        ItemData(1809, ANY, quantity=0, apclass=FILLER),
-    item_names.BIGGER_VESPENE_GEYSERS:       ItemData(1810, ANY, quantity=0, apclass=FILLER),
+    item_names.MINERAL_FIELD_SIZE:           ItemData(1809, ANY, quantity=0, apclass=FILLER),
+    item_names.VESPENE_GEYSER_SIZE:          ItemData(1810, ANY, quantity=0, apclass=FILLER),
 
 
     # Mutators
