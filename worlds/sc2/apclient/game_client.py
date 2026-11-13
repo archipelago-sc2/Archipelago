@@ -188,6 +188,7 @@ class MissionClient:
             objectives = " ".join(f"{str(objective)}" for objective in uncollected_objectives)
         return banks.send_core_options(
             self.get_resources(start_items),
+            self.get_bigger_resource_fields(start_items),
             self.get_colors(),
             objectives,
             "1",
@@ -668,6 +669,12 @@ class MissionClient:
             max_supply_amount - DEFAULT_MAX_SUPPLY,
         ))
 
+    def get_bigger_resource_fields(self, current_items: dict[SC2Race, list[int]]) -> str:
+        return ("{} {}".format(
+            current_items[SC2Race.ANY][get_item_flag_word(item_names.MINERAL_FIELD_SIZE)],
+            current_items[SC2Race.ANY][get_item_flag_word(item_names.VESPENE_GEYSER_SIZE)],
+        ))
+
     def get_terran_tech(self, current_items: dict[SC2Race, list[int]]) -> str:
         terran_items = current_items[SC2Race.TERRAN]
         return (" ".join(f'{i:02x}' for i in terran_items))
@@ -716,6 +723,7 @@ class MissionClient:
     def update_core_options(self, current_items: dict[SC2Race, list[int]]) -> None | Error[str]:
         return banks.send_core_options(
             self.get_resources(current_items),
+            self.get_bigger_resource_fields(current_items),
             self.get_colors(),
             slot_name=self.get_slot_name(),
             world_id=self.ctx.world_id,
@@ -1142,6 +1150,10 @@ def calculate_items(ctx: 'SC2Context', mission_id: int) -> dict[SC2Race, list[in
                 accumulators[item_data.race][item_id.item_type.flag_word] += ctx.minerals_per_item
             elif name == item_names.STARTING_VESPENE:
                 accumulators[item_data.race][item_id.item_type.flag_word] += ctx.vespene_per_item
+            elif name == item_names.MINERAL_FIELD_SIZE:
+                accumulators[item_data.race][item_id.item_type.flag_word] += ctx.mineral_field_size_per_item
+            elif name == item_names.VESPENE_GEYSER_SIZE:
+                accumulators[item_data.race][item_id.item_type.flag_word] += ctx.vespene_geyser_size_per_item
             elif name == item_names.STARTING_SUPPLY:
                 accumulators[item_data.race][item_id.item_type.flag_word] += ctx.starting_supply_per_item
             elif name == item_names.UPGRADE_RESEARCH_COST:
