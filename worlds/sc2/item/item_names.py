@@ -1106,6 +1106,7 @@ UPGRADE_RESEARCH_COST       = "Reduced Upgrade Research Cost"
 # Mutators
 MUTATOR_GHOST_SPAWN         = "Ghost Spawn Mutator"
 MUTATOR_VOID_DUPLICATE      = "Void Duplicate Mutator"
+MUTATOR_NYDUS_NETWORK       = "Nydus Network Mutator"
 
 # does nothing by itself, just allows other mutators to apply cloak
 MUTATOR_ENABLE_CLOAK        = "Enable Cloak for Mutators"

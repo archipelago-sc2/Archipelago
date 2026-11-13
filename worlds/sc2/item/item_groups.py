@@ -2019,6 +2019,7 @@ item_name_groups[ItemGroupNames.MUTATOR_ITEMS] = mutator_items = [
     # Mutators
     item_names.MUTATOR_GHOST_SPAWN,
     item_names.MUTATOR_VOID_DUPLICATE,
+    item_names.MUTATOR_NYDUS_NETWORK,
 ]
 
 # Opt-In items that do not show up by default.

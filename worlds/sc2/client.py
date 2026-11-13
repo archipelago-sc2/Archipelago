@@ -677,7 +677,7 @@ class StarcraftClientProcessor(ClientCommandProcessor):
         Overrides the level of the Ghost Spawn mutator
         """
         if level not in [str(i) for i in range(-1, 6)]:
-            sc2_logger.info("Use `/ghost_spawn [0-5] to override the level. -1 restores the default" )
+            sc2_logger.info("Use /ghost_spawn [0-5] to override the level. -1 restores the default" )
             return
         if level == "-1" :
             self.ctx.ghost_spawn_level = -1;
@@ -692,7 +692,7 @@ class StarcraftClientProcessor(ClientCommandProcessor):
         Overrides the level of the Void Duplicate mutator
         """
         if level not in [str(i) for i in range(-1, 6)]:
-            sc2_logger.info("Use `/void_duplicate [0-5] to override the level. -1 restores the default" )
+            sc2_logger.info("Use /void_duplicate [0-5] to override the level. -1 restores the default" )
             return
         if level == "-1" :
             self.ctx.void_duplicate_level = -1;
@@ -700,6 +700,21 @@ class StarcraftClientProcessor(ClientCommandProcessor):
         else:
             self.ctx.void_duplicate_level = int(level)
             sc2_logger.info(f" Void Duplicate Mutator set to level {self.ctx.void_duplicate_level}")
+
+    @mark_raw
+    def _cmd_nydus_network(self, level: str = "") -> None:
+        """
+        Overrides the level of the Nydus Network mutator
+        """
+        if level not in [str(i) for i in range(-1, 6)]:
+            sc2_logger.info("Use /nydus_network [0-5] to override the level. -1 restores the default" )
+            return
+        if level == "-1" :
+            self.ctx.nydus_network_level = -1;
+            sc2_logger.info(" Nydus Network mutator set to default level")
+        else:
+            self.ctx.nydus_network_level = int(level)
+            sc2_logger.info(f" Nydus Network Mutator set to level {self.ctx.nydus_network_level}")
 
     @mark_raw
     def _cmd_set_path(self, path: str = "") -> bool:
@@ -898,6 +913,7 @@ class SC2Context(CommonContext):
         self.mutation_rate_order: list[str] | None = None
         self.ghost_spawn_level: int = -1 # Overrides for mutator levels. -1 = don't use override.
         self.void_duplicate_level: int = -1
+        self.nydus_network_level: int = -1
         self.detector_items = DetectorItems.option_disabled
 
     async def server_auth(self, password_requested: bool = False) -> None:
