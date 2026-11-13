@@ -95,6 +95,8 @@ class FactionlessItemType(ItemTypeEnum):
     MutatorGhostSpawn = "Ghost Spawn Mutator", 12
     MutatorVoidDuplicate = "Void Duplicate Mutator", 13
     MutatorEnableCloak = "Enable Cloak Mutator", 14
+    BiggerMineralFields = "Bigger Mineral Fields", 15
+    BiggerVespeneGeysers = "Bigger Vespene Geysers", 16
     Keys = "Keys", -1
 
 

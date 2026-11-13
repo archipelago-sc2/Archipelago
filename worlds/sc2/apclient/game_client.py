@@ -188,6 +188,7 @@ class MissionClient:
             objectives = " ".join(f"{str(objective)}" for objective in uncollected_objectives)
         return banks.send_core_options(
             self.get_resources(start_items),
+            self.get_bigger_resource_fields(start_items),
             self.get_colors(),
             objectives,
             "1",
@@ -668,6 +669,12 @@ class MissionClient:
             max_supply_amount - DEFAULT_MAX_SUPPLY,
         ))
 
+    def get_bigger_resource_fields(self, current_items: dict[SC2Race, list[int]]) -> str:
+        return ("{} {}".format(
+            current_items[SC2Race.ANY][get_item_flag_word(item_names.BIGGER_MINERAL_FIELDS)],
+            current_items[SC2Race.ANY][get_item_flag_word(item_names.BIGGER_VESPENE_GEYSERS)],
+        ))
+
     def get_terran_tech(self, current_items: dict[SC2Race, list[int]]) -> str:
         terran_items = current_items[SC2Race.TERRAN]
         return (" ".join(f'{i:02x}' for i in terran_items))
@@ -716,6 +723,7 @@ class MissionClient:
     def update_core_options(self, current_items: dict[SC2Race, list[int]]) -> None | Error[str]:
         return banks.send_core_options(
             self.get_resources(current_items),
+            self.get_bigger_resource_fields(current_items),
             self.get_colors(),
             slot_name=self.get_slot_name(),
             world_id=self.ctx.world_id,
