@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, NamedTuple, Literal
 import logging
 import os
 import subprocess
-import inspect
 import asyncio
 import time
 
@@ -893,7 +892,12 @@ def try_decode(line: bytes, encoding: str) -> str | None:
 
 
 def windows_get_sc2_pid() -> int | None:
-    result_bytes = subprocess.check_output(["tasklist"])
+    # Note(mm): Without this, running on Windows with a cx_freeze install causes
+    # a window to pop up every time.
+    # Suggestion from StackOverflow: https://stackoverflow.com/a/22639920
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    result_bytes = subprocess.check_output(["tasklist"], startupinfo=startupinfo)
     lines = result_bytes.split(b"\r\n")
     for line_bytes in lines:
         if b"SC2_x64.exe" not in line_bytes:
@@ -925,7 +929,9 @@ def is_pid_running(pid: int | None) -> bool:
 
 
 def windows_is_pid_running(pid: int) -> bool:
-    result_bytes = subprocess.check_output(["tasklist", "/FI", f"PID eq {pid}"])
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    result_bytes = subprocess.check_output(["tasklist", "/FI", f"PID eq {pid}"], startupinfo=startupinfo)
     return b"SC2_x64.exe" in result_bytes
 
 
