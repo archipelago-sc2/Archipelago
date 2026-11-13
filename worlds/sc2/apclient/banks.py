@@ -16,6 +16,7 @@ from .failable import Error
 BANK_CORE_OPTIONS_FILE_NAME = "ArchipelagoCoreOptions" # .SC2Bank
 BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS = "CoreOptions"
 BANK_CORE_OPTIONS_KEY_STARTING_RESOURCES = "StartingResources"
+BANK_CORE_OPTIONS_KEY_BIGGER_RESOURCE_FIELDS = "BiggerResourceFields"
 BANK_CORE_OPTIONS_KEY_FACTION_COLORS = "FactionColors"
 BANK_CORE_OPTIONS_KEY_UNCOLLECTED_LOCATIONS = "UncollectedLocations"
 BANK_CORE_OPTIONS_KEY_LOAD_FINISHED = "LoadFinished"
@@ -263,6 +264,7 @@ def send_options(msg: str) -> None | Error[str]:
 
 def send_core_options(
     start_resources: str,
+    bigger_resource_fields: str,
     colors: str,
     uncollected_objectives: str | None = None,
     finished_loading: str | None = None,
@@ -275,6 +277,11 @@ def send_core_options(
         BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
         BANK_CORE_OPTIONS_KEY_STARTING_RESOURCES,
         start_resources
+    )
+    bank.add_entry(
+        BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,
+        BANK_CORE_OPTIONS_KEY_BIGGER_RESOURCE_FIELDS,
+        bigger_resource_fields
     )
     bank.add_entry(
         BANK_CORE_OPTIONS_SECTION_CORE_OPTIONS,

@@ -1704,6 +1704,8 @@ class FillerItemsDistribution(ItemDict):
         item_names.STARTING_MINERALS: 1,
         item_names.STARTING_VESPENE: 1,
         item_names.STARTING_SUPPLY: 1,
+        item_names.BIGGER_MINERAL_FIELDS: 1,
+        item_names.BIGGER_VESPENE_GEYSERS: 1,
         item_names.MAX_SUPPLY: 1,
         item_names.SHIELD_REGENERATION: 1,
         item_names.BUILDING_CONSTRUCTION_SPEED: 1,
