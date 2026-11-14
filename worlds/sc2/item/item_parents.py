@@ -127,6 +127,10 @@ parent_present[parent_names.SIEGE_TANK_AND_TRANSPORT] = AnyOfGroupAndOneOtherIte
     item_names.SIEGE_TANK,
 )
 parent_present[parent_names.SIEGE_TANK_AND_MEDIVAC] = AllOf((item_names.SIEGE_TANK, item_names.MEDIVAC), item_names.SIEGE_TANK)
+parent_present[parent_names.SHOCK_DIVISION_AND_MEDIVAC] = AllOf(
+    (item_names.SHOCK_DIVISION, item_names.MEDIVAC),
+    main_item=item_names.SHOCK_DIVISION,
+)
 parent_present[parent_names.SPIDER_MINE_SOURCE] = AnyOf(item_groups.spider_mine_sources, display_string='Spider Mines')
 parent_present[parent_names.STARSHIP_UNITS] = AnyOf(item_groups.starport_units, display_string='Terran Starships')
 parent_present[parent_names.STARSHIP_WEAPON_UNITS] = AnyOf(item_groups.starport_wa_group, display_string='Terran Starships')

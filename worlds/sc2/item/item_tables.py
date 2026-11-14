@@ -429,7 +429,7 @@ item_table = {
     # Terran technologies 3
     item_names.SHOCK_DIVISION_NAPALM_STRIKE:        ItemData(1950, T, parent=item_names.SHOCK_DIVISION),
     item_names.SHOCK_DIVISION_RETROFITTED_CANNONS:  ItemData(1951, T, parent=item_names.SHOCK_DIVISION),
-    item_names.SHOCK_DIVISION_ARMAMENT_STABILIZERS: ItemData(1952, T, apclass=PROG, parent=item_names.SHOCK_DIVISION),
+    item_names.SHOCK_DIVISION_ARMAMENT_STABILIZERS: ItemData(1952, T, apclass=PROG, parent=parent_names.SHOCK_DIVISION_AND_MEDIVAC),
     item_names.BULWARK_COMPANY_MOEBIUS_SHIELDING:   ItemData(1953, T, parent=item_names.BULWARK_COMPANY),
     item_names.BULWARK_COMPANY_ARES_CLASS_TARGETING_ADDON: ItemData(1954, T, parent=item_names.BULWARK_COMPANY),
     item_names.BULWARK_COMPANY_JUMP_JETS_MKII:      ItemData(1955, T, parent=item_names.BULWARK_COMPANY),
@@ -446,9 +446,9 @@ item_table = {
     item_names.SHOCK_DIVISION_PROMOTION_GRANTED:    ItemData(1966, T, parent=item_names.SHOCK_DIVISION),
     item_names.BLACKHAMMER_PROMOTION_GRANTED:       ItemData(1967, T, parent=item_names.BLACKHAMMER),
     item_names.NIGHT_WOLF_PROMOTION_GRANTED:        ItemData(1968, T, parent=item_names.NIGHT_WOLF),
-    item_names.SON_OF_KORHAL_PROMOTION_GRANTED:     ItemData(1988, T, parent=item_names.SON_OF_KORHAL),
-    item_names.AEGIS_GUARD_PROMOTION_GRANTED:       ItemData(1989, T, parent=item_names.AEGIS_GUARD),
-    item_names.FIELD_RESPONSE_THETA_PROMOTION_GRANTED: ItemData(1990, T, parent=item_names.FIELD_RESPONSE_THETA),
+    item_names.SON_OF_KORHAL_PROMOTION_GRANTED:     ItemData(1969, T, parent=item_names.SON_OF_KORHAL),
+    item_names.AEGIS_GUARD_PROMOTION_GRANTED:       ItemData(1970, T, parent=item_names.AEGIS_GUARD),
+    item_names.FIELD_RESPONSE_THETA_PROMOTION_GRANTED: ItemData(1971, T, parent=item_names.FIELD_RESPONSE_THETA),
 
     # Zerg unit
     item_names.ZERGLING:                ItemData(2000, Z, apclass=PROG),
