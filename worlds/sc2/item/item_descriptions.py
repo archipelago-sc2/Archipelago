@@ -37,6 +37,7 @@ CLOAK_DESCRIPTION_TEMPLATE = "Allows {} to use the Cloak ability."
 DISPLAY_NAME_BROOD_LORD = "Brood Lord"
 DISPLAY_NAME_CLOAKED_ASSASSIN = "Dark Templar, Avenger, and Blood Hunter"
 DISPLAY_NAME_WORMS = "Nydus Worm and Echidna Worm"
+DISPLAY_NAME_NUKES = "Nuclear Missile"
 
 GENERIC_KEY_DESC = "Unlocks a part of the mission order."
 
@@ -61,6 +62,7 @@ resource_efficiency_cost_reduction = {
     item_names.MEDIVAC:       (0, 50, 0),
     item_names.DEVASTATOR_TURRET: (50, 0, 0),
     item_names.MISSILE_TURRET: (25, 0, 0),
+    DISPLAY_NAME_NUKES:       (25, 50, 0),
     item_names.SCOURGE:       (0, 50, 0),
     item_names.HYDRALISK:     (25, 25, 1),
     item_names.SWARM_HOST:    (100, 25, 0),
@@ -596,6 +598,9 @@ item_descriptions = {
     item_names.RAPID_REINFORCEMENT: "Reduces cooldowns of all Terran Mercenary calldowns by 60s.",
     item_names.SIGNAL_BEACON: "Terran Mercenary Calldowns are instantly deployed on rally point.",
     item_names.FUSION_CORE_FUSION_REACTOR: "Fusion Cores increase the energy regeneration of nearby units by +1 energy per second.",
+    item_names.NUKE_RESOURCE_EFFICIENCY: _get_resource_efficiency_desc(DISPLAY_NAME_NUKES),
+    item_names.NUKE_OPTIMIZED_LOGISTICS: "Increases Nuclear Missile building speed.",
+    item_names.NUKE_FISSION_PROPELLANT: "Nuclear Missiles can be called down faster.",
     item_names.ZEALOT: "Powerful melee warrior. Can use the charge ability.",
     item_names.STALKER: "Ranged attack strider. Can use the Blink ability.",
     item_names.HIGH_TEMPLAR: "Potent psionic master. Can use the Feedback and Psionic Storm abilities. Can merge into an Archon.",

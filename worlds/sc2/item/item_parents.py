@@ -133,6 +133,11 @@ parent_present[parent_names.STARSHIP_WEAPON_UNITS] = AnyOf(item_groups.starport_
 parent_present[parent_names.VEHICLE_UNITS] = AnyOf(item_groups.factory_units, display_string='Terran Vehicles')
 parent_present[parent_names.VEHICLE_WEAPON_UNITS] = AnyOf(item_groups.factory_wa_group, display_string='Terran Vehicles')
 parent_present[parent_names.TERRAN_MERCENARIES] = AnyOf(item_groups.terran_mercenaries, display_string='Terran Mercenaries')
+parent_present[parent_names.NUKE_SOURCE] = AnyOf([
+    item_names.GHOST,
+    item_names.SPECTRE,
+    item_names.THOR_BUTTON_WITH_A_SKULL_ON_IT,
+])
 
 # Zerg
 parent_present[parent_names.ANY_NYDUS_WORM] = AnyOf((item_names.NYDUS_WORM, item_names.ECHIDNA_WORM), item_names.NYDUS_WORM)

@@ -438,6 +438,9 @@ item_table = {
     item_names.BLACKHAMMER_INFERNO_BLITZ:           ItemData(1958, T, parent=item_names.BLACKHAMMER),
     item_names.BLACKHAMMER_SMART_SERVOS:            ItemData(1959, T, parent=item_names.BLACKHAMMER),
     item_names.BLACKHAMMER_BULWARK_FIELD:           ItemData(1960, T, parent=item_names.BLACKHAMMER),
+    item_names.NUKE_RESOURCE_EFFICIENCY:            ItemData(1961, T, parent=parent_names.NUKE_SOURCE),
+    item_names.NUKE_OPTIMIZED_LOGISTICS:            ItemData(1962, T, parent=parent_names.NUKE_SOURCE),
+    item_names.NUKE_FISSION_PROPELLANT:             ItemData(1963, T, parent=parent_names.NUKE_SOURCE),
 
     # Zerg unit
     item_names.ZERGLING:                ItemData(2000, Z, apclass=PROG),
