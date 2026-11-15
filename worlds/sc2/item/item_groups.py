@@ -1999,7 +1999,8 @@ item_name_groups[ItemGroupNames.OVERPOWERED_ITEMS] = overpowered_items = [
     item_names.ARGUS_AMPLIFIER,
 
     # Zerg Mind Control
-    item_names.INFESTOR,
+    item_names.INFESTOR_NEURAL_PARASITE,
+    item_names.INFESTOR_CONSUME,
 
     # Protoss Mind Control
     item_names.DARK_ARCHON_INDOMITABLE_WILL,
