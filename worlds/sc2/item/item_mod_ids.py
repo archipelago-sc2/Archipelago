@@ -392,8 +392,8 @@ item_id_table = {
     item_names.SON_OF_KORHAL_PROMOTION_GRANTED:               ItemModInfo(TerranItemType.Item, 303),
     item_names.AEGIS_GUARD_PROMOTION_GRANTED:                 ItemModInfo(TerranItemType.Item, 304),
     item_names.FIELD_RESPONSE_THETA_PROMOTION_GRANTED:        ItemModInfo(TerranItemType.Item, 305),
-    item_names.MARINE_U_238_SHELLS:                           ItemModInfo(TerranItemType.Item, 298),
-    item_names.SIEGE_TANK_SERVO_COOLANT:                      ItemModInfo(TerranItemType.Item, 299),
+    item_names.MARINE_U_238_SHELLS:                           ItemModInfo(TerranItemType.Item, 306),
+    item_names.SIEGE_TANK_SERVO_COOLANT:                      ItemModInfo(TerranItemType.Item, 307),
 
     item_names.PROGRESSIVE_FIRE_SUPPRESSION_SYSTEM:                ItemModInfo(TerranItemType.Progressive, 0),
     item_names.VULTURE_PROGRESSIVE_REPLENISHABLE_MAGAZINE:         ItemModInfo(TerranItemType.Progressive, 2),
