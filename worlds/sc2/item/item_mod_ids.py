@@ -389,9 +389,9 @@ item_id_table = {
     item_names.SHOCK_DIVISION_PROMOTION_GRANTED:              ItemModInfo(TerranItemType.Item, 300),
     item_names.BLACKHAMMER_PROMOTION_GRANTED:                 ItemModInfo(TerranItemType.Item, 301),
     item_names.NIGHT_WOLF_PROMOTION_GRANTED:                  ItemModInfo(TerranItemType.Item, 302),
-    item_names.SON_OF_KORHAL_PROMOTION_GRANTED:               ItemModInfo(TerranItemType.Item, 322),
-    item_names.AEGIS_GUARD_PROMOTION_GRANTED:                 ItemModInfo(TerranItemType.Item, 323),
-    item_names.FIELD_RESPONSE_THETA_PROMOTION_GRANTED:        ItemModInfo(TerranItemType.Item, 324),
+    item_names.SON_OF_KORHAL_PROMOTION_GRANTED:               ItemModInfo(TerranItemType.Item, 303),
+    item_names.AEGIS_GUARD_PROMOTION_GRANTED:                 ItemModInfo(TerranItemType.Item, 304),
+    item_names.FIELD_RESPONSE_THETA_PROMOTION_GRANTED:        ItemModInfo(TerranItemType.Item, 305),
 
     item_names.PROGRESSIVE_FIRE_SUPPRESSION_SYSTEM:                ItemModInfo(TerranItemType.Progressive, 0),
     item_names.VULTURE_PROGRESSIVE_REPLENISHABLE_MAGAZINE:         ItemModInfo(TerranItemType.Progressive, 2),
