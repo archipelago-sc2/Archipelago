@@ -450,6 +450,8 @@ item_table = {
     item_names.SON_OF_KORHAL_PROMOTION_GRANTED:     ItemData(1969, T, parent=item_names.SON_OF_KORHAL),
     item_names.AEGIS_GUARD_PROMOTION_GRANTED:       ItemData(1970, T, parent=item_names.AEGIS_GUARD),
     item_names.FIELD_RESPONSE_THETA_PROMOTION_GRANTED: ItemData(1971, T, parent=item_names.FIELD_RESPONSE_THETA),
+    item_names.MARINE_U_238_SHELLS:                 ItemData(1964, T, parent=item_names.MARINE),
+    item_names.SIEGE_TANK_SERVO_COOLANT:            ItemData(1965, T, parent=item_names.SIEGE_TANK),
 
     # Zerg unit
     item_names.ZERGLING:                ItemData(2000, Z, apclass=PROG),
@@ -1011,6 +1013,7 @@ item_table = {
     item_names.PSI_SPIRE_ELECTROMAGNETIC_DISRUPTION:   ItemData(3472, P, parent=item_names.PSI_SPIRE),
     item_names.LAUNCH_BAY_GRAVITON_CATAPULT:           ItemData(3473, P, parent=item_names.LAUNCH_BAY),
     item_names.LAUNCH_BAY_FOCUSED_LENS:                ItemData(3474, P, parent=item_names.LAUNCH_BAY),
+    item_names.COLOSSUS_EXTENDED_THERMAL_LANCE:        ItemData(3475, P, parent=item_names.COLOSSUS),
 
     # Protoss war council
     item_names.ZEALOT_WHIRLWIND:                     ItemData(3500, P, apclass=PROG, parent=item_names.ZEALOT),
