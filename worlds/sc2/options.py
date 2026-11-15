@@ -678,7 +678,7 @@ class ExcludeOverpoweredItems(Toggle):
 
 
 # Current maximum number of upgrades for a unit
-MAX_UPGRADES_OPTION = 13
+MAX_UPGRADES_OPTION = 14
 
 
 class EnsureGenericItems(Range):
