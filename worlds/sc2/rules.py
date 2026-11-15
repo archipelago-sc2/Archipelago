@@ -2529,7 +2529,7 @@ class SC2Logic:
     def protoss_havens_fall_gas_pickups(self, state: CollectionState) -> bool:
         return (
             self.protoss_basic_transport(state)
-            or state.has_all((item_names.MISTWING), self.player)
+            or state.has(item_names.MISTWING, self.player)
             or state.has_all((item_names.ORACLE, item_names.ORACLE_SURFACE_STABILIZER), self.player)
         )
 

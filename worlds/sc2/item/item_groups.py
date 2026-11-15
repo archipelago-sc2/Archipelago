@@ -93,6 +93,7 @@ class ItemGroupNames:
     TERRAN_GENERIC_ITEMS = "Terran Generic Items"
     TERRAN_MOBILE_DETECTION = "Terran Mobile Detection"
     TERRAN_DETECTION = "Terran Detection"
+    TERRAN_NERF_ITEMS = "Terran Nerf Items"
     BARRACKS_UNITS = "Barracks Units"
     FACTORY_UNITS = "Factory Units"
     STARPORT_UNITS = "Starport Units"
@@ -147,6 +148,7 @@ class ItemGroupNames:
     ZERG_GENERIC_ITEMS = "Zerg Generic Items"
     ZERG_MOBILE_DETECTION = "Zerg Mobile Detection"
     ZERG_DETECTION = "Zerg Detection"
+    ZERG_NERF_ITEMS = "Zerg Nerf Items"
     HOTS_UNITS = "HotS Units"
     HOTS_BUILDINGS = "HotS Buildings"
     HOTS_STRAINS = "HotS Strains"
@@ -204,6 +206,7 @@ class ItemGroupNames:
     PROTOSS_GENERIC_ITEMS = "Protoss Generic Items"
     PROTOSS_MOBILE_DETECTION = "Protoss Mobile Detection"
     PROTOSS_DETECTION = "Protoss Detection"
+    PROTOSS_NERF_ITEMS = "Protoss Nerf Items"
     GATEWAY_UNITS = "Gateway Units"
     ROBO_UNITS = "Robo Units"
     STARGATE_UNITS = "Stargate Units"
@@ -405,6 +408,10 @@ item_name_groups[ItemGroupNames.TERRAN_MOBILE_DETECTION] = terran_mobile_detecti
 item_name_groups[ItemGroupNames.TERRAN_DETECTION] = terran_detection = (
     *terran_mobile_detection,
     item_names.MISSILE_TURRET,
+)
+item_name_groups[ItemGroupNames.TERRAN_NERF_ITEMS] = terran_nerf_items = (
+    item_names.MARINE_U_238_SHELLS,
+    item_names.SIEGE_TANK_SERVO_COOLANT,
 )
 barracks_wa_group = (
     item_names.MARINE, item_names.FIREBAT, item_names.MARAUDER,
@@ -1055,6 +1062,10 @@ item_name_groups[ItemGroupNames.ZERG_DETECTION] = zerg_detection = (
     item_names.SPORE_CRAWLER,
     item_names.INFESTED_MISSILE_TURRET,
 )
+item_name_groups[ItemGroupNames.ZERG_NERF_ITEMS] = zerg_nerf_items = (
+    item_names.INFESTOR_CONSUME,
+    item_names.INFESTOR_NEURAL_PARASITE,
+)
 item_name_groups[ItemGroupNames.HOTS_UNITS] = hots_units = [
     item_names.ZERGLING, item_names.SWARM_QUEEN, item_names.ROACH, item_names.HYDRALISK,
     item_names.ABERRATION, item_names.SWARM_HOST, item_names.MUTALISK,
@@ -1577,6 +1588,9 @@ item_name_groups[ItemGroupNames.PROTOSS_DETECTION] = protoss_detection = (
     *protoss_mobile_detection,
     item_names.PHOTON_CANNON,
 )
+item_name_groups[ItemGroupNames.PROTOSS_NERF_ITEMS] = protoss_nerf_items = (
+    item_names.COLOSSUS_EXTENDED_THERMAL_LANCE,
+)
 item_name_groups[ItemGroupNames.LOTV_UNITS] = lotv_units = [
     item_names.ZEALOT, item_names.CENTURION, item_names.SENTINEL,
     item_names.STALKER, item_names.DRAGOON, item_names.ADEPT,
@@ -1985,7 +1999,8 @@ item_name_groups[ItemGroupNames.OVERPOWERED_ITEMS] = overpowered_items = [
     item_names.ARGUS_AMPLIFIER,
 
     # Zerg Mind Control
-    item_names.INFESTOR,
+    item_names.INFESTOR_NEURAL_PARASITE,
+    item_names.INFESTOR_CONSUME,
 
     # Protoss Mind Control
     item_names.DARK_ARCHON_INDOMITABLE_WILL,

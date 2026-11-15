@@ -393,6 +393,10 @@ PLANETARY_FORTRESS_ORBITAL_MODULE                  = "Orbital Module (Planetary 
 SENSOR_TOWER_ASSISTIVE_TARGETING                   = "Assistive Targeting (Sensor Tower)"
 SENSOR_TOWER_MULTISPECTRUM_DOPPLER                 = "Multispectrum Doppler (Sensor Tower)"
 
+# Terran nerfs
+MARINE_U_238_SHELLS = "U-238 Shells (Marine)"
+SIEGE_TANK_SERVO_COOLANT = "Servo Coolant (Siege Tank)"
+
 # Nova
 NOVA_GHOST_VISOR                        = "Ghost Visor (Nova Equipment)"
 NOVA_RANGEFINDER_OCULUS                 = "Rangefinder Oculus (Nova Equipment)"
@@ -445,6 +449,30 @@ INFESTED_BUNKER         = "Infested Bunker"
 INFESTED_MISSILE_TURRET = "Infested Missile Turret"
 NYDUS_WORM              = "Nydus Worm"
 ECHIDNA_WORM            = "Echidna Worm"
+
+# Morphs
+BANELING        = "Baneling"
+IMPALER         = "Impaler"
+LURKER          = "Lurker"
+BROOD_LORD      = "Brood Lord"
+VIPER           = "Viper"
+GUARDIAN        = "Guardian"
+DEVOURER        = "Devourer"
+RAVAGER         = "Ravager"
+OVERSEER        = "Overseer"
+PRIMAL_IGNITER  = "Primal Igniter"
+TYRANNOZOR      = "Tyrannozor"
+
+# Zerg Mercs
+INFESTED_MEDICS         = "Infested Medics"
+INFESTED_SIEGE_BREAKERS = "Infested Siege Breakers"
+INFESTED_DUSK_WINGS     = "Infested Dusk Wings"
+DEVOURING_ONES          = "Devouring Ones"
+HUNTER_KILLERS          = "Hunter Killers"
+WISE_OLD_TORRASQUE      = "Wise Old Torrasque"
+HUNTERLING              = "Hunterling"
+YGGDRASIL               = "Yggdrasil"
+CAUSTIC_HORRORS         = "Caustic Horrors"
 
 # Zerg Weapon / Armor Upgrades
 ZERG_UPGRADE_PREFIX = "Progressive Zerg"
@@ -642,30 +670,9 @@ SWARM_HOST_CREEPER_STRAIN  = "Creeper Strain (Swarm Host)"
 ULTRALISK_NOXIOUS_STRAIN   = "Noxious Strain (Ultralisk)"
 ULTRALISK_TORRASQUE_STRAIN = "Torrasque Strain (Ultralisk)"
 
-# Morphs
-BANELING        = "Baneling"
-IMPALER         = "Impaler"
-LURKER          = "Lurker"
-BROOD_LORD      = "Brood Lord"
-VIPER           = "Viper"
-GUARDIAN        = "Guardian"
-DEVOURER        = "Devourer"
-RAVAGER         = "Ravager"
-OVERSEER        = "Overseer"
-PRIMAL_IGNITER  = "Primal Igniter"
-TYRANNOZOR      = "Tyrannozor"
-
-# Zerg Mercs
-INFESTED_MEDICS         = "Infested Medics"
-INFESTED_SIEGE_BREAKERS = "Infested Siege Breakers"
-INFESTED_DUSK_WINGS     = "Infested Dusk Wings"
-DEVOURING_ONES          = "Devouring Ones"
-HUNTER_KILLERS          = "Hunter Killers"
-WISE_OLD_TORRASQUE      = "Wise Old Torrasque"
-HUNTERLING              = "Hunterling"
-YGGDRASIL               = "Yggdrasil"
-CAUSTIC_HORRORS         = "Caustic Horrors"
-
+# Zerg Nerfs
+INFESTOR_CONSUME = "Consume (Infestor)"
+INFESTOR_NEURAL_PARASITE = "Neural Parasite (Infestor)"
 
 # Kerrigan Upgrades
 KERRIGAN_KINETIC_BLAST           = "Kinetic Blast (Kerrigan Ability)"
@@ -977,6 +984,9 @@ PSI_SPIRE_POWER_GRID_STABILIZER                         = "Power Grid Stabilizer
 PSI_SPIRE_ELECTROMAGNETIC_DISRUPTION                    = "Electromagnetic Disruption (Psi Spire)"
 LAUNCH_BAY_GRAVITON_CATAPULT                            = "Graviton Catapult (Launch Bay)"
 LAUNCH_BAY_FOCUSED_LENS                                 = "Focused Lens (Launch Bay)"
+
+# Protoss Nerfs
+COLOSSUS_EXTENDED_THERMAL_LANCE = "Extended Thermal Lance (Colossus)"
 
 # War Council
 ZEALOT_WHIRLWIND                                        = "Whirlwind (Zealot)"
