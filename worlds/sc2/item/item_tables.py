@@ -441,6 +441,8 @@ item_table = {
     item_names.NUKE_RESOURCE_EFFICIENCY:            ItemData(1961, T, parent=parent_names.NUKE_SOURCE),
     item_names.NUKE_OPTIMIZED_LOGISTICS:            ItemData(1962, T, parent=parent_names.NUKE_SOURCE),
     item_names.NUKE_FISSION_PROPELLANT:             ItemData(1963, T, parent=parent_names.NUKE_SOURCE),
+    item_names.MARINE_U_238_SHELLS:                 ItemData(1964, T, parent=item_names.MARINE),
+    item_names.SIEGE_TANK_SERVO_COOLANT:            ItemData(1965, T, parent=item_names.SIEGE_TANK),
 
     # Zerg unit
     item_names.ZERGLING:                ItemData(2000, Z, apclass=PROG),
@@ -1002,6 +1004,7 @@ item_table = {
     item_names.PSI_SPIRE_ELECTROMAGNETIC_DISRUPTION:   ItemData(3472, P, parent=item_names.PSI_SPIRE),
     item_names.LAUNCH_BAY_GRAVITON_CATAPULT:           ItemData(3473, P, parent=item_names.LAUNCH_BAY),
     item_names.LAUNCH_BAY_FOCUSED_LENS:                ItemData(3474, P, parent=item_names.LAUNCH_BAY),
+    item_names.COLOSSUS_EXTENDED_THERMAL_LANCE:        ItemData(3475, P, parent=item_names.COLOSSUS),
 
     # Protoss war council
     item_names.ZEALOT_WHIRLWIND:                     ItemData(3500, P, apclass=PROG, parent=item_names.ZEALOT),
