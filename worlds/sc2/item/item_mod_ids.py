@@ -384,8 +384,8 @@ item_id_table = {
     item_names.NUKE_RESOURCE_EFFICIENCY:                      ItemModInfo(TerranItemType.Item, 295),
     item_names.NUKE_OPTIMIZED_LOGISTICS:                      ItemModInfo(TerranItemType.Item, 296),
     item_names.NUKE_FISSION_PROPELLANT:                       ItemModInfo(TerranItemType.Item, 297),
-    item_names.MARINE_U_238_SHELLS:                           ItemModInfo(TerranItemType.Item, 298),
-    item_names.SIEGE_TANK_SERVO_COOLANT:                      ItemModInfo(TerranItemType.Item, 299),
+    item_names.MARINE_U_238_SHELLS:                           ItemModInfo(TerranItemType.Item, 306),
+    item_names.SIEGE_TANK_SERVO_COOLANT:                      ItemModInfo(TerranItemType.Item, 307),
 
     item_names.PROGRESSIVE_FIRE_SUPPRESSION_SYSTEM:                ItemModInfo(TerranItemType.Progressive, 0),
     item_names.VULTURE_PROGRESSIVE_REPLENISHABLE_MAGAZINE:         ItemModInfo(TerranItemType.Progressive, 2),
