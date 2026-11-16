@@ -697,7 +697,7 @@ class MissionClient:
         if (self.ctx.void_duplicate_level == -1):
             void_duplicate = current_items[SC2Race.ANY][get_item_flag_word(item_names.MUTATOR_VOID_DUPLICATE)]
         else:
-            nydus_network = self.ctx.nydus_network_level
+            void_duplicate = self.ctx.void_duplicate_level
         if (self.ctx.nydus_network_level == -1):
             nydus_network = current_items[SC2Race.ANY][get_item_flag_word(item_names.MUTATOR_NYDUS_NETWORK)]
         else:
