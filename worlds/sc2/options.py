@@ -1632,7 +1632,7 @@ class MineralFieldSizePerItem(Range):
         if text.startswith("random"):
             if text.startswith("random-range"):
                 return cls.custom_range(text)
-            return cls(random_weighted_range(text, 1, 10) * 5)
+            return cls(random_weighted_range(text, 1, 10))
         return super(MineralFieldSizePerItem, cls).from_text(text)
 
 class VespeneGeyserSizePerItem(Range):
@@ -1650,7 +1650,7 @@ class VespeneGeyserSizePerItem(Range):
         if text.startswith("random"):
             if text.startswith("random-range"):
                 return cls.custom_range(text)
-            return cls(random_weighted_range(text, 1, 10) * 5)
+            return cls(random_weighted_range(text, 1, 10))
         return super(VespeneGeyserSizePerItem, cls).from_text(text)
 
 class StartingSupplyPerItem(Range):
@@ -2075,6 +2075,8 @@ option_groups = [
         FillerPercentage,
         MineralsPerItem,
         VespenePerItem,
+        MineralFieldSizePerItem,
+        VespeneGeyserSizePerItem,
         StartingSupplyPerItem,
         MaximumSupplyPerItem,
         MaximumSupplyReductionPerItem,
