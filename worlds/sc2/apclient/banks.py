@@ -36,7 +36,7 @@ BANK_ITEMS_KEY_TERRAN_ITEMS = "TerranItems"
 BANK_ITEMS_KEY_ZERG_ITEMS = "ZergItems"
 BANK_ITEMS_KEY_PROTOSS_ITEMS = "ProtossItems"
 BANK_ITEMS_KEY_MISC_ITEMS = "MiscItems"
-BANK_ITEMS_KEY_TRAP_ITEMS = "TrapItems"
+BANK_ITEMS_KEY_MUTATORS = "Mutators"
 
 # Messages
 BANK_MESSAGES_FILE_NAME = "ArchipelagoMessages" # .SC2Bank
@@ -344,7 +344,7 @@ def send_items(
     )
     bank.add_entry(
         BANK_ITEMS_SECTION_ITEMS,
-        BANK_ITEMS_KEY_TRAP_ITEMS,
+        BANK_ITEMS_KEY_MUTATORS,
         trap_items
     )
     return bank.write_file()

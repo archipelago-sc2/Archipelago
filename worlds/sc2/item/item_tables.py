@@ -404,6 +404,7 @@ item_table = {
     item_names.MUTATOR_GHOST_SPAWN:          ItemData(1851, ANY, quantity=5, apclass=TRAP),
     item_names.MUTATOR_VOID_DUPLICATE:       ItemData(1852, ANY, quantity=5, apclass=TRAP),
     item_names.MUTATOR_ENABLE_CLOAK:         ItemData(1853, ANY, apclass=TRAP),
+    item_names.MUTATOR_NYDUS_NETWORK:        ItemData(1854, ANY, quantity=5, apclass=TRAP),
 
     # Nova items
     item_names.NOVA_GHOST_VISOR:             ItemData(1900, T, apclass=PROG),
