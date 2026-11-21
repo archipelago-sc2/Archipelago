@@ -92,10 +92,12 @@ class FactionlessItemType(ItemTypeEnum):
     ResearchCost = "Research Cost", 9
     Level = "Level", 10
     ShieldRegeneration = "Shield Regeneration Group", 11
-    MutatorGhostSpawn = "Ghost Spawn Mutator", 12
-    MutatorVoidDuplicate = "Void Duplicate Mutator", 13
-    MutatorEnableCloak = "Enable Cloak Mutator", 14
-    MutatorNydusNetwork = "Nydus Network Mutator", 15
+    MineralFieldSize = "Mineral Field Size", 12
+    VespeneGeyserSize = "Vespene Geyser Size", 13
+    MutatorGhostSpawn = "Ghost Spawn Mutator", 14
+    MutatorVoidDuplicate = "Void Duplicate Mutator", 15
+    MutatorEnableCloak = "Enable Cloak Mutator", 16
+    MutatorNydusNetwork = "Nydus Network Mutator", 17
     Keys = "Keys", -1
 
 
