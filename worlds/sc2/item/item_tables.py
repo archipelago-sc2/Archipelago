@@ -429,11 +429,11 @@ item_table = {
     # Terran technologies 3
     item_names.SHOCK_DIVISION_NAPALM_STRIKE:        ItemData(1950, T, parent=item_names.SHOCK_DIVISION),
     item_names.SHOCK_DIVISION_RETROFITTED_CANNONS:  ItemData(1951, T, parent=item_names.SHOCK_DIVISION),
-    item_names.SHOCK_DIVISION_ARMAMENT_STABILIZERS: ItemData(1952, T, apclass=PROG, parent=item_names.SHOCK_DIVISION),
+    item_names.SHOCK_DIVISION_ARMAMENT_STABILIZERS: ItemData(1952, T, apclass=PROG, parent=parent_names.SHOCK_DIVISION_AND_MEDIVAC),
     item_names.BULWARK_COMPANY_MOEBIUS_SHIELDING:   ItemData(1953, T, parent=item_names.BULWARK_COMPANY),
     item_names.BULWARK_COMPANY_ARES_CLASS_TARGETING_ADDON: ItemData(1954, T, parent=item_names.BULWARK_COMPANY),
     item_names.BULWARK_COMPANY_JUMP_JETS_MKII:      ItemData(1955, T, parent=item_names.BULWARK_COMPANY),
-    item_names.BULWARK_COMPANY_NEURAL_SHUTDOWN:     ItemData(1956, T, parent=item_names.BULWARK_COMPANY),
+    item_names.BULWARK_COMPANY_ANTI_AIR_COUNTERMEASURES: ItemData(1956, T, parent=item_names.BULWARK_COMPANY),
     item_names.BLACKHAMMER_HAMMER_OF_THE_LAW:       ItemData(1957, T, parent=item_names.BLACKHAMMER),
     item_names.BLACKHAMMER_INFERNO_BLITZ:           ItemData(1958, T, parent=item_names.BLACKHAMMER),
     item_names.BLACKHAMMER_SMART_SERVOS:            ItemData(1959, T, parent=item_names.BLACKHAMMER),
@@ -441,6 +441,14 @@ item_table = {
     item_names.NUKE_RESOURCE_EFFICIENCY:            ItemData(1961, T, parent=parent_names.NUKE_SOURCE),
     item_names.NUKE_OPTIMIZED_LOGISTICS:            ItemData(1962, T, parent=parent_names.NUKE_SOURCE),
     item_names.NUKE_FISSION_PROPELLANT:             ItemData(1963, T, parent=parent_names.NUKE_SOURCE),
+    item_names.EMPERORS_SHADOW_PROMOTION_GRANTED:   ItemData(1964, T, parent=item_names.EMPERORS_SHADOW),
+    item_names.BULWARK_COMPANY_PROMOTION_GRANTED:   ItemData(1965, T, parent=item_names.BULWARK_COMPANY),
+    item_names.SHOCK_DIVISION_PROMOTION_GRANTED:    ItemData(1966, T, parent=item_names.SHOCK_DIVISION),
+    item_names.BLACKHAMMER_PROMOTION_GRANTED:       ItemData(1967, T, parent=item_names.BLACKHAMMER),
+    item_names.NIGHT_WOLF_PROMOTION_GRANTED:        ItemData(1968, T, parent=item_names.NIGHT_WOLF),
+    item_names.SON_OF_KORHAL_PROMOTION_GRANTED:     ItemData(1969, T, parent=item_names.SON_OF_KORHAL),
+    item_names.AEGIS_GUARD_PROMOTION_GRANTED:       ItemData(1970, T, parent=item_names.AEGIS_GUARD),
+    item_names.FIELD_RESPONSE_THETA_PROMOTION_GRANTED: ItemData(1971, T, parent=item_names.FIELD_RESPONSE_THETA),
 
     # Zerg unit
     item_names.ZERGLING:                ItemData(2000, Z, apclass=PROG),
