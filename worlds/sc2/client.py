@@ -907,6 +907,7 @@ class SC2Context(CommonContext):
         self.mission_order_scouting = MissionOrderScouting.option_none
         self.mission_item_classification: dict[str, int] | None = None
         self.show_war_council_nerfs: int = 0
+        self.hide_general_nerfs: int = 1
         self.mutation_rate_source = MutationRateSource.default
         self.mutation_rate_limit = MutationRateLimit.default
         self.mutation_rate_endpoint = MutationRateEndpoint.default
@@ -1140,6 +1141,7 @@ class SC2Context(CommonContext):
                 slot_data.get("player_color_nova", ColorChoice.option_dark_grey)
             )
             self.show_war_council_nerfs = slot_data.get("war_council_nerfs", WarCouncilNerfs.option_false)
+            self.hide_general_nerfs = slot_data.get("hide_general_nerfs", 1)
             self.mercenary_highlanders = slot_data.get("mercenary_highlanders", MercenaryHighlanders.option_false)
             self.generic_upgrade_missions = slot_data.get("generic_upgrade_missions", GenericUpgradeMissions.default)
             self.max_upgrade_level = slot_data.get("max_upgrade_level", MaxUpgradeLevel.default)

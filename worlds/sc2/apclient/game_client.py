@@ -176,6 +176,7 @@ class MissionClient:
             f" {self.ctx.difficulty_damage_modifier}"
             f" {self.ctx.mercenary_highlanders}" # TODO: Possibly rework into unit options
             f" {self.ctx.show_war_council_nerfs}"
+            f" {self.ctx.hide_general_nerfs}"
             f" {hero_presence}"
         )
         if isinstance(error, Error):
