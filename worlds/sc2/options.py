@@ -903,6 +903,13 @@ class GeneralUnitNerfs(Choice):
     Vanilla: Abilities and unit stats are available baseline as in vanilla
     Itemized: Abilities and unit stats start nerfed, but may be restored to vanilla values by finding an item
     Excluded: Abilities and unit stats are nerfed with no way to recover them
+
+    The current nerfs are:
+    U-238 Shells (Marine): reduces Marine range by 1
+    Servo Coolant (Siege Tank): Siege Tanks have a 20s cooldown on changing siege mode
+    Consume (Infestor): locks the Infestor's Consume ability
+    Neural Parasite (Infestor): locks the Infestor's Mind Control ability
+    Extended Thermal Lance (Colossus): reduces Colossus range by 2
     """
     option_vanilla = 0
     option_itemized = 1
