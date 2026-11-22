@@ -450,8 +450,8 @@ item_table = {
     item_names.SON_OF_KORHAL_PROMOTION_GRANTED:     ItemData(1969, T, parent=item_names.SON_OF_KORHAL),
     item_names.AEGIS_GUARD_PROMOTION_GRANTED:       ItemData(1970, T, parent=item_names.AEGIS_GUARD),
     item_names.FIELD_RESPONSE_THETA_PROMOTION_GRANTED: ItemData(1971, T, parent=item_names.FIELD_RESPONSE_THETA),
-    item_names.MARINE_U_238_SHELLS:                 ItemData(1964, T, parent=item_names.MARINE),
-    item_names.SIEGE_TANK_SERVO_COOLANT:            ItemData(1965, T, parent=item_names.SIEGE_TANK),
+    item_names.MARINE_U_238_SHELLS:                 ItemData(1972, T, parent=item_names.MARINE),
+    item_names.SIEGE_TANK_SERVO_COOLANT:            ItemData(1973, T, parent=item_names.SIEGE_TANK),
 
     # Zerg unit
     item_names.ZERGLING:                ItemData(2000, Z, apclass=PROG),
