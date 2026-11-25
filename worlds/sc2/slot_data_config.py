@@ -21,6 +21,7 @@ class Sc2SlotDataDict(TypedDict, total=False):
     game_speed: int
     mission_order: int
     war_council_nerfs: int
+    hide_general_nerfs: int  # not present => 1
     mercenary_highlanders: int
     generic_upgrade_missions: int
     max_upgrade_level: int
@@ -181,6 +182,9 @@ def fill_slot_data(world: 'SC2World') -> Sc2SlotDataDict:
     slot_data["mutation_rate_endpoint"] = int(world.options.mutation_rate_endpoint)
     slot_data["mutation_rate_order"] = world.mutation_rate_order
     slot_data["detector_items"] = int(world.options.detector_items)
+
+    if world.options.general_unit_nerfs != options.GeneralUnitNerfs.option_vanilla:
+        slot_data["hide_general_nerfs"] = 0
 
     if world.options.enable_void_trade != options.EnableVoidTrade.option_false:
         slot_data["enable_void_trade"] = int(world.options.enable_void_trade)

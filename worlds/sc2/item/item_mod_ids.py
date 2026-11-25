@@ -392,6 +392,8 @@ item_id_table = {
     item_names.SON_OF_KORHAL_PROMOTION_GRANTED:               ItemModInfo(TerranItemType.Item, 303),
     item_names.AEGIS_GUARD_PROMOTION_GRANTED:                 ItemModInfo(TerranItemType.Item, 304),
     item_names.FIELD_RESPONSE_THETA_PROMOTION_GRANTED:        ItemModInfo(TerranItemType.Item, 305),
+    item_names.MARINE_U_238_SHELLS:                           ItemModInfo(TerranItemType.Item, 306),
+    item_names.SIEGE_TANK_SERVO_COOLANT:                      ItemModInfo(TerranItemType.Item, 307),
 
     item_names.PROGRESSIVE_FIRE_SUPPRESSION_SYSTEM:                ItemModInfo(TerranItemType.Progressive, 0),
     item_names.VULTURE_PROGRESSIVE_REPLENISHABLE_MAGAZINE:         ItemModInfo(TerranItemType.Progressive, 2),
@@ -697,6 +699,8 @@ item_id_table = {
     item_names.SPIRE_MATURATION:                             ItemModInfo(ZergItemType.Item, 210),
     item_names.SUBMERGED_TUMORS:                             ItemModInfo(ZergItemType.Item, 211),
     item_names.KERRIGAN_PRIMAL_FORM:                         ItemModInfo(ZergItemType.Item, 212),
+    item_names.INFESTOR_CONSUME:                             ItemModInfo(ZergItemType.Item, 213),
+    item_names.INFESTOR_NEURAL_PARASITE:                     ItemModInfo(ZergItemType.Item, 214),
 
     item_names.INFESTED_SIEGE_TANK_PROGRESSIVE_AUTOMATED_MITOSIS: ItemModInfo(ZergItemType.Progressive, 0),
     item_names.INFESTED_DIAMONDBACK_PROGRESSIVE_FUNGAL_SNARE:     ItemModInfo(ZergItemType.Progressive, 2),
@@ -1066,6 +1070,7 @@ item_id_table = {
     item_names.PSI_SPIRE_ELECTROMAGNETIC_DISRUPTION:             ItemModInfo(ProtossItemType.Item, 280),
     item_names.LAUNCH_BAY_GRAVITON_CATAPULT:                     ItemModInfo(ProtossItemType.Item, 281),
     item_names.LAUNCH_BAY_FOCUSED_LENS:                          ItemModInfo(ProtossItemType.Item, 282),
+    item_names.COLOSSUS_EXTENDED_THERMAL_LANCE:                  ItemModInfo(ProtossItemType.Item, 283),
 
     item_names.SOA_PROGRESSIVE_PROXY_PYLON: ItemModInfo(ProtossItemType.Progressive, 0),
     item_names.PROGRESSIVE_WARP_RELOCATE:   ItemModInfo(ProtossItemType.Progressive, 2),

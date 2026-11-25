@@ -678,7 +678,7 @@ class ExcludeOverpoweredItems(Toggle):
 
 
 # Current maximum number of upgrades for a unit
-MAX_UPGRADES_OPTION = 13
+MAX_UPGRADES_OPTION = 14
 
 
 class EnsureGenericItems(Range):
@@ -892,7 +892,29 @@ class WarCouncilNerfs(Toggle):
     Controls whether most Protoss units can initially be found in a nerfed state, with upgrades restoring their stronger power level.
     For example, nerfed Zealots will lack the whirlwind upgrade until it is found as an item.
     """
-    display_name = "Allow Unit Nerfs"
+    display_name = "War Council Unit Nerfs"
+
+
+class GeneralUnitNerfs(Choice):
+    """
+    Nerfs several overpowered or dominant units and abilities, such as Infestor Mind Control, Marine range, etc.
+    Fine-tuned adjustments may be made with start inventory and locked items options.
+
+    Vanilla: Abilities and unit stats are available baseline as in vanilla
+    Itemized: Abilities and unit stats start nerfed, but may be restored to vanilla values by finding an item
+    Excluded: Abilities and unit stats are nerfed with no way to recover them
+
+    The current nerfs are:
+    U-238 Shells (Marine): reduces Marine range by 1
+    Servo Coolant (Siege Tank): Siege Tanks have a 20s cooldown on changing siege mode
+    Consume (Infestor): locks the Infestor's Consume ability
+    Neural Parasite (Infestor): locks the Infestor's Mind Control ability
+    Extended Thermal Lance (Colossus): reduces Colossus range by 2
+    """
+    option_vanilla = 0
+    option_itemized = 1
+    option_excluded = 2
+    display_name = "General Unit Nerfs"
 
 
 class SpearOfAdunPresence(Choice):
@@ -1890,6 +1912,7 @@ class Starcraft2Options(PerGameCommonOptions):
     kerrigan_max_passive_abilities: KerriganMaxPassiveAbilities
     enable_morphling: EnableMorphling
     war_council_nerfs: WarCouncilNerfs
+    general_unit_nerfs: GeneralUnitNerfs
     spear_of_adun_presence: SpearOfAdunPresence
     spear_of_adun_present_in_no_build: SpearOfAdunPresentInNoBuild
     spear_of_adun_passive_ability_presence: SpearOfAdunPassiveAbilityPresence
@@ -1956,6 +1979,7 @@ option_groups = [
         StarterUnit,
         RequiredTactics,
         WarCouncilNerfs,
+        GeneralUnitNerfs,
         DifficultyCurve,
     ]),
     OptionGroup("Primary Campaign Settings", [

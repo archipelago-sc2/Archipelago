@@ -176,6 +176,7 @@ class MissionClient:
             f" {self.ctx.difficulty_damage_modifier}"
             f" {self.ctx.mercenary_highlanders}" # TODO: Possibly rework into unit options
             f" {self.ctx.show_war_council_nerfs}"
+            f" {self.ctx.hide_general_nerfs}"
             f" {hero_presence}"
         )
         if isinstance(error, Error):
@@ -1024,6 +1025,13 @@ API3_TO_API4_COMPAT_ITEMS: set[CompatItemHolder] = {
     CompatItemHolder(item_names.DARK_TEMPLAR_ARCHON_MERGE),
     CompatItemHolder(item_names.SPORE_CRAWLER_BIO_BONUS),
 }
+API4_TO_API5_COMPAT_ITEMS = {
+    CompatItemHolder(item_names.MARINE_U_238_SHELLS),
+    CompatItemHolder(item_names.SIEGE_TANK_SERVO_COOLANT),
+    CompatItemHolder(item_names.INFESTOR_CONSUME),
+    CompatItemHolder(item_names.INFESTOR_NEURAL_PARASITE),
+    CompatItemHolder(item_names.COLOSSUS_EXTENDED_THERMAL_LANCE),
+}
 
 
 def compat_item_to_network_items(compat_item: CompatItemHolder) -> list[NetworkItem]:
@@ -1069,6 +1077,9 @@ def calculate_items(ctx: 'SC2Context', mission_id: int) -> dict[SC2Race, list[in
             items.append(create_network_item(item_names.SCOUT_SUPPLY_EFFICIENCY))
         if item_list[item_names.REAVER_RESOURCE_EFFICIENCY].code in received_item_ids:
             items.append(create_network_item(item_names.REAVER_BARGAIN_BIN_PRICES))
+    if ctx.slot_data_version < 5:
+        for compat_item in API4_TO_API5_COMPAT_ITEMS:
+            items.extend(compat_item_to_network_items(compat_item))
 
     # API < 4 Orbital Command Count (Deprecated item)
     orbital_command_count: int = 0
