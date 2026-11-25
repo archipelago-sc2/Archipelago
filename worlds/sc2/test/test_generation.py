@@ -347,7 +347,7 @@ class TestItemFiltering(Sc2SetupTestBase):
         for item_name, item_data in world_items:
             if item_data.quantity == 0:
                 continue
-            self.assertIn(item_name, item_groups.vanilla_items + item_groups.nova_equipment)
+            self.assertIn(item_name, (*item_groups.vanilla_items, *item_groups.nova_equipment))
 
     def test_vanilla_items_only_can_unexclude_items(self) -> None:
         world_options = {
