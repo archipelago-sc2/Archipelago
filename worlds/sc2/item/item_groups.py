@@ -1982,7 +1982,12 @@ item_name_groups[ItemGroupNames.GENERIC_ITEMS] = generic_items = (
 )
 
 item_name_groups[ItemGroupNames.VANILLA_ITEMS] = vanilla_items = (
-    vanilla_wol_items + vanilla_hots_items + vanilla_lotv_items
+    *vanilla_wol_items,
+    *vanilla_hots_items,
+    *vanilla_lotv_items,
+    *terran_nerf_items,
+    *zerg_nerf_items,
+    *protoss_nerf_items,
 )
 
 item_name_groups[ItemGroupNames.OVERPOWERED_ITEMS] = overpowered_items = [
