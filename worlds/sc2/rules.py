@@ -471,14 +471,14 @@ class SC2Logic:
                     item_names.BLACKHAMMER,
                     # Ships
                     item_names.WRAITH,
-                    item_names.WINGED_NIGHTMARES,
-                    item_names.NIGHT_HAWK,
+                    item_names.PHANTOM_SQUADRON,
+                    item_names.WINGED_NIGHTMARE,
                     item_names.VIKING,
                     item_names.HELS_ANGELS,
                     item_names.SKY_FURY,
                     item_names.LIBERATOR,
                     item_names.MIDNIGHT_RIDERS,
-                    item_names.EMPERORS_GUARDIAN,
+                    item_names.CRIMSON_SERAPH,
                     item_names.VALKYRIE,
                     item_names.BRYNHILDS,
                     item_names.BATTLECRUISER,
@@ -516,7 +516,7 @@ class SC2Logic:
                 # Mercs
                 item_names.WAR_PIGS,
                 item_names.SPARTAN_COMPANY,
-                item_names.WINGED_NIGHTMARES,
+                item_names.PHANTOM_SQUADRON,
                 # RG
                 item_names.SON_OF_KORHAL,
                 item_names.BULWARK_COMPANY,
@@ -549,8 +549,8 @@ class SC2Logic:
                         item_names.PRIDE_OF_AUGUSTGRAD,
                         item_names.BLACKHAMMER,
                         item_names.EMPERORS_SHADOW,
-                        item_names.EMPERORS_GUARDIAN,
-                        item_names.NIGHT_HAWK,
+                        item_names.CRIMSON_SERAPH,
+                        item_names.WINGED_NIGHTMARE,
                         # Mercs
                         item_names.HELS_ANGELS,  # air-to-air
                         item_names.BRYNHILDS,  # air-to-air
@@ -617,7 +617,7 @@ class SC2Logic:
                 state.has(item_names.WRAITH, self.player)
                 and (
                     state.count_from_list_unique((
-                        item_names.WRAITH_ADVANCED_LASER_TECHNOLOGY,
+                        item_names.WRAITH_PULSE_AMPLIFIER,
                         item_names.WRAITH_RESOURCE_EFFICIENCY,
                     ), self.player)
                     + air_upgrade_level
@@ -790,7 +790,7 @@ class SC2Logic:
         """
         return (
             state.has(item_names.VIKING, self.player)
-            or state.has_all((item_names.WRAITH, item_names.WRAITH_ADVANCED_LASER_TECHNOLOGY), self.player)
+            or state.has_all((item_names.WRAITH, item_names.WRAITH_PULSE_AMPLIFIER), self.player)
             or state.has_all((item_names.BATTLECRUISER, item_names.BATTLECRUISER_ATX_LASER_BATTERY), self.player)
             or (
                 self.advanced_tactics
@@ -2830,7 +2830,7 @@ class SC2Logic:
                 or state.has_all((
                     item_names.WRAITH,
                     item_names.WRAITH_RESOURCE_EFFICIENCY,
-                    item_names.WRAITH_ADVANCED_LASER_TECHNOLOGY,
+                    item_names.WRAITH_PULSE_AMPLIFIER,
                 ), self.player)
                 or state.has_all((
                     item_names.PREDATOR,
@@ -3040,7 +3040,7 @@ class SC2Logic:
             or (
                 state.has(item_names.WRAITH, self.player)
                 and state.has_any((
-                    item_names.WRAITH_ADVANCED_LASER_TECHNOLOGY,
+                    item_names.WRAITH_PULSE_AMPLIFIER,
                     item_names.WRAITH_RESOURCE_EFFICIENCY,
                 ), self.player)
             )
@@ -3138,17 +3138,15 @@ class SC2Logic:
                 item_names.WRAITH,
                 item_names.SIEGE_TANK,
                 item_names.BATTLECRUISER,
-                item_names.NIGHT_HAWK,
+                item_names.WINGED_NIGHTMARE,
                 item_names.NIGHT_WOLF,
                 item_names.SHOCK_DIVISION,
                 item_names.SKY_FURY,
             ), self.player)
             or state.has_all((item_names.VALKYRIE, item_names.VALKYRIE_FLECHETTE_MISSILES), self.player)
             or state.has_all((item_names.RAVEN, item_names.RAVEN_HUNTER_SEEKER_WEAPON), self.player)
-            or (
-                state.has_any((item_names.LIBERATOR, item_names.EMPERORS_GUARDIAN), self.player)
-                and state.has(item_names.LIBERATOR_RAID_ARTILLERY, self.player)
-            )
+            or state.has_all((item_names.LIBERATOR, item_names.LIBERATOR_RAID_ARTILLERY), self.player)
+            or state.has_all((item_names.CRIMSON_SERAPH, item_names.CRIMSON_SERAPH_SIEGE_PROTOCOL), self.player)
             or state.has_all((item_names.REAPER, item_names.REAPER_JET_PACK_OVERDRIVE), self.player)
             or state.has_all((item_names.WARHOUND, item_names.WARHOUND_JUMP_JETS), self.player)
             or (
@@ -3157,7 +3155,7 @@ class SC2Logic:
                     state.has_any((
                         item_names.HELS_ANGELS,
                         item_names.DUSK_WINGS,
-                        item_names.WINGED_NIGHTMARES,
+                        item_names.PHANTOM_SQUADRON,
                         item_names.SIEGE_BREAKERS,
                         item_names.BRYNHILDS,
                         item_names.JACKSONS_REVENGE,
@@ -3291,7 +3289,7 @@ class SC2Logic:
                     or state.has_all((item_names.LIBERATOR, item_names.LIBERATOR_RAID_ARTILLERY), self.player)
                     or state.has_all((item_names.VALKYRIE, item_names.VALKYRIE_FLECHETTE_MISSILES), self.player)
                     or (self.advanced_tactics
-                        and (state.has_all((item_names.WRAITH, item_names.WRAITH_ADVANCED_LASER_TECHNOLOGY), self.player))
+                        and (state.has_all((item_names.WRAITH, item_names.WRAITH_PULSE_AMPLIFIER), self.player))
                     )
                 )
             )
@@ -3918,7 +3916,7 @@ class SC2Logic:
         return (
             state.has_any(item_groups.terran_chaos_starter_units, self.player)
             or state.has_all((item_names.LIBERATOR, item_names.LIBERATOR_RAID_ARTILLERY), self.player)
-            or state.has_all((item_names.EMPERORS_GUARDIAN, item_names.LIBERATOR_RAID_ARTILLERY), self.player)
+            or state.has_all((item_names.CRIMSON_SERAPH, item_names.CRIMSON_SERAPH_SIEGE_PROTOCOL), self.player)
             or state.has_all((item_names.VALKYRIE, item_names.VALKYRIE_FLECHETTE_MISSILES), self.player)
             or state.has_all((item_names.WIDOW_MINE, item_names.WIDOW_MINE_DEMOLITION_PAYLOAD), self.player)
             or (
@@ -3927,7 +3925,7 @@ class SC2Logic:
                     item_names.WAR_PIGS,
                     item_names.DEATH_HEADS,
                     item_names.HELS_ANGELS,
-                    item_names.WINGED_NIGHTMARES,
+                    item_names.PHANTOM_SQUADRON,
                 ), self.player)
                 # + 2 upgrades that allow getting faster/earlier mercs
                 and state.count_from_list_unique((

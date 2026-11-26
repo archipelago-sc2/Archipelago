@@ -184,9 +184,9 @@ item_descriptions = {
     item_names.BULWARK_COMPANY: "Royal Guard heavy-fire support unit.",
     item_names.SHOCK_DIVISION: "Royal Guard heavy tank. Long-range artillery in Siege Mode.",
     item_names.BLACKHAMMER: "Royal Guard heavy assault mech.",
-    item_names.NIGHT_HAWK: "Royal Guard highly mobile flying unit. Excellent at surgical strikes.",
+    item_names.WINGED_NIGHTMARE: "Highly mobile Royal Guard fighter. Excellent at surgical strikes.",
     item_names.NIGHT_WOLF: "Royal Guard tactical-strike aircraft.",
-    item_names.EMPERORS_GUARDIAN: inspect.cleandoc("""
+    item_names.CRIMSON_SERAPH: inspect.cleandoc("""
         Royal Guard artillery fighter. Loaded with missiles that deal area damage to enemy air targets.
         Can switch into Defender Mode to provide siege support.
     """),
@@ -317,9 +317,9 @@ item_descriptions = {
     item_names.PREDATOR_RESOURCE_EFFICIENCY: _get_resource_efficiency_desc(item_names.PREDATOR),
     item_names.MEDIVAC_EXPANDED_HULL: "Increases Medivac cargo space by 4.",
     item_names.MEDIVAC_AFTERBURNERS: "Ability. Temporarily increases the Medivac's movement speed by 70%.",
-    item_names.WRAITH_ADVANCED_LASER_TECHNOLOGY: inspect.cleandoc("""
-        Burst Lasers do more damage and can hit both ground and air targets.
-        Replaces Gemini Missiles weapon.
+    item_names.WRAITH_PULSE_AMPLIFIER: inspect.cleandoc("""
+        While moving, Wraiths deal 100% more damage with Gemini Missiles and
+        200% more damage with Burst Lasers.
     """),
     item_names.VIKING_SMART_SERVOS: SMART_SERVOS_DESCRIPTION,
     item_names.VIKING_ANTI_MECHANICAL_MUNITION: "Increases Viking damage to mechanical units while in Assault Mode.",
@@ -500,8 +500,7 @@ item_descriptions = {
     item_names.SENSOR_TOWER_MULTISPECTRUM_DOPPLER: "Sensor Towers gain +10 sight range and +5 radar range.",
     item_names.SCIENCE_VESSEL_TACTICAL_JUMP: "Allows Science Vessels to warp to a target location anywhere on the map.",
     item_names.LIBERATOR_UED_MISSILE_TECHNOLOGY: "Increases Liberator attack range in Fighter mode by 4.",
-    item_names.BATTLECRUISER_FIELD_ASSIST_TARGETING_SYSTEM: "Battlecruisers increase the attack range of nearby friendly ground units by 1.",
-    item_names.VIKING_AESIR_TURBINES: "Increases Viking movement speed by 55%.",
+    item_names.VIKING_DYNAMIC_AERIAL_SYSTEMS: "Vikings gain 33% movement speed in Fighter Mode and +2 armor in Assault Mode.",
     item_names.MEDIVAC_RESOURCE_EFFICIENCY: _get_resource_efficiency_desc(item_names.MEDIVAC),
     item_names.EMPERORS_SHADOW_SOVEREIGN_TACTICAL_MISSILES: "Tactical Missile Strikes no longer need to be channeled.",
     item_names.EMPERORS_SHADOW_PSYCHIC_ENHANCERS: "Reduces the energy cost and cooldown of EMP Blast and Pyrokinetic Immolation.",
@@ -548,6 +547,26 @@ item_descriptions = {
     item_names.NIGHT_WOLF_ENERGIZED_BACKLASH: "Night Wolves restore energy whenever they fire a missile.",
     item_names.NIGHT_WOLF_ELUSIVE_ROTORS: "Night Wolves take reduced damage while moving.",
     item_names.NIGHT_WOLF_PROMOTION_GRANTED: "Allows Night Wolves to obtain Rank 3 for additional stats and bonuses. Must be turned on per unit.",
+    item_names.SKY_FURY_PROMOTION_GRANTED: "Allows Sky Furies to obtain Rank 3 for additional stats and bonuses. Must be turned on per unit.",
+    item_names.SKY_FURY_GIANTSLAYER_ROUNDS: "Sky Furies deal an additional 12 damage to Massive targets starting at Rank 1.",
+    item_names.SKY_FURY_AESIR_TURBINES: "Increases Sky Fury movement speed in Fighter Mode.",
+    item_names.SKY_FURY_SMART_SERVOS: "Sky Furies transform between Fighter Mode and Assault Mode 3 times as fast.",
+    item_names.SKY_FURY_TACTICAL_SUPERIORITY: "Reduces Tactical Realignment's cooldown to 8 seconds and increases its duration from 5 to 8 seconds.",
+    item_names.WINGED_NIGHTMARE_PROMOTION_GRANTED: "Allows Winged Nightmares to obtain Rank 3 for additional stats and bonuses. Must be turned on per unit.",
+    item_names.WINGED_NIGHTMARE_TOXIC_TYRANT: "Toxic Canister can store up to 2 charges, with a 2-second cooldown between uses.",
+    item_names.WINGED_NIGHTMARE_MADDENING_PATHOGEN: "Toxic Canister causes enemies to attack their allies for 2 seconds instead of fleeing. Massive and Heroic units are immune.",
+    item_names.WINGED_NIGHTMARE_HORRIFYING_BLAST: "Decloaking damages nearby enemies and causes them to flee. Massive and Heroic units are immune to fear.",
+    item_names.WINGED_NIGHTMARE_ADVANCED_LASER_TECHNOLOGY: "Winged Nightmares gain stronger Burst Lasers that hit both ground and air targets and replace Gemini Missiles.",
+    item_names.CRIMSON_SERAPH_PROMOTION_GRANTED: "Allows Crimson Seraphs to obtain Rank 3 for additional stats and bonuses. Must be turned on per unit.",
+    item_names.CRIMSON_SERAPH_SMART_SERVOS: "Crimson Seraphs transform between Fighter Mode and Defender Mode 3 times as fast.",
+    item_names.CRIMSON_SERAPH_SIEGE_PROTOCOL: "Allows Crimson Seraphs to attack structures in Defender Mode.",
+    item_names.CRIMSON_SERAPH_RICOCHET_AMMUNITION: "Killing a target in Defender Mode ricochets the shot to one nearby enemy for 25% damage. Ricochets can hit structures with Siege Protocol.",
+    item_names.CRIMSON_SERAPH_THERMITE_MISSILES: "Fighter Mode missiles deal 3 more damage to Light targets and have a 25% larger splash radius.",
+    item_names.PRIDE_OF_AUGUSTGRAD_PROMOTION_GRANTED: "Allows Prides of Augustgrad to obtain Rank 3 for additional stats and bonuses. Must be turned on per unit.",
+    item_names.PRIDE_OF_AUGUSTGRAD_TACTICAL_JUMP: "Allows the Pride of Augustgrad to warp to a target location anywhere on the map.",
+    item_names.PRIDE_OF_AUGUSTGRAD_PLASMA_RECYCLING: "Each laser hit against an enemy reduces Yamato Cannon's remaining cooldown by 0.15 seconds.",
+    item_names.PRIDE_OF_AUGUSTGRAD_TACTICAL_MISSILE_ARRAY: "Allows the Pride of Augustgrad to launch a Tactical Missile Strike without channeling.",
+    item_names.PRIDE_OF_AUGUSTGRAD_FIELD_ASSIST_TARGETING_SYSTEM: "Increases the weapon range of nearby friendly ranged ground units by 1.",
     item_names.BUNKER: "Defensive structure. Able to load infantry units, giving them +1 range to their attacks.",
     item_names.MISSILE_TURRET: "Anti-air defensive structure.",
     item_names.SENSOR_TOWER: "Reveals locations of enemy units at long range.",
@@ -561,7 +580,7 @@ item_descriptions = {
     item_names.JACKSONS_REVENGE: "Mercenary Battlecruiser.",
     item_names.SKIBIS_ANGELS: "Mercenary Medics.",
     item_names.DEATH_HEADS: "Mercenary Reapers.",
-    item_names.WINGED_NIGHTMARES: "Mercenary Wraiths.",
+    item_names.PHANTOM_SQUADRON: "Mercenary Wraiths.",
     item_names.MIDNIGHT_RIDERS: "Mercenary Liberators.",
     item_names.BRYNHILDS: "Mercenary Valkyries.",
     item_names.JOTUN: "Mercenary Thor.",

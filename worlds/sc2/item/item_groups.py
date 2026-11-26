@@ -316,7 +316,7 @@ _terran_core_units = {
     item_names.MEDIVAC: LogicRating.BASIC_EXTRA,  # Healer
     item_names.BULWARK_COMPANY: LogicRating.BASIC_EXTRA,
     item_names.SHOCK_DIVISION: LogicRating.BASIC_EXTRA,
-    item_names.NIGHT_HAWK: LogicRating.BASIC_EXTRA,
+    item_names.WINGED_NIGHTMARE: LogicRating.BASIC_EXTRA,
     item_names.NIGHT_WOLF: LogicRating.BASIC_EXTRA,
     item_names.PRIDE_OF_AUGUSTGRAD: LogicRating.BASIC_EXTRA,
     item_names.SKY_FURY: LogicRating.BASIC_EXTRA,
@@ -338,7 +338,7 @@ _terran_core_units = {
     item_names.LIBERATOR: LogicRating.ADVANCED_EXTRA,           # Technical, no building attack baseline
     item_names.VALKYRIE: LogicRating.ADVANCED_EXTRA,            # Air-to-air
     item_names.EMPERORS_SHADOW: LogicRating.ADVANCED_EXTRA,     # Caster, expensive
-    item_names.EMPERORS_GUARDIAN: LogicRating.ADVANCED_EXTRA,   # Technical, expensive
+    item_names.CRIMSON_SERAPH: LogicRating.ADVANCED_EXTRA,     # Technical, expensive
     item_names.BLACKHAMMER: LogicRating.ADVANCED_EXTRA,         # Primarily anti-air, expensive
 
     item_names.HERCULES: LogicRating.NONE,
@@ -390,7 +390,7 @@ item_name_groups[ItemGroupNames.TERRAN_CHAOS_STARTER_UNITS] = terran_chaos_start
     item_names.BLACKHAMMER,
     item_names.SKY_FURY,
     item_names.NIGHT_WOLF,
-    item_names.NIGHT_HAWK,
+    item_names.WINGED_NIGHTMARE,
     item_names.PRIDE_OF_AUGUSTGRAD,
 ]
 item_name_groups[ItemGroupNames.TERRAN_GENERIC_UPGRADES] = terran_generic_upgrades = [
@@ -440,12 +440,16 @@ starport_wa_group = (
     item_names.VALKYRIE,
     item_names.RAVEN_HUNTER_SEEKER_WEAPON,
     item_names.NIGHT_WOLF,
+    item_names.PRIDE_OF_AUGUSTGRAD,
+    item_names.SKY_FURY,
+    item_names.CRIMSON_SERAPH,
+    item_names.WINGED_NIGHTMARE,
 )
 item_name_groups[ItemGroupNames.STARPORT_UNITS] = starport_units = (
     item_names.MEDIVAC, item_names.WRAITH, item_names.VIKING, item_names.BANSHEE,
     item_names.BATTLECRUISER, item_names.HERCULES, item_names.SCIENCE_VESSEL, item_names.RAVEN,
     item_names.LIBERATOR, item_names.VALKYRIE, item_names.PRIDE_OF_AUGUSTGRAD, item_names.SKY_FURY,
-    item_names.EMPERORS_GUARDIAN, item_names.NIGHT_HAWK, item_names.NIGHT_WOLF,
+    item_names.CRIMSON_SERAPH, item_names.WINGED_NIGHTMARE, item_names.NIGHT_WOLF,
 )
 terran_basic_barracks_units = _intersection(terran_basic_units, barracks_wa_group)
 terran_basic_factory_units = _intersection(terran_basic_units, factory_wa_group)
@@ -473,7 +477,7 @@ terran_chaos_ship_units = (
     item_names.HELS_ANGELS,
     item_names.DUSK_WINGS,
     item_names.JACKSONS_REVENGE,
-    item_names.WINGED_NIGHTMARES,
+    item_names.PHANTOM_SQUADRON,
     item_names.MIDNIGHT_RIDERS,
     item_names.BRYNHILDS,
 )
@@ -488,7 +492,7 @@ item_name_groups[ItemGroupNames.TERRAN_MERCENARIES] = terran_mercenaries = (
     item_names.JACKSONS_REVENGE,
     item_names.SKIBIS_ANGELS,
     item_names.DEATH_HEADS,
-    item_names.WINGED_NIGHTMARES,
+    item_names.PHANTOM_SQUADRON,
     item_names.MIDNIGHT_RIDERS,
     item_names.BRYNHILDS,
     item_names.JOTUN,
@@ -609,7 +613,7 @@ item_name_groups[ItemGroupNames.TERRAN_ROYAL_GUARD_UNITS] = [
     item_names.SHOCK_DIVISION, item_names.BLACKHAMMER,
     # Elite Starport
     item_names.PRIDE_OF_AUGUSTGRAD, item_names.SKY_FURY,
-    item_names.NIGHT_HAWK, item_names.EMPERORS_GUARDIAN,
+    item_names.WINGED_NIGHTMARE, item_names.CRIMSON_SERAPH,
     item_names.NIGHT_WOLF,
 ]
 item_name_groups[ItemGroupNames.ORBITAL_COMMAND_ABILITIES] = orbital_command_abilities = [
