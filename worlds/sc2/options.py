@@ -1617,6 +1617,41 @@ class VespenePerItem(Range):
             return cls(random_weighted_range(text, 1, 10) * 5)
         return super(VespenePerItem, cls).from_text(text)
 
+class MineralFieldPercentPerItem(Range):
+    """
+    Configures the percentage increase of Mineral Field size per item.
+    """
+    display_name = "Mineral Field Percent Per Item"
+    range_start = 0
+    range_end = 10
+    default = 5
+
+    @classmethod
+    def from_text(cls, text: str) -> Range:
+        text = text.lower()
+        if text.startswith("random"):
+            if text.startswith("random-range"):
+                return cls.custom_range(text)
+            return cls(random_weighted_range(text, 1, 10))
+        return super(MineralFieldPercentPerItem, cls).from_text(text)
+
+class VespeneGeyserPercentPerItem(Range):
+    """
+    Configures the percentage increase of Vespene Geyser size per item.
+    """
+    display_name = "Vespene Geyser Percent Per Item"
+    range_start = 0
+    range_end = 10
+    default = 5
+
+    @classmethod
+    def from_text(cls, text: str) -> Range:
+        text = text.lower()
+        if text.startswith("random"):
+            if text.startswith("random-range"):
+                return cls.custom_range(text)
+            return cls(random_weighted_range(text, 1, 10))
+        return super(VespeneGeyserPercentPerItem, cls).from_text(text)
 
 class StartingSupplyPerItem(Range):
     """
@@ -1704,6 +1739,8 @@ class FillerItemsDistribution(ItemDict):
         item_names.STARTING_MINERALS: 1,
         item_names.STARTING_VESPENE: 1,
         item_names.STARTING_SUPPLY: 1,
+        item_names.MINERAL_FIELD_SIZE: 1,
+        item_names.VESPENE_GEYSER_SIZE: 1,
         item_names.MAX_SUPPLY: 1,
         item_names.SHIELD_REGENERATION: 1,
         item_names.BUILDING_CONSTRUCTION_SPEED: 1,
@@ -1930,6 +1967,8 @@ class Starcraft2Options(PerGameCommonOptions):
     filler_percentage: FillerPercentage
     minerals_per_item: MineralsPerItem
     vespene_per_item: VespenePerItem
+    mineral_field_percent_per_item: MineralFieldPercentPerItem
+    vespene_geyser_percent_per_item: VespeneGeyserPercentPerItem
     starting_supply_per_item: StartingSupplyPerItem
     maximum_supply_per_item: MaximumSupplyPerItem
     maximum_supply_reduction_per_item: MaximumSupplyReductionPerItem
@@ -2036,6 +2075,8 @@ option_groups = [
         FillerPercentage,
         MineralsPerItem,
         VespenePerItem,
+        MineralFieldPercentPerItem,
+        VespeneGeyserPercentPerItem,
         StartingSupplyPerItem,
         MaximumSupplyPerItem,
         MaximumSupplyReductionPerItem,
